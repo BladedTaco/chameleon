@@ -23,6 +23,14 @@ import tasks from './code';
 import Modal from 'react-modal';
 import Split from 'split-grid'
 
+// --------------------------------------------------------------
+// --------------------------------------------------------------
+
+import wrasse from './wrasse'
+
+// --------------------------------------------------------------
+// --------------------------------------------------------------
+
 Split({
   columnGutters: [{
     track: 1,
@@ -84,6 +92,13 @@ store.subscribe(() => {
 document.getElementById('save').addEventListener('click', _ => {
   let text = editor.getValue();
   store.dispatch(typeCheckThunk(text));
+  // --------------------------------------------------------------
+  // --------------------------------------------------------------
+  // wrasse.hook("he");
+  wrasse.hook(store.dispatch(typeCheckThunk(text)));
+  
+  // --------------------------------------------------------------
+  // --------------------------------------------------------------
 });
 
 document.getElementById('skip').addEventListener('click', _ => {

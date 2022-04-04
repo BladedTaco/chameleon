@@ -22,6 +22,7 @@ import {
 import tasks from "./code.js";
 import Modal from "./_snowpack/pkg/react-modal.js";
 import Split from "./_snowpack/pkg/split-grid.js";
+import wrasse from "./wrasse.js";
 Split({
   columnGutters: [{
     track: 1,
@@ -66,6 +67,7 @@ store.subscribe(() => {
 document.getElementById("save").addEventListener("click", (_) => {
   let text = editor.getValue();
   store.dispatch(typeCheckThunk(text));
+  wrasse.hook(store.dispatch(typeCheckThunk(text)));
 });
 document.getElementById("skip").addEventListener("click", (_) => {
   let state = store.getState();
