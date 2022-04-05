@@ -1,6 +1,6 @@
 
-const backendUrl =
-__SNOWPACK_ENV__.MODE === 'development' ? 'http://localhost:3000' : '';
+// const backendUrl =
+// __SNOWPACK_ENV__.MODE === 'development' ? 'http://localhost:3000' : '';
 
 
 const html = {
@@ -18,7 +18,7 @@ let hook = async (response) => {
     )
     
     // send code to ghc handler
-    html.wrasse.innerHTML = handle_ghc(data.meta.arg)
+    // html.wrasse.innerHTML = handle_ghc(data.meta.arg)
 
     // still figuring this out, not sure if its needed
     // editor = CodeMirror(document.getElementById('wrasse'), {
@@ -28,17 +28,17 @@ let hook = async (response) => {
     // });
 }
 
-let handle_ghc = (code) => {
-    return ghc_hook(code)
-}
+// let handle_ghc = (code) => {
+//     return ghc_hook(code)
+// }
 
-let ghc_hook = (code) => {
-    let response = await fetch(backendUrl + '/ghc', {
-        method: 'POST',
-        body: code,
-    });
-    return response.json();
-}
+// let ghc_hook = (code) => {
+//     let response = await fetch(backendUrl + '/ghc', {
+//         method: 'POST',
+//         body: code,
+//     });
+//     return response.json();
+// }
 
 const wrasse = {
     "hook": hook

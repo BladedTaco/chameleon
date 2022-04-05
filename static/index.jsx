@@ -91,7 +91,7 @@ store.subscribe(() => {
 
 document.getElementById('save').addEventListener('click', _ => {
   let text = editor.getValue();
-  store.dispatch(typeCheckThunk(text));
+  // store.dispatch(typeCheckThunk(text));
   // --------------------------------------------------------------
   // --------------------------------------------------------------
   // wrasse.hook("he");

@@ -14,6 +14,10 @@ main = do
   r <- runGhc (Just libdir) (process (head args))
   putStrLn r
 
+hook :: FilePath -> Ghc String
+hook f = process f
+
+
 process :: FilePath -> Ghc String
 process path = do
   dflags <- getSessionDynFlags
