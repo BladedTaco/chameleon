@@ -30,6 +30,8 @@ dependencies:
 - string-qq
 - lens
 - text
+- filepath
+- directory
 
 library:
   source-dirs: src

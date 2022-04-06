@@ -6,6 +6,8 @@ import Reasoning
 import Data.Aeson
 import Language.Haskell.Exts.SrcLoc
 
+import Wrasse
+
 instance ToJSON TypeForm
 instance ToJSON SrcLoc
 instance ToJSON Order
@@ -14,3 +16,5 @@ instance ToJSON SrcSpan
 instance ToJSON ChContext
 instance ToJSON ChResult
 instance ToJSON Affinity
+
+instance ToJSON GHCResult

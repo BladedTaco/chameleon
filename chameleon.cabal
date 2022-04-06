@@ -46,6 +46,8 @@ library
     , base
     , bytestring
     , containers
+    , directory
+    , filepath
     , ghc
     , ghc-paths
     , haskell-src-exts
@@ -71,6 +73,8 @@ executable chameleon
     , bytestring
     , chameleon
     , containers
+    , directory
+    , filepath
     , ghc
     , ghc-paths
     , haskell-src-exts

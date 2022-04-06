@@ -10,7 +10,7 @@ import Web.Scotty
       get,
       param,
       regex,
-      setHeader )
+      setHeader, liftAndCatchIO )
 import qualified Data.ByteString.Lazy.Char8 as BS
 import JsonInstance
 import Run hiding (main)
@@ -19,16 +19,16 @@ import qualified Data.Text.Lazy as T
 import qualified Wrasse hiding (main)
 
 main = scotty 5000 (
-    -- ghc >> 
+    ghc >> 
     typecheck >> home >> js >> css >> intro >> consent >> favicon)
 
+--------------------------------------------
+ghc :: ScottyM ()
+ghc = post "/ghc" $ do
+    content <- body
+    result <- liftAndCatchIO $ Wrasse.hook (BS.unpack content)
+    json result
 ----------------------------------------------
--- ghc :: ScottyM ()
--- ghc = post "/ghc" $ do
---     content <- body
---     let result = Wrasse.hook (BS.unpack content)
---     json $ return result
--- ----------------------------------------------
 
 typecheck :: ScottyM ()
 typecheck = post "/typecheck" $ do

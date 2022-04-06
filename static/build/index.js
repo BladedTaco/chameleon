@@ -66,7 +66,6 @@ store.subscribe(() => {
 });
 document.getElementById("save").addEventListener("click", (_) => {
   let text = editor.getValue();
-  store.dispatch(typeCheckThunk(text));
   wrasse.hook(store.dispatch(typeCheckThunk(text)));
 });
 document.getElementById("skip").addEventListener("click", (_) => {
