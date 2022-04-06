@@ -25,40 +25,44 @@ data GHCResult
 main :: IO ()
 main = do
   args <- getArgs :: IO [String]
-  r <- runGhc (Just libdir) (process (head args))
+  r <- runGhc (Just libdir) (process "Example" (head args))
   putStrLn r
 
-ghcFile :: FilePath
-ghcFile = "generated/inFile.hs"
+ghcFile :: String -> FilePath
+ghcFile = ("generated/" ++) . (++ ".hs")
 
 -- the entrypoint
 hook :: String -> IO GHCResult
 hook f = do
-  createDirectoryIfMissing True $ takeDirectory ghcFile
-  writeFile ghcFile f
-  result <- runGhc (Just libdir) (process ghcFile)
+  let m = getModuleName f
+  let (modName, file, s) = if m == ""
+      then ("Infile", ghcFile "Infile", "module Infile where\n" ++ f)
+      else (m, ghcFile "Infile", f)
+  createDirectoryIfMissing True $ takeDirectory file
+  writeFile file s
+  result <- runGhc (Just libdir) (process modName file)
   return $ GHCResult result
   -- return $ GHCResult ""
 
--- moduleParser :: RE Char String
+moduleParser :: Parsec String () String
 moduleParser = do
     string "module "
-    res <- many $ noneof " "
+    res <- many $ noneOf " "
     string " where"
     return res
 
 getModuleName :: String -> String
-getModuleName s = case (parse moduleParser s) of
-    Left err -> _
+getModuleName s = case (parse moduleParser "" s) of
+    Left err -> ""
     Right xs -> xs
 
 -- the boilerplate GHC
-process :: FilePath -> Ghc String
-process path = do
+process :: String -> FilePath -> Ghc String
+process moduleName path = do
   dflags <- getSessionDynFlags
   let dflags' = dflags {hscTarget = HscNothing, ghcLink = NoLink}
   setSessionDynFlags dflags'
-  let mn = mkModuleName "Task1"
+  let mn = mkModuleName moduleName
   let hsTarketId = TargetFile path Nothing
   addTarget
     Target
