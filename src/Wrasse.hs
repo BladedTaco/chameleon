@@ -14,7 +14,7 @@ import System.Environment
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath.Posix (takeDirectory)
 import GHC.Generics
-import Text.Regex.Applicative
+import Text.Parsec
 
 data GHCResult
   = GHCResult
@@ -40,7 +40,7 @@ hook f = do
   return $ GHCResult result
   -- return $ GHCResult ""
 
-moduleParser :: RE Char String
+-- moduleParser :: RE Char String
 moduleParser = do
     string "module "
     res <- many $ noneof " "
@@ -48,7 +48,9 @@ moduleParser = do
     return res
 
 getModuleName :: String -> String
-getModuleName s = moduleParser s
+getModuleName s = case (parse moduleParser s) of
+    Left err -> _
+    Right xs -> xs
 
 -- the boilerplate GHC
 process :: FilePath -> Ghc String
