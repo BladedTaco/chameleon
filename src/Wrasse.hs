@@ -6,30 +6,67 @@ module Wrasse where
 
 import Exception
 import GHC
+
+import GhcMonad
+
 import GHC.Paths
 import HscTypes
 import System.Environment
 
-
-import System.Directory (createDirectoryIfMissing)
+import System.Directory (createDirectoryIfMissing, getTemporaryDirectory, removeFile)
 import System.FilePath.Posix (takeDirectory)
+
+import System.IO.Silently
+
+import GHC.IO.Handle
+import System.IO
+
 import GHC.Generics
 import Text.Parsec
+import Bag
+import Outputable
+
+import DynFlags
+import ErrUtils 
+
+
+import GHC.IORef (newIORef, IORef)
+import Data.IORef
 
 data GHCResult
   = GHCResult
-      { payload :: String
+      { 
+        console :: String,
+        payload :: String
       }
       deriving (Show, Generic)
 
 main :: IO ()
 main = do
   args <- getArgs :: IO [String]
-  r <- runGhc (Just libdir) (process "Example" (head args))
+  ref <- liftIO $ newIORef ""
+  r <- runGhc (Just libdir) (process ref "Example" (head args))
+  putStrLn "start output"
   putStrLn r
+  r' <- readIORef ref
+  putStrLn r
+  putStrLn "end output"
 
 ghcFile :: String -> FilePath
 ghcFile = ("generated/" ++) . (++ ".hs")
+
+catchOutput :: IO () -> IO String
+catchOutput f = do
+  tmpd <- getTemporaryDirectory
+  (tmpf, tmph) <- openTempFile tmpd "haskell_stdout"
+  stdout_dup <- hDuplicate stdout
+  hDuplicateTo tmph stdout
+  hClose tmph
+  f
+  hDuplicateTo stdout_dup stdout
+  str <- readFile tmpf
+  removeFile tmpf
+  return str
 
 -- the entrypoint
 hook :: String -> IO GHCResult
@@ -40,9 +77,10 @@ hook f = do
       else (m, ghcFile "Infile", f)
   createDirectoryIfMissing True $ takeDirectory file
   writeFile file s
-  result <- runGhc (Just libdir) (process modName file)
-  return $ GHCResult result
-  -- return $ GHCResult ""
+  ref <- liftIO $ newIORef "" -- make an output IO stream
+  result <- runGhc (Just libdir) (process ref modName file)
+  ref_out <- readIORef ref -- read the output IO stream
+  return $ GHCResult ref_out result
 
 moduleParser :: Parsec String () String
 moduleParser = do
@@ -52,15 +90,31 @@ moduleParser = do
     return res
 
 getModuleName :: String -> String
-getModuleName s = case (parse moduleParser "" s) of
+getModuleName s = case parse moduleParser "" s of
     Left err -> ""
     Right xs -> xs
 
+-- LogAction == DynFlags -> Severity -> SrcSpan -> PprStyle -> MsgDoc -> IO ()
+logHandler :: IORef String -> LogAction
+logHandler ref dflags warn severity srcSpan style msg =
+  case severity of
+     SevError ->  modifyIORef' ref (++ printDoc)
+     SevFatal ->  modifyIORef' ref (++ printDoc)
+     _        ->  return () -- ignore the rest
+  where cntx = initSDocContext dflags style
+        locMsg = mkLocMessage severity srcSpan msg
+        printDoc = show (runSDoc locMsg cntx) 
+
 -- the boilerplate GHC
-process :: String -> FilePath -> Ghc String
-process moduleName path = do
+process :: IORef String -> String -> FilePath -> Ghc String
+process ref moduleName path = do
   dflags <- getSessionDynFlags
-  let dflags' = dflags {hscTarget = HscNothing, ghcLink = NoLink}
+  -- ref <- liftIO $ newIORef ""
+  let dflags' = dflags {
+      hscTarget = HscNothing,
+      ghcLink = NoLink,
+      log_action = logHandler ref
+    }
   setSessionDynFlags dflags'
   let mn = mkModuleName moduleName
   let hsTarketId = TargetFile path Nothing
@@ -75,17 +129,18 @@ process moduleName path = do
   case eitherl of
     Left se -> do
       removeTarget hsTarketId
-      return "Failed at stage: loading"
+      return $ "Failed at stage: loading\n" ++ show se
     Right sf -> do
       modSum <- getModSummary mn
       eitherp <- gtry (parseModule modSum) :: Ghc (Either SourceError ParsedModule)
       case eitherp of
         Left se -> do
-          return "Failed at stage: parsing"
+          return $ "Failed at stage: parsing\n" ++ show se
         Right p -> do
           t <- gtry (typecheckModule p) :: Ghc (Either SourceError TypecheckedModule)
           case t of
             Left se -> do
-              return "Failed at stage: type checking"
+              let j = unlines $ show <$> bagToList (srcErrorMessages se)
+              return $ "Failed at stage: type checking\n" ++ show se
             Right tc -> do
               return "Program looks good"

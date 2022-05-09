@@ -33,6 +33,7 @@ dependencies:
 - filepath
 - directory
 - parsec
+- silently
 
 library:
   source-dirs: src
