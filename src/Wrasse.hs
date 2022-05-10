@@ -23,8 +23,8 @@ import System.IO
 
 import GHC.Generics
 import Text.Parsec
-import Bag
-import Outputable
+import Bag ( bagToList )
+import Outputable ( SDoc(runSDoc), initSDocContext )
 
 import DynFlags
 import ErrUtils 
@@ -54,19 +54,6 @@ main = do
 
 ghcFile :: String -> FilePath
 ghcFile = ("generated/" ++) . (++ ".hs")
-
-catchOutput :: IO () -> IO String
-catchOutput f = do
-  tmpd <- getTemporaryDirectory
-  (tmpf, tmph) <- openTempFile tmpd "haskell_stdout"
-  stdout_dup <- hDuplicate stdout
-  hDuplicateTo tmph stdout
-  hClose tmph
-  f
-  hDuplicateTo stdout_dup stdout
-  str <- readFile tmpf
-  removeFile tmpf
-  return str
 
 -- the entrypoint
 hook :: String -> IO GHCResult

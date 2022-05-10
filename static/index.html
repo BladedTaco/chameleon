@@ -18,6 +18,8 @@
     <link rel="stylesheet" href="./lib/codemirror.css">
     <link rel="stylesheet" href="./main.css">
     <script type="module" src="/index.js"></script>
+    <link rel="stylesheet" href="./lib/xterm.css" />
+    <script src="./lib/xterm.js"></script>
 </head>
 
 <body class="h-screen w-full flex flex-col">
@@ -47,14 +49,17 @@
         </aside>
     </section>
 
+    
+
     <section class="grow h-1/2 w-full split-container">
         <main class="grow h-full overflow-y-auto">
-            <pre id="wrasse" class="w-full wrasse-window code overflow-y-auto">
+            <div id="terminal" class="w-full wrasse-window code overflow-y-auto"></div>
+            <!-- <pre id="wrasse" class="w-full wrasse-window code overflow-y-auto">
                 wrasse window <br>
                 wrasse <br>
                 wrassea <br>
                 a
-            </pre>
+            </pre> -->
         </main>
     </section>
 </body>

@@ -5,6 +5,7 @@
     "react-dom": "./react-dom.js",
     "react-modal": "./react-modal.js",
     "react-redux": "./react-redux.js",
-    "split-grid": "./split-grid.js"
+    "split-grid": "./split-grid.js",
+    "xterm": "./xterm.js"
   }
 }

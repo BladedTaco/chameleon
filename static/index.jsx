@@ -23,10 +23,24 @@ import tasks from './code';
 import Modal from 'react-modal';
 import Split from 'split-grid'
 
+import xterm from 'xterm'
+
+
 // --------------------------------------------------------------
 // --------------------------------------------------------------
 
 import wrasse from './wrasse'
+
+wrasse.terminal.options.convertEol = true
+wrasse.terminal.options.tabStopWidth = 2
+
+let col_num = Math.ceil(window.innerWidth / 4)
+// let row_num = Math.ceil(window.innerHeight / wrasse.terminal.options.lineHeight)
+let row_num = 30
+
+wrasse.terminal.resize(col_num, row_num)
+wrasse.terminal.open(document.getElementById('terminal'));
+wrasse.terminal.write('Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ')
 
 // --------------------------------------------------------------
 // --------------------------------------------------------------

@@ -22,7 +22,15 @@ import {
 import tasks from "./code.js";
 import Modal from "./_snowpack/pkg/react-modal.js";
 import Split from "./_snowpack/pkg/split-grid.js";
+import xterm from "./_snowpack/pkg/xterm.js";
 import wrasse from "./wrasse.js";
+wrasse.terminal.options.convertEol = true;
+wrasse.terminal.options.tabStopWidth = 2;
+let col_num = Math.ceil(window.innerWidth / 4);
+let row_num = 30;
+wrasse.terminal.resize(col_num, row_num);
+wrasse.terminal.open(document.getElementById("terminal"));
+wrasse.terminal.write("Hello from [1;3;31mxterm.js[0m $ ");
 Split({
   columnGutters: [{
     track: 1,

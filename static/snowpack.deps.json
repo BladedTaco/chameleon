@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "xterm": "^4.18.0"
+  },
+  "lock": {
+    "xterm#^4.18.0": "xterm@v4.18.0-ohGiItef60baQWQrAmLK"
+  }
+}

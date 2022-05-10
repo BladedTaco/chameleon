@@ -18,6 +18,7 @@ import Data.Monoid (mconcat)
 import qualified Data.Text.Lazy as T
 import qualified Wrasse hiding (main)
 
+import qualified System.IO.Silently
 main = scotty 5000 (
     ghc >> 
     typecheck >> home >> js >> css >> intro >> consent >> favicon)
