@@ -32,12 +32,13 @@ import ErrUtils
 
 import GHC.IORef (newIORef, IORef)
 import Data.IORef
+import HieAst (mkHieFile)
 
 data GHCResult
   = GHCResult
       { 
         console :: String,
-        payload :: String
+        payload :: [String]
       }
       deriving (Show, Generic)
 
@@ -47,9 +48,9 @@ main = do
   ref <- liftIO $ newIORef ""
   r <- runGhc (Just libdir) (process ref "Example" (head args))
   putStrLn "start output"
-  putStrLn r
+  mconcat $ putStrLn <$> r
   r' <- readIORef ref
-  putStrLn r
+  putStrLn r'
   putStrLn "end output"
 
 ghcFile :: String -> FilePath
@@ -93,7 +94,7 @@ logHandler ref dflags warn severity srcSpan style msg =
         printDoc = show (runSDoc locMsg cntx) 
 
 -- the boilerplate GHC
-process :: IORef String -> String -> FilePath -> Ghc String
+process :: IORef String -> String -> FilePath -> Ghc [String]
 process ref moduleName path = do
   dflags <- getSessionDynFlags
   -- ref <- liftIO $ newIORef ""
@@ -116,18 +117,25 @@ process ref moduleName path = do
   case eitherl of
     Left se -> do
       removeTarget hsTarketId
-      return $ "Failed at stage: loading\n" ++ show se
+      return ["Failed at stage: loading", show se]
     Right sf -> do
       modSum <- getModSummary mn
       eitherp <- gtry (parseModule modSum) :: Ghc (Either SourceError ParsedModule)
       case eitherp of
         Left se -> do
-          return $ "Failed at stage: parsing\n" ++ show se
+          return ["Failed at stage: parsing", show se]
         Right p -> do
           t <- gtry (typecheckModule p) :: Ghc (Either SourceError TypecheckedModule)
           case t of
             Left se -> do
-              let j = unlines $ show <$> bagToList (srcErrorMessages se)
-              return $ "Failed at stage: type checking\n" ++ show se
+              let ParsedModule _ ps imprts anns = p
+              return ["Failed at stage: type checking", show se]
             Right tc -> do
-              return "Program looks good"
+              let TypecheckedModule _ (Just rs) ts modInfo (typeGlobalEnv, moduleDeets) = tc
+              let hieFile = mkHieFile modSum typeGlobalEnv rs
+
+
+              return ["Program looks good"]
+
+
+-- getHieAst modSum env source = mkHieFile modsum env source

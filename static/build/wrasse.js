@@ -27,13 +27,14 @@ let hook = async (response) => {
     ghc_data.console = ghc_data.console.replace("\n", "\r\n")
 
     // term.open(document.getElementById('terminal'));
-    WrasseTerminal.reset()
-    WrasseTerminal.options.disableStdin = true;
-    WrasseTerminal.writeln(JSON.stringify(
-        { ghc: ghc_data, typecheck: data },
-        null,
-        2
-    ))
+
+
+    wrasse.data_0 = ghc_data
+    wrasse.data_1 = data
+    wrasse.data_2 = { ghc: ghc_data, typecheck: data }
+
+
+    switch_terminal(wrasse.data_2)
 
     // still figuring this out, not sure if its needed
     // editor = CodeMirror(document.getElementById('wrasse'), {
@@ -41,6 +42,17 @@ let hook = async (response) => {
     //     mode: null,
     //     value: code,
     // });
+}
+
+
+let switch_terminal = (data) => {
+    WrasseTerminal.reset()
+    WrasseTerminal.options.disableStdin = true;
+    WrasseTerminal.writeln(JSON.stringify(
+        data,
+        null,
+        2
+    ))
 }
 
 let handle_ghc = async (code) => {
@@ -57,7 +69,11 @@ let ghc_hook = async (code) => {
 
 const wrasse = {
     "hook": hook,
-    "terminal": WrasseTerminal
+    "terminal": WrasseTerminal,
+    "data_0" : {},
+    "data_1" : {},
+    "data_2" : {},
+    "switch_terminal" : switch_terminal
 };
 
 

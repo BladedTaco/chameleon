@@ -151,3 +151,8 @@
     font-size:16px;
     text-align:left;
 }
+
+.wrasse-button {
+    z-index:10000;
+    /* position:absolute; */
+}
