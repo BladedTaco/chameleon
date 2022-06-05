@@ -3,3 +3,5 @@
 node_modules
 generated/*
 generated/inFile.hs
+.env
+.envrc

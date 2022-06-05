@@ -1,4 +1,48 @@
-const exampeExtend = (n) => `module Task${n} where
+const intro = n => `module Task${n} where
+
+x y =
+  case y of
+    3 -> '3'
+    False -> '4'
+`
+
+const dropEvery = n => `module Task${n} where
+
+divides x y = y \`mod\` x == 0
+
+
+dropEvery [] _ = []
+dropEvery (x:xs) n = dropEvery' (x:xs) n 1
+
+dropEvery' :: [Int] -> Int -> Int -> [Int]
+dropEvery' [] _ _ = []
+dropEvery' (x:xs) n i =
+    let current =
+            if n \`divides\` i
+                then []
+                else [x]
+    in current : dropEvery' xs n (i+1)
+`
+
+const rotate = n => `module Task${n} where
+-- Rotate a list N places to the left.
+
+rotate1 :: [a] -> [a]
+rotate1 x = tail x ++ [head x]
+
+rotate1Back :: [a] -> [a]
+rotate1Back x = last x : init x
+
+
+rotate :: [a] -> Int -> [a]
+rotate [] _ = []
+rotate x 0 = x
+rotate x y
+  | y > 0 = rotate rotate1 (y-1)
+  | otherwise = rotate rotate1Back x (y+1)
+`
+
+const exampeExtend = n => `module Task${n} where
 
 data Expr = C Int |
             Comb Expr Expr|
@@ -21,8 +65,40 @@ extend v e (Env env)  = Env ([(v,e)] ++ env)
 find v  (Env [])          = error "Unbound variable"
 find v1 (Env ((v2,e):es)) = if v1 == v2 then e else find v1 (Env es)
 
-`
+`;
 
+const weekdayRange = n => `module Task${n} where
+
+toWeekday n =
+  ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] !! n
+
+seperateByComma [] = ""
+seperateByComma [x] = x
+seperateByComma (x : xs) = x ++ "," ++ seperateByComma xs
+
+range xs
+  | length xs < 3 = seperateByComma xs
+  | otherwise = head xs ++ "-" ++ last xs
+
+-- dayRange :: [Int] -> [String]
+dayRange days =
+  let grouped = groupBy' (\\a b -> a + 1 == b) days
+   in map (\\x -> range (toWeekday x)) grouped
+
+-- unlike groupBy which compares any element
+-- to the first,
+-- groupBy' compares any element to the last
+-- element
+groupBy' :: (a -> a -> Bool) -> [a] -> [[a]]
+groupBy' f (x : xs) =
+  let go f (x : xs) ((a : as) : bs) =
+        if f a x
+          then go f xs ((x : a : as) : bs)
+          else go f xs ([x] : (a : as) : bs)
+      go _ [] as = reverse (map reverse as)
+   in go f xs [[x]]
+
+`
 
 const exampleJValue = n => `module Task${n} where
 
@@ -51,10 +127,11 @@ renderPairs [] = ""
 renderPairs [p] = renderPair p
 renderPairs (p:ps) = renderPair p ++ "," ++ renderPairs ps
 
+-- renderArrayValues is not used anywhere, I wonder why
 renderArrayValues [] = ""
 renderArrayValues [v] = renderJValue v
 renderArrayValues (v:vs) = renderJValue v ++ "," ++ renderArrayValues vs
-`
+`;
 
 const exampleNQueens = n => `module Task${n} where
 
@@ -67,12 +144,16 @@ board_permutations size = permutations [0..size - 1]
 --Count the number of valid boards for a specified Chess board size.
 count_boards size = length . nqueens
 
+init' [] = error "init' applied at empty list"
+init' [a, b] = [a]
+init' (a:as) = a : init' as
+
 --Recursively check that prior rows are valid.
 evaluateBoard [] = True
 evaluateBoard rows =
-  evaluateBoard (init rows) &&
+  evaluateBoard (init' rows) &&
   validate
-    (init rows)
+    (init' rows)
     (last (rows - 1))
     (last rows + 1)
     (last rows)
@@ -83,8 +164,8 @@ validate [] _ _ _ = True
 validate rows left right position =
   if last rows == left || last rows == right || last rows == position
   then False
-  else validate (init rows) (left - 1) (right + 1) position
-`
+  else validate (init' rows) (left - 1) (right + 1) position
+`;
 
 const exampleRockPaperScissors = n => `module Task${n} where
 
@@ -107,14 +188,17 @@ combine a b = (fst a + fst b, snd a + snd b)
 
 zip' (a:as) (b:bs) = (a,b) : zip' as bs
 
+foldl1 :: (b -> a -> b) -> b -> [a] -> b
+foldl1  _ b [] = b
+foldl1  f b (a:as) = foldl1 f (f b a) as
 
 pairScore (h1, h2) = computeScore h1 h2
 
 score :: [Hand] -> [Hand] -> Score
 score h1 h2 =
-    foldl combine (0, 0) (pairScore (zip' h1 h2))
+    foldl1 combine (0, 0) (pairScore (zip' h1 h2))
 
-`
+`;
 
 const exampleDateSpan = n => `module Task${n} where
 data Period
@@ -136,7 +220,8 @@ fromGregorian :: Year -> Month -> Int -> Maybe Day
 fromGregorian y m d = Just (Day y m d)
 
 periodAsDateSpan :: Period -> DataSpan
-periodAsDateSpan (WeekPeriod b) =  DateSpan (Just b) (Just (addDays 7 b))
+periodAsDateSpan (WeekPeriod b) =
+  DateSpan (Just b) (Just (addDays 7 b))
 periodAsDateSpan (MonthPeriod y m) =
   let
     (y', m')
@@ -148,16 +233,16 @@ periodAsDateSpan (MonthPeriod y m) =
 
 
 
-`
+`;
 
 const exampleBookTrans = n => `module Task${n} where
 
 standardTrans z =
   case z of
-    "shorttitle" -> []
-    "sorttitle" -> []
-    "indextitle" -> []
-    "indexsorttitle" -> []
+    "shorttitle" -> ["short"]
+    "sorttitle" -> ["sorted"]
+    "indextitle" -> ["index"]
+    "indexsorttitle" -> ["index", "sorted"]
     _ -> z
 
 
@@ -185,15 +270,15 @@ transformKey "mvbook" y z
     standardTrans z
 transformKey _ _ x = [x]
 
-`
+`;
 
-const exampleTake = n =>`module Task${n} where
+const exampleTake = n => `module Task${n} where
 
 -- Takes the first n elements from a list
 take' :: Int -> [Int] -> [Int]
 take' n [] = []
 take' n (x:xs) = x ++ take' (n - 1) xs
-`
+`;
 
 const examplePassword = n => `module Task${n} where
 
@@ -206,17 +291,155 @@ validate password =
     if length password > 10
         then "Great password"
         else "Password too short"
-`
-const examples =
-  [
-      exampleTake,
-      examplePassword,
-      exampleRockPaperScissors,
-      exampleNQueens,
-      exampleDateSpan,
-      exampleBookTrans,
-      exampleJValue,
-      exampeExtend
-  ].map((ex, n) => ex(n + 1))
+`;
 
-export default examples
+
+const insertAt = n => `module Task${n} where
+
+-- Insert an element at a given position into a list.
+
+insertAt el lst n =
+    let accu (i, acc) x =
+            if i == n
+                then (acc ++ [el,x],i+1)
+                else (acc ++ [x],i+1)
+    in fst $ foldl accu ([],1) lst
+
+
+`
+
+const balanceTree = n => `module Task${n} where
+
+data Tree a = Empty | Branch a (Tree a) (Tree a)
+leaf x = Branch x Empty Empty
+
+isBalancedTree Empty = True
+isBalancedTree (Branch _ l r) =
+    (countBranches l - countBranches r) == 1
+    || (countBranches r - countBranches l) == 1
+    && isBalancedTree l && isBalancedTree r
+
+
+countBranches Empty = 0
+countBranches (Branch _ l r) = 1 + l + r
+`
+
+const mostBasic = n => `module Task${n} where
+
+x y =
+  case y of
+    Nothing -> Just 0
+    Just n -> n * 2
+`
+
+const ifelse = n => `module Task${n} where
+u = 0
+v = 0.1
+z = True
+y = if z then u else v
+`
+[[1,2,3,4], [4,5,6,7]] [[1,2,3,4], [5,6,7,8]]
+const compress = n => `module Task${n} where
+--  Eliminate consecutive duplicates of list elements.
+
+compress = foldr skipDups
+
+skipDups x [] = [x]
+skipDups x acc
+   | x == head acc = acc
+   | otherwise = x : acc
+
+expect = [3,4,5,6]
+
+actual = compress [3,3,4,5,6,6]
+
+y :: Bool
+y =  expect == actual
+`
+
+
+const uconandvcon = n => `module Task${n} where
+
+data V = VCon String
+data U = UCon Bool Int (Int, Int)
+
+u :: U -> V
+u (UCon x y j) =
+  if x
+    then j
+    else fst y + snd y
+
+`
+
+const quicksort = n => `module Task${n} where
+
+quick :: [Int] -> [Int]
+quick []   = []
+quick (x:xs)=
+ let littlebigs = split xs
+ in
+   quick (fst littlebigs)
+    ++ [x]
+    ++  quick (snd littlebigs)
+
+split [] _ result = result
+split (x:xs) n (littles, bigs) =
+  if x < n
+    then split xs n (x:littles, bigs)
+    else split xs n (littles, x:bigs)
+`
+
+
+const printXML = n => `module Task${n} where
+
+data XML = XML Position Part
+data Position = Top | Bottom | Left | Right
+
+type Name = String
+
+data Part =
+     Element Name [Attribute] [XML]
+   | Comment String
+   | Text String
+
+getPart :: XML -> Part
+getPart (XML pos part) = part
+
+
+printXML (Element name [attributs] xmls) =
+  "<" ++ name ++ ">"
+  ++ mconcat (map printXML xmls)
+  ++ "</" ++ name ++ ">"
+printXML (Text text) = text
+
+
+`
+
+const euler1 = n => `module Task${n} where
+
+-- Add all the natural numbers below 1000
+-- that are multiples of 3 or 5.
+sum [] = 0
+sum [x] = x
+sum (x:xs) = x + sum xs
+
+check (x:xs)
+  | x \`mod\` 3 == 0 || x \`mod\` 5 == 0 = x + check xs
+  | otherwise = check xs
+
+problem_1 = sum (check [1..999])
+`
+const examples = [
+  euler1,
+  dropEvery,
+  rotate,
+  insertAt,
+  balanceTree,
+  compress,
+  uconandvcon,
+  quicksort,
+  printXML,
+  // weekdayRange,
+].map((ex, n) => ex(n + 1));
+
+export default examples;

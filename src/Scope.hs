@@ -6,13 +6,13 @@ import Data.Bifunctor
 import Data.List
 import Data.Maybe
 import Debug.Trace
+import GHC.Read (paren)
 import Language.Haskell.Exts.Parser
 import Language.Haskell.Exts.Pretty
 import Language.Haskell.Exts.SrcLoc
 import Language.Haskell.Exts.Syntax
 import Nameable
 import System.Environment
-import GHC.Read (paren)
 
 data ScopeType
   = VarScope
@@ -38,7 +38,8 @@ data Scope = Scope
     generate :: [String],
     use :: [String],
     parentScope :: Int,
-    topOrder :: Int
+    topOrder :: Int,
+    constraints :: [(String, String)]
   }
   deriving (Show, Ord)
 
@@ -63,6 +64,10 @@ fn = srcSpanFilename . sp
 noSpan :: SrcSpan
 noSpan = sp noSrcSpan
 
+toSrcSpan :: ScopeRange -> SrcSpan
+toSrcSpan Global = noSpan
+toSrcSpan (Normal x) = x
+
 getId :: State Int Int
 getId = do
   n <- get
@@ -80,7 +85,6 @@ instance HasScopes Module where
     (_, scopes) <- concatUnzip <$> mapM (getScopes Global parentId) decls
     -- return ([], sortScopes parentId scopes)
     return ([], scopes)
-
   getScopes _ _ _ = error "Not a module"
 
 instance HasScopes Decl where
@@ -94,18 +98,17 @@ instance HasScopes Decl where
         typeCon = getTypeCon typehead
         newScope =
           Scope
-          {
-              scopeId = newScopeId,
+            { scopeId = newScopeId,
               scopeType = TypeAliasScope,
               effectiveIn = parent,
               definedIn = normal l,
               generate = [typeCon],
               use = [],
               parentScope = parentId,
-              topOrder = 0
-          }
-    return ([], newScope: [])
-    
+              topOrder = 0,
+              constraints = []
+            }
+    return ([], newScope : [])
   getScopes parent parentId p@(PatBind l pat rhs maybeWheres) = do
     newScopeId <- getId
     (names, scopes) <- getScopes (normal l) newScopeId rhs
@@ -119,7 +122,8 @@ instance HasScopes Decl where
               generate = newNames,
               use = names \\ newNames,
               parentScope = parentId,
-              topOrder = 0
+              topOrder = 0,
+              constraints = []
             }
     return (names, newScope : scopes)
   getScopes parent parentId (FunBind l matches) = do
@@ -138,7 +142,8 @@ instance HasScopes Decl where
               generate = funName,
               use = [],
               parentScope = parentId,
-              topOrder = 0
+              topOrder = 0,
+              constraints = []
             }
     return (names, mergedFunScope : childrenScopes)
   getScopes parent parentId (DataDecl l _ _ declHead conDecls _) = do
@@ -155,7 +160,8 @@ instance HasScopes Decl where
               generate = datacons,
               use = [],
               parentScope = parentId,
-              topOrder = 0
+              topOrder = 0,
+              constraints = []
             }
     if null typeVars
       then return (datacons, [dataconScope])
@@ -170,23 +176,26 @@ instance HasScopes Decl where
                   generate = typeVars,
                   use = [],
                   parentScope = dataConId,
-                  topOrder = 0
+                  topOrder = 0,
+                  constraints = []
                 }
         return (datacons ++ typeVars, [dataconScope, typeVarScope])
   getScopes parent parentId (TypeSig l names typeDef) = do
     newScopeId <- getId
+    let constraints = getConstraints typeDef
     let names = getTypeVars typeDef
         newScope =
-              Scope
-                { scopeId = newScopeId,
-                  scopeType = TypeScope,
-                  effectiveIn = normal l,
-                  definedIn = normal l,
-                  generate = names,
-                  use = [],
-                  parentScope = parentId,
-                  topOrder = 0
-                }
+          Scope
+            { scopeId = newScopeId,
+              scopeType = TypeScope,
+              effectiveIn = normal l,
+              definedIn = normal l,
+              generate = names,
+              use = [],
+              parentScope = parentId,
+              topOrder = 0,
+              constraints = constraints
+            }
     return ([], [newScope])
   getScopes parent parentId (InstDecl l _ instRule maybeInstDcls) = do
     newScopeId <- getId
@@ -201,10 +210,11 @@ instance HasScopes Decl where
               generate = typeVars,
               use = [],
               parentScope = parentId,
-              topOrder = 0
+              topOrder = 0,
+              constraints = []
             }
     (names, declScopes) <- concatUnzip <$> mapM (getScopes (normal l) newScopeId) instDecls
-    return ([], newScope:declScopes)
+    return ([], newScope : declScopes)
   getScopes parent parentId (ClassDecl l _ declHead fundeps maybeclassdecls) = do
     newScopeId <- getId
     let classdecls = concat maybeclassdecls
@@ -218,11 +228,12 @@ instance HasScopes Decl where
               generate = typeVars,
               use = [],
               parentScope = parentId,
-              topOrder = 0
+              topOrder = 0,
+              constraints = []
             }
     (names, methodScopes) <- concatUnzip <$> mapM (getScopes (normal l) newScopeId) classdecls
     let methodScopes' = map (\s -> if scopeType s == TypeScope then s {generate = generate s \\ typeVars} else s) methodScopes
-    return (names, newScope:methodScopes')
+    return (names, newScope : methodScopes')
   getScopes parent parentId _ = undefined
 
 instance HasScopes InstRule where
@@ -254,7 +265,8 @@ instance HasScopes ClassDecl where
               generate = methodNames,
               use = [],
               parentScope = parentId,
-              topOrder = 0
+              topOrder = 0,
+              constraints = []
             }
         typeVarScope =
           Scope
@@ -265,10 +277,11 @@ instance HasScopes ClassDecl where
               generate = typeVars,
               use = [],
               parentScope = parentId,
-              topOrder = 0
+              topOrder = 0,
+              constraints = []
             }
 
-    return ([], [methodScope, typeVarScope])        
+    return ([], [methodScope, typeVarScope])
   getScopes _ _ _ = error "Unsupported types of method declaration"
 
 instance HasScopes DeclHead where
@@ -288,6 +301,7 @@ instance HasScopes Match where
     argScopeId <- getId
     (names, scopes) <- getScopes (normal l) argScopeId rhs
     let argNames = nub $ concatMap patternVarNames pats
+        argSpan = normal . foldr1 combSpanInfo . map ann $ pats
         funName = getName name
         use' = names \\ (funName : argNames)
         funScope =
@@ -299,18 +313,20 @@ instance HasScopes Match where
               generate = [funName],
               use = [],
               parentScope = parentId,
-              topOrder = 0
+              topOrder = 0,
+              constraints = []
             }
         argsScope =
           Scope
             { scopeId = argScopeId,
               scopeType = ArgScope,
               effectiveIn = normal l,
-              definedIn = normal l,
+              definedIn = argSpan,
               generate = argNames,
               use = names \\ (funName : argNames),
               parentScope = funScopeId,
-              topOrder = 0
+              topOrder = 0,
+              constraints = []
             }
     return (names, [funScope, argsScope] ++ scopes)
 
@@ -347,7 +363,8 @@ instance HasScopes Alt where
               generate = newNames,
               use = names \\ newNames,
               parentScope = parentId,
-              topOrder = 0
+              topOrder = 0,
+              constraints = []
             }
     return (names, newScope : scopes)
 
@@ -392,7 +409,8 @@ instance HasScopes Exp where
               generate = gen',
               use = use',
               parentScope = parentId,
-              topOrder = 0
+              topOrder = 0,
+              constraints = []
             }
     return (names, newScope : scopes)
   getScopes parent parentId (Let l binds e) = do
@@ -411,7 +429,8 @@ instance HasScopes Exp where
               generate = [],
               use = use',
               parentScope = parentId,
-              topOrder = 0
+              topOrder = 0,
+              constraints = []
             }
     return (names1 ++ names2, newScope : scopes1 ++ scopes2)
   getScopes parent parentId (If l e1 e2 e3) = concatUnzip <$> mapM (getScopes (normal l) parentId) [e1, e2, e3]
@@ -528,7 +547,7 @@ instance RangeLike SrcSpan where
             | endL1 < endL2 = True
             | endL1 == endL2 && endC1 <= endC2 = True
             | otherwise = False
-      in sameFile && startAfter && endBefore
+       in sameFile && startAfter && endBefore
 
 instance RangeLike ScopeRange where
   within _ Global = True
@@ -546,7 +565,7 @@ allNames = concatMap (\scp -> map (uniqueName (scopeId scp)) (generate scp))
 smallestDefiningScope :: [Scope] -> SrcSpanInfo -> Scope
 smallestDefiningScope allScopes srcspaninfo =
   let scrrange = normal srcspaninfo
-      allContainingScopes = filter (\s -> scrrange `within` definedIn s ) allScopes
+      allContainingScopes = filter (\s -> scrrange `within` definedIn s) allScopes
       smallest =
         if null allContainingScopes
           then error $ "No bounding scope for : " ++ show srcspaninfo
@@ -559,50 +578,55 @@ smallestDefiningScope allScopes srcspaninfo =
               )
               (head allContainingScopes)
               allContainingScopes
-  in smallest
+   in smallest
 
 smallestBoundingScope :: [Scope] -> Maybe ScopeType -> String -> SrcSpan -> Maybe Scope
 smallestBoundingScope scopes scpType v sp =
-  let isContaining v sp Nothing (Scope scpId _ eff _ gen _ _ _) =
+  let isContaining v sp Nothing (Scope scpId _ eff _ gen _ _ _ _) =
         v `elem` gen && sp `within` eff
-      isContaining v sp (Just t) (Scope scpId scpTy eff _ gen _ _ _) =
+      isContaining v sp (Just t) (Scope scpId scpTy eff _ gen _ _ _ _) =
         v `elem` gen && t == scpTy && sp `within` eff
       boundingScopes = filter (isContaining v (Normal sp) scpType) scopes
       smallest =
         if null boundingScopes
           then Nothing
           else
-            Just $ foldr
-                      ( \scp1 scp2 ->
-                          if effectiveIn scp1 `within` effectiveIn scp2
-                            then scp1
-                            else scp2
-                      )
-                      (head boundingScopes)
-                      boundingScopes
+            Just $
+              foldr
+                ( \scp1 scp2 ->
+                    if effectiveIn scp1 `within` effectiveIn scp2
+                      then scp1
+                      else scp2
+                )
+                (head boundingScopes)
+                boundingScopes
    in smallest
 
 uniqueNameFromBinding :: [Scope] -> Maybe ScopeType -> String -> SrcSpan -> String
 uniqueNameFromBinding scopes scpType v sp =
   uniqueName (scopeId . fromJust $ smallestBoundingScope scopes scpType v sp) v
 
+findScopeByName :: [Scope] -> String -> Maybe Scope
+findScopeByName scopes name =
+  let scpId = (read . reverse . takeWhile (/= '.') . reverse $ name) :: Int
+  in find ((== scpId) . scopeId) scopes
+
 parentScopesUntil :: Scope -> [Scope] -> Int -> [Scope]
 parentScopesUntil scp scopes n =
   let go :: [Scope] -> [Scope] -> Int -> [Scope]
       go allScopes [] _ = error "No initial scope"
       go allScopes (s : ss) m
-        | parentScope s <= m =  s : ss
-        | Just s' <- find ((== parentScope s) . scopeId) allScopes =  go allScopes ([s', s] ++ ss)  m
+        | parentScope s <= m = s : ss
+        | Just s' <- find ((== parentScope s) . scopeId) allScopes = go allScopes ([s', s] ++ ss) m
         | otherwise = error ("No parent scope: " ++ show s)
    in reverse (go scopes [scp] n)
 
-sortScopes :: Int ->  [Scope] -> [Scope]
+sortScopes :: Int -> [Scope] -> [Scope]
 sortScopes start scopes =
   let top = topSort (scopesToNodes scopes) (scopesToEdges start scopes)
-  in case top of
-      Nothing -> error "Scope ordering failed"
-      Just sorted -> map (\s  -> s {topOrder = fromJust (elemIndex (scopeId s) sorted) } ) scopes
-
+   in case top of
+        Nothing -> error "Scope ordering failed"
+        Just sorted -> map (\s -> s {topOrder = fromJust (elemIndex (scopeId s) sorted)}) scopes
 
 scopesToNodes :: [Scope] -> [Int]
 scopesToNodes = map scopeId
@@ -620,8 +644,7 @@ scopesToEdges start scopes =
             searchables = nub (siblings ++ global)
             dependencyScopes = mapMaybe (\dep -> find ((dep `elem`) . generate) searchables) dependencies
             dependencyEdges = map (\scp -> (scopeId s, scopeId scp)) dependencyScopes
-         in
-            -- trace (
+         in -- trace (
             --     "\nFor scope: " ++ show s ++
             --     "\nParents" ++ show (scopesIds parents) ++
             --     "\nSearchables" ++ show (scopesIds searchables) ++
@@ -630,6 +653,19 @@ scopesToEdges start scopes =
             -- parentEdges ++
             dependencyEdges ++ go allScopes ss
    in nub (go scopes scopes)
+
+getConstraints :: Type a -> [(String, String)]
+getConstraints (TyForall _ _ maybecontext _) =
+  case maybecontext of
+    Just (CxSingle _ assert) -> go assert
+    Just (CxTuple _ asserts) -> concatMap go asserts
+    _ -> []
+  where
+    go :: Asst a -> [(String, String)]
+    go (TypeA _ (TyApp _ (TyCon _ con) (TyVar _ v))) = [(getName v, getName con)]
+    go (ParenA _ asst) = go asst
+    go _ = []
+getConstraints _ = []
 
 processFile :: String -> IO ()
 processFile filepath = do

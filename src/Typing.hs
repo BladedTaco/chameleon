@@ -1,12 +1,13 @@
 module Typing where
 
-import Constraint hiding (main, processFile)
+import Constraint
 import Control.Lens hiding (List)
 import Control.Monad
 import Control.Monad.Trans.State.Lazy
 import Data.List
 import Data.Maybe
 import Data.Set (Set)
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Debug.Trace
 import FieldOrdering hiding (main, processFile)
@@ -19,6 +20,8 @@ import Language.Haskell.Exts.Syntax
 import Nameable
 import Scope hiding (main, processFile)
 import System.Environment
+import qualified Kanren as KR
+import Agda.Auto.Syntax (sub)
 
 data LabeledGoal = Label
   { goalNum :: Int,
@@ -63,7 +66,8 @@ varByNameWithScope scpType namable = do
       return Nothing
     Just scp' -> do
       let uniqueVarName = uniqueName (scopeId scp') (getName namable)
-      return $ Just (var uniqueVarName)
+      let requirements = map (view _2) . filter ((== getName namable) . view _1) $ constraints scp'
+      return $ Just (KR.Var uniqueVarName (map Need requirements))
 
 varsByNamesWithScope :: (Nameable a, Annotated a) => Maybe ScopeType -> [a SrcSpanInfo] -> SolveState [Maybe Term]
 varsByNamesWithScope scpType namables = mapM (varByNameWithScope scpType) namables
@@ -134,7 +138,7 @@ instance MatchTerm Decl where
     -- let gInstance = hasInstance constraints typeClassName vTypeVar
     -- 3. (Optional) a `haso` X'
 
-    return $ gClassDecls
+    return gClassDecls
   matchTerm _ (InstDecl l _ _ maybeInstaDecls) = return []
   matchTerm _ node = error (show node ++ " is not supported")
 
@@ -166,8 +170,8 @@ instance MatchTerm DeclHead where
     case mbTypeVar of
       Nothing -> return []
       Just vTypeVar -> do
-        let label = Label 0 (term, Pair vHead vTypeVar) [] "Annotated" (sl node)
-        return (label (term === Pair vHead vTypeVar) : gHead)
+        let label = Label 0 (term, pair vHead vTypeVar) [] "Annotated" (sl node)
+        return (label (term === pair vHead vTypeVar) : gHead)
 
 instance MatchTerm QualConDecl where
   matchTerm term (QualConDecl _ _ _ conDecl) = matchTerm term conDecl
@@ -274,14 +278,14 @@ instance MatchTerm Match where
     mbFunVar <- varByName name
     case mbFunVar of
       Nothing -> return []
-      Just funVar -> do
+      Just funVar ->  do
         gWheres <- concat <$> mapM (matchTerm Unit) (maybeToList maybeWheres)
         args <- freshVarN (length pats)
         ret <- freshVar
         gArgs <- concat <$> zipWithM matchTerm args pats
         gReturn <- matchTerm ret rhs
 
-        let label = Label 0 (funVar, funOf (args ++ [ret])) [] ("Defined") (sl name)
+        let label = Label 0 (funVar, funOf (args ++ [ret])) [] "Defined" (sl name)
         let gApp = [label (funVar === funOf (args ++ [ret]))]
         return $ gArgs ++ gReturn ++ gApp
   matchTerm term (InfixMatch l pat name pats rhs maybeWheres) = matchTerm term (Match l name (pat : pats) rhs maybeWheres)
@@ -379,7 +383,7 @@ instance MatchTerm Exp where
         --       Just (_, consFun) -> consFun
 
         f <- freshVar
-        let label = Label 0 (vOp, funOf [v1, v2, term]) [(vOp, f)] ("Applied") (sl e2)
+        let label = Label 0 (vOp, funOf [v1, v2, term]) [(vOp, f)] ("Applied") (sl node)
         let g =
               label
                 ( conjN
@@ -549,10 +553,10 @@ instance MatchTerm FieldUpdate where
 
 instance MatchTerm Pat where
   matchTerm term (PApp _ node@(UnQual _ (Ident _ "True")) []) = do
-    let label = Label 0 (term, atom "Bool") [] "Literal" (sl node)
+    let label = Label 0 (term, atom "Bool") [] "Matched" (sl node)
     return [label (term === atom "Bool")]
   matchTerm term (PApp _ node@(UnQual _ (Ident _ "False")) []) = do
-    let label = Label 0 (term, atom "Bool") [] "Literal" (sl node)
+    let label = Label 0 (term, atom "Bool") [] "Matched" (sl node)
     return [label (term === atom "Bool")]
   matchTerm term (PInfixApp l pat1 name pat2) = matchTerm term (PApp l name [pat1, pat2])
   matchTerm term node@(PVar (SrcSpanInfo sp _) name) = do
@@ -562,7 +566,9 @@ instance MatchTerm Pat where
       Just varTerm -> do
         let label = Label 0 (varTerm, term) [] "Matched" (sl node)
         return [label (varTerm === term)]
-  matchTerm term (PLit _ _ literal) = matchTerm term literal
+  matchTerm term (PLit _ _ literal) = do
+    goals <- matchTerm term literal
+    return $ map (\g -> g {reason = "Matched"}) goals
   matchTerm term node@(PNPlusK (SrcSpanInfo sp _) name _) = do
     mbV <- varByName name
     case mbV of
@@ -573,7 +579,6 @@ instance MatchTerm Pat where
   matchTerm term node@(PTuple _ _ pats) = do
     args <- freshVarN (length pats)
     tArgs <- concat <$> zipWithM matchTerm args pats
-
     let label = Label 0 (term, tupOf args) [] "Matched" (sl node)
     return $ label (term === tupOf args) : tArgs
   matchTerm term node@(PList l pats) = do
@@ -618,14 +623,14 @@ instance MatchTerm Literal where
     let label = Label 0 (term, atom "Char") [] "Literal" (sl node)
     return [label (term === atom "Char")]
   matchTerm term node@String {} = do
-    let label = Label 0 (term, Pair (atom "List") (atom "Char")) [] "Literal" (sl node)
-    return [label (term === Pair (atom "List") (atom "Char"))]
+    let label = Label 0 (term, pair (atom "List") (atom "Char")) [] "Literal" (sl node)
+    return [label (term === pair (atom "List") (atom "Char"))]
   matchTerm term node@Int {} = do
     let label = Label 0 (term, atom "Int") [] "Literal" (sl node)
     return [label (term === atom "Int")]
   matchTerm term node@Frac {} = do
-    let label = Label 0 (term, atom "Frac") [] "Literal" (sl node)
-    return [label (term === atom "Frac")]
+    let label = Label 0 (term, atom "Fraction") [] "Literal" (sl node)
+    return [label (term === atom "Fraction")]
   matchTerm _ _ = undefined
 
 processFile :: String -> IO ()
@@ -639,11 +644,19 @@ processFile filepath = do
           filedOrderings = getFieldOrdering hModule
           names = allNames scopes
           goals = sortOn goalNum $ evalState (matchTerm Unit hModule) (0, scopes, filedOrderings, [])
+          krenstate = runGoalNWithState emptyS 1 (conjN (map unlabel goals))
           res = run1 names (conjN (map unlabel goals))
-      mapM_ print scopes
-      mapM_ print goals
+      -- mapM_ print scopes
+      -- mapM_ print goals
       print names
+      putStrLn "\nResult:"
       print res
+      putStrLn "\nKanren State:"
+      print krenstate
+      putStrLn "\n\n"
+      let newSubs = deriveRequirement . fst . head $ krenstate
+      print newSubs
+
     ParseFailed srcLoc message ->
       putStrLn $
         unlines

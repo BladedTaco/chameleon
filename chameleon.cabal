@@ -25,10 +25,10 @@ library
       Builtin
       Constraint
       FieldOrdering
+      Graph
       Instance
       JsonInstance
       Kanren
-      Lib
       Nameable
       Reasoning
       Run
@@ -42,7 +42,6 @@ library
   build-depends:
       Agda
     , aeson
-    , array
     , base
     , bytestring
     , containers
@@ -71,7 +70,6 @@ executable chameleon
   build-depends:
       Agda
     , aeson
-    , array
     , base
     , bytestring
     , chameleon

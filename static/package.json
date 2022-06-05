@@ -4,18 +4,27 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "snowpack dev",
-    "build": "snowpack build",
-    "dev": "snowpack build --watch"
+    "build": "esbuild index.jsx --bundle --sourcemap --outfile=build/out.js",
+    "dev": "esbuild index.jsx --bundle --sourcemap --outfile=build/out.js --watch"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@analytics/mixpanel": "^0.4.0",
+    "@devbookhq/splitter": "^1.3.2",
+    "@floating-ui/react-dom": "^0.7.1",
+    "@floating-ui/react-dom-interactions": "^0.6.1",
+    "@heroicons/react": "^1.0.6",
+    "@openreplay/tracker": "^3.5.4",
     "@reduxjs/toolkit": "^1.8.0",
+    "analytics": "^0.8.1",
+    "esbuild": "^0.14.29",
+    "nanoid": "^3.3.2",
+    "ramda": "^0.28.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "react-modal": "^3.14.4",
+    "react-modal": "^3.15.1",
     "react-redux": "7.2.5",
     "split-grid": "^1.0.11",
     "xterm": "^4.18.0"
