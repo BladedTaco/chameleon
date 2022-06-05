@@ -42,6 +42,7 @@ library
   build-depends:
       Agda
     , aeson
+    , array
     , base
     , bytestring
     , containers
@@ -70,6 +71,7 @@ executable chameleon
   build-depends:
       Agda
     , aeson
+    , array
     , base
     , bytestring
     , chameleon

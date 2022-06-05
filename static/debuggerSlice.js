@@ -10,6 +10,7 @@ import {
   convertLocation,
   getRandomInt
 } from './util';
+import wrasse from './wrasse';
 
 
 
@@ -47,6 +48,12 @@ export let typeCheckThunk = createAsyncThunk(
       body: text,
     });
     let data = response.json();
+
+    // ------------------------------------------------
+    // WRASSE HOOK
+    wrasse.hook({ code: text, response: data })
+    // ------------------------------------------------
+
     return data;
   },
 );

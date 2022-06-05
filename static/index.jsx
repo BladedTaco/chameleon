@@ -22,54 +22,6 @@ import Editor from "./Editor"
 import Debugger from "./Debugger"
 import MenuBar from "./MenuBar"
 import Modal from 'react-modal';
-import Split from 'split-grid'
-
-import xterm from 'xterm'
-
-
-// --------------------------------------------------------------
-// --------------------------------------------------------------
-
-import wrasse from './wrasse'
-
-wrasse.terminal.options.convertEol = true
-wrasse.terminal.options.tabStopWidth = 2
-
-let col_num = Math.ceil(window.innerWidth / 4)
-// let row_num = Math.ceil(window.innerHeight / wrasse.terminal.options.lineHeight)
-let row_num = 22 //TODO: make this dynamic
-
-wrasse.terminal.resize(col_num, row_num)
-wrasse.terminal.open(document.getElementById('terminal'));
-wrasse.terminal.write('Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ')
-
-document.getElementById('wrasse_0').addEventListener('click', _ => {
-  wrasse.switch_terminal(wrasse.data_0)
-});
-document.getElementById('wrasse_1').addEventListener('click', _ => {
-  wrasse.switch_terminal(wrasse.data_1)
-});
-document.getElementById('wrasse_2').addEventListener('click', _ => {
-  wrasse.switch_terminal(wrasse.data_2)
-});
-
-// --------------------------------------------------------------
-// --------------------------------------------------------------
-
-Split({
-  columnGutters: [{
-    track: 1,
-    element: document.querySelector('#gutter'),
-  }],
-})
-
-Modal.setAppElement('#debugger');
-
-let currentTask = 0;
-let currentRound = 1;
-let editor = initializeEditor(tasks[currentTask]);
-store.dispatch(switchTaskThunk(currentTask));
-
   
 Modal.setAppElement('#react-root');
 store.dispatch(switchTaskThunk(0));
@@ -99,17 +51,6 @@ window.addEventListener('keydown', (event) => {
   }
   if (state.debugger.mode === editorModes.normal) {
 
-document.getElementById('save').addEventListener('click', _ => {
-  let text = editor.getValue();
-  // store.dispatch(typeCheckThunk(text));
-  // --------------------------------------------------------------
-  // --------------------------------------------------------------
-  // wrasse.hook("he");
-  wrasse.hook(store.dispatch(typeCheckThunk(text)));
-  
-  // --------------------------------------------------------------
-  // --------------------------------------------------------------
-});
 
     if (keyName === '1') {
       store.dispatch(showOnlyMark1())
