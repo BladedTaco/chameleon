@@ -27,7 +27,7 @@ import wrasse from "./wrasse.js";
 wrasse.terminal.options.convertEol = true;
 wrasse.terminal.options.tabStopWidth = 2;
 let col_num = Math.ceil(window.innerWidth / 4);
-let row_num = 25;
+let row_num = 22;
 wrasse.terminal.resize(col_num, row_num);
 wrasse.terminal.open(document.getElementById("terminal"));
 wrasse.terminal.write("Hello from [1;3;31mxterm.js[0m $ ");

@@ -51,6 +51,7 @@ library
     , ghc
     , ghc-paths
     , haskell-src-exts
+    , hlint
     , lens
     , parsec
     , scotty
@@ -80,6 +81,7 @@ executable chameleon
     , ghc
     , ghc-paths
     , haskell-src-exts
+    , hlint
     , lens
     , parsec
     , scotty

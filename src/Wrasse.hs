@@ -1,8 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
 {-# LANGUAGE DeriveGeneric #-}
 
-module Wrasse where
+module Wrasse (hook, GHCResult) where
 
 import Exception
 import GHC
@@ -24,29 +23,34 @@ import System.IO
 import GHC.Generics
 import Text.Parsec
 import Bag ( bagToList )
-import Outputable ( SDoc(runSDoc), initSDocContext )
+import Outputable ( SDoc(runSDoc), initSDocContext, Outputable (ppr), showSDocUnsafe )
 
 import DynFlags
-import ErrUtils 
+import ErrUtils
 
 
 import GHC.IORef (newIORef, IORef)
 import Data.IORef
 import HieAst (mkHieFile)
 
+import Language.Haskell.Exts.Lexer
+
+import Language.Haskell.HLint
+
 data GHCResult
   = GHCResult
-      { 
-        console :: String,
+      {
+        console :: [String],
         payload :: [String]
       }
       deriving (Show, Generic)
+
 
 main :: IO ()
 main = do
   args <- getArgs :: IO [String]
   ref <- liftIO $ newIORef ""
-  r <- runGhc (Just libdir) (process ref "Example" (head args))
+  r <- runGhc (Just libdir) (processGHC ref "Example" (head args))
   putStrLn "start output"
   mconcat $ putStrLn <$> r
   r' <- readIORef ref
@@ -65,10 +69,31 @@ hook f = do
       else (m, ghcFile "Infile", f)
   createDirectoryIfMissing True $ takeDirectory file
   writeFile file s
+  (GHCResult a1 b1) <- hlintHook file
+  (GHCResult a2 b2) <- ghcHook modName file
+  return $ GHCResult a2 $ b2 ++ a1 ++ b1
+
+-- runs GHC
+ghcHook :: String -> FilePath -> IO GHCResult
+ghcHook modName file = do
   ref <- liftIO $ newIORef "" -- make an output IO stream
-  result <- runGhc (Just libdir) (process ref modName file)
+  result <- runGhc (Just libdir) (processGHC ref modName file)
   ref_out <- readIORef ref -- read the output IO stream
-  return $ GHCResult ref_out result
+  return $ GHCResult (("ghc console: " ++) <$> lines ref_out) (fmap ("ghc result: " ++) result)
+
+-- runs HLint
+hlintHook ::  FilePath -> IO GHCResult
+hlintHook file = do
+  ref <- liftIO $ newIORef "" -- make an output IO stream
+  -- parse module
+  let pflags = defaultParseFlags
+  result <- parseModuleEx pflags file Nothing
+  let out = processHLint result
+  -- hlint
+  ideas <- hlint ["generated", "--quiet"]
+  ref_out <- readIORef ref -- read the output IO stream
+  return $ GHCResult (("hlint console: " ++) <$> lines ref_out) $ fmap ("hlint out: " ++) out ++ fmap (("idea: " ++) . show) ideas
+
 
 moduleParser :: Parsec String () String
 moduleParser = do
@@ -91,17 +116,21 @@ logHandler ref dflags warn severity srcSpan style msg =
      _        ->  return () -- ignore the rest
   where cntx = initSDocContext dflags style
         locMsg = mkLocMessage severity srcSpan msg
-        printDoc = show (runSDoc locMsg cntx) 
+        printDoc = show (runSDoc locMsg cntx)
 
 -- the boilerplate GHC
-process :: IORef String -> String -> FilePath -> Ghc [String]
-process ref moduleName path = do
+processGHC :: IORef String -> String -> FilePath -> Ghc [String]
+processGHC ref moduleName path = do
   dflags <- getSessionDynFlags
   -- ref <- liftIO $ newIORef ""
   let dflags' = dflags {
       hscTarget = HscNothing,
       ghcLink = NoLink,
-      log_action = logHandler ref
+      log_action = logHandler ref,
+      maxValidHoleFits = Nothing,
+      refLevelHoleFits = Nothing,
+      maxRefHoleFits = Nothing,
+      maxRelevantBinds = Nothing
     }
   setSessionDynFlags dflags'
   let mn = mkModuleName moduleName
@@ -129,7 +158,7 @@ process ref moduleName path = do
           case t of
             Left se -> do
               let ParsedModule _ ps imprts anns = p
-              return ["Failed at stage: type checking", show se]
+              return ["Failed at stage: type checking", show se, showSDocUnsafe $ ppr ps]
             Right tc -> do
               let TypecheckedModule _ (Just rs) ts modInfo (typeGlobalEnv, moduleDeets) = tc
               let hieFile = mkHieFile modSum typeGlobalEnv rs
@@ -138,4 +167,17 @@ process ref moduleName path = do
               return ["Program looks good"]
 
 
+-- the boilerplate GHC
+processHLint :: Either Language.Haskell.HLint.ParseError ModuleEx -> [String]
+processHLint e = do
+
+  case e of
+    Left pe -> ["Failed compiling"]
+    Right me -> ["COMPILED SUCCESSFULLY"]
+
+
 -- getHieAst modSum env source = mkHieFile modsum env source
+
+
+cleanGHCOutput :: String -> String
+cleanGHCOutput = undefined

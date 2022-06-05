@@ -24,7 +24,7 @@ let hook = async (response) => {
     //     2
     // )
     
-    ghc_data.console = ghc_data.console.replace("\n", "\r\n")
+    // ghc_data.console = ghc_data.console.replace("\n", "\r\n")
 
     // term.open(document.getElementById('terminal'));
 
@@ -34,7 +34,7 @@ let hook = async (response) => {
     wrasse.data_2 = { ghc: ghc_data, typecheck: data }
 
 
-    switch_terminal(wrasse.data_2)
+    switch_terminal(wrasse.data_0)
 
     // still figuring this out, not sure if its needed
     // editor = CodeMirror(document.getElementById('wrasse'), {

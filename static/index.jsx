@@ -36,7 +36,7 @@ wrasse.terminal.options.tabStopWidth = 2
 
 let col_num = Math.ceil(window.innerWidth / 4)
 // let row_num = Math.ceil(window.innerHeight / wrasse.terminal.options.lineHeight)
-let row_num = 25
+let row_num = 22 //TODO: make this dynamic
 
 wrasse.terminal.resize(col_num, row_num)
 wrasse.terminal.open(document.getElementById('terminal'));
