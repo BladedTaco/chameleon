@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module Wrasse (hook, GHCResult) where
+module Wrasse.Hook (hook) where
 
 import Exception
 import GHC
@@ -37,14 +37,11 @@ import Language.Haskell.Exts.Lexer
 
 import Language.Haskell.HLint
 
-data GHCResult
-  = GHCResult
-      {
-        console :: [String],
-        payload :: [String]
-      }
-      deriving (Show, Generic)
+import Wrasse.Types
+import Data.Tree (Tree(..), drawTree)
+import Data.List (intercalate)
 
+import Wrasse.Tree (multiLevel)
 
 main :: IO ()
 main = do
@@ -61,7 +58,7 @@ ghcFile :: String -> FilePath
 ghcFile = ("generated/" ++) . (++ ".hs")
 
 -- the entrypoint
-hook :: String -> IO GHCResult
+hook :: String -> IO WrasseResult
 hook f = do
   let m = getModuleName f
   let (modName, file, s) = if m == ""
@@ -69,20 +66,30 @@ hook f = do
       else (m, ghcFile "Infile", f)
   createDirectoryIfMissing True $ takeDirectory file
   writeFile file s
-  (GHCResult a1 b1) <- hlintHook file
-  (GHCResult a2 b2) <- ghcHook modName file
-  return $ GHCResult a2 $ b2 ++ a1 ++ b1
+  tools <- toolHook modName file
+  return $ WrasseResult tools "" "" "" (multiLevel tools) (lines $ Data.Tree.drawTree $ filter (/= '\n') <$> multiLevel tools)
+
+--
+toolHook :: String -> FilePath -> IO [(String, [String], [String])]
+toolHook modName file = do
+  ghc <- ghcHook modName file
+  hlint <- hlintHook file
+  return [
+    ("GHC", fst ghc, snd ghc),
+    ("HLint", fst hlint, snd hlint)
+    ]
 
 -- runs GHC
-ghcHook :: String -> FilePath -> IO GHCResult
+ghcHook :: String -> FilePath -> IO ([String], [String])
 ghcHook modName file = do
   ref <- liftIO $ newIORef "" -- make an output IO stream
   result <- runGhc (Just libdir) (processGHC ref modName file)
   ref_out <- readIORef ref -- read the output IO stream
-  return $ GHCResult (("ghc console: " ++) <$> lines ref_out) (fmap ("ghc result: " ++) result)
+  -- return $ GHCResult (("ghc console: " ++) <$> lines ref_out) (fmap ("ghc result: " ++) result)
+  return (lines ref_out, intercalate ["", "\n", ""] $ lines <$> result)
 
 -- runs HLint
-hlintHook ::  FilePath -> IO GHCResult
+hlintHook ::  FilePath -> IO  ([String], [String])
 hlintHook file = do
   ref <- liftIO $ newIORef "" -- make an output IO stream
   -- parse module
@@ -92,7 +99,8 @@ hlintHook file = do
   -- hlint
   ideas <- hlint ["generated", "--quiet"]
   ref_out <- readIORef ref -- read the output IO stream
-  return $ GHCResult (("hlint console: " ++) <$> lines ref_out) $ fmap ("hlint out: " ++) out ++ fmap (("idea: " ++) . show) ideas
+  -- return $ GHCResult (("hlint console: " ++) <$> lines ref_out) $ fmap ("hlint out: " ++) out ++ fmap (("idea: " ++) . show) ideas
+  return (lines ref_out, out ++ [""] ++ (show <$> ideas))
 
 
 moduleParser :: Parsec String () String

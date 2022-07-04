@@ -27,7 +27,7 @@ import qualified Data.ByteString.Lazy.Char8 as BS
 import Data.Monoid (mconcat)
 import Control.Monad.IO.Class
 import qualified Data.Text.Lazy as T
-import qualified Wrasse hiding (main)
+import qualified Wrasse.Hook as Wrasse hiding (main)
 
 
 import JsonInstance

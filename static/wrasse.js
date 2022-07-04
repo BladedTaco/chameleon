@@ -26,6 +26,7 @@ let wrasse_setup = () => {
 
     initialized = true;
 
+    // ignore all keypresses
     wrasse.terminal.attachCustomKeyEventHandler((_) => false);
     // wrasse.terminal.modes.mouseTrackingMode
     wrasse.terminal.modes.wraparoundMode = true;
@@ -50,11 +51,20 @@ let wrasse_setup = () => {
     });
 
 
+    // wrasse.terminal.onRender(({start, end}) => {
+    //     console.log(start, end)
+    //     if (start > 0) {
+    //         wrasse.terminal.scrollToTop()
+    //     }
+    // });
+
     // Make the terminal's size and geometry fit the size of #terminal-container
     fitAddon.fit();
 }
 
 let hook = async ({code, response}) => {
+    let data = await response;
+
     console.log('back-end call')
     if (!initialized) {
         wrasse.setup()
@@ -64,8 +74,8 @@ let hook = async ({code, response}) => {
     let ghc_data = await handle_ghc(code);
 
     wrasse.data_0 = ghc_data
-    wrasse.data_1 = response
-    wrasse.data_2 = { ghc: ghc_data, typecheck: response }
+    wrasse.data_1 = data
+    wrasse.data_2 = { ghc: ghc_data, chameleon: data }
 
     switch_terminal(wrasse.data_0)
 }

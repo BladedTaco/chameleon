@@ -34,7 +34,13 @@ library
       Run
       Scope
       Typing
-      Wrasse
+      Wrasse.Cleanup
+      Wrasse.Fixes
+      Wrasse.Hook
+      Wrasse.Tree
+      Wrasse.TypeInfo
+      Wrasse.Types
+      Wrasse.Util
   other-modules:
       Paths_chameleon
   hs-source-dirs:
@@ -56,6 +62,7 @@ library
     , parsec
     , scotty
     , silently
+    , split
     , string-qq
     , text
     , transformers
@@ -86,6 +93,7 @@ executable chameleon
     , parsec
     , scotty
     , silently
+    , split
     , string-qq
     , text
     , transformers

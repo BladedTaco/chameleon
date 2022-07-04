@@ -34672,7 +34672,6 @@ problem_1 = sum (check [1..999])
     initialized = true;
     wrasse.terminal.attachCustomKeyEventHandler((_3) => false);
     wrasse.terminal.modes.wraparoundMode = true;
-    wrasse.terminal.modes.wraparoundMode = false;
     wrasse.terminal.write("Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ");
     html.buttons[0].addEventListener("click", (_3) => {
       wrasse.switch_terminal(wrasse.data_0);
@@ -34689,14 +34688,15 @@ problem_1 = sum (check [1..999])
     fitAddon.fit();
   };
   var hook = async ({ code, response }) => {
+    let data = await response;
     console.log("back-end call");
     if (!initialized) {
       wrasse.setup();
     }
     let ghc_data = await handle_ghc(code);
     wrasse.data_0 = ghc_data;
-    wrasse.data_1 = response;
-    wrasse.data_2 = { ghc: ghc_data, typecheck: response };
+    wrasse.data_1 = data;
+    wrasse.data_2 = { ghc: ghc_data, chameleon: data };
     switch_terminal(wrasse.data_0);
   };
   var switch_terminal = (data) => {

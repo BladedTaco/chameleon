@@ -36,6 +36,7 @@ dependencies:
 - silently
 - hlint
 - ghc
+- split
 
 library:
   source-dirs: src

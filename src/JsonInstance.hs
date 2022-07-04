@@ -6,7 +6,7 @@ import Language.Haskell.Exts.SrcLoc
 import Reasoning
 import Run
 
-import Wrasse
+import Wrasse.Types
 
 instance ToJSON TypeForm
 
@@ -24,4 +24,6 @@ instance ToJSON ChResult
 
 instance ToJSON Affinity
 
+
 instance ToJSON GHCResult
+instance ToJSON WrasseResult
