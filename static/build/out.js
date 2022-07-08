@@ -34754,9 +34754,13 @@ problem_1 = sum (check [1..999])
     return ESC + row + "d";
   };
   ansiEscapes.cursorPos = (row, col) => {
-    return ESC + row + ";" + col + "d";
+    return ESC + row + SEP + col + "d";
   };
-  var ansiEscapes_default = ansiEscapes;
+  ansiEscapes.colouredText = (fg_col, bg_col, text) => {
+    let fg = { r: 0, g: 0, b: 0, ...fg_col };
+    let bg = { r: 0, g: 0, b: 0, ...bg_col };
+    return ESC + "38;2" + fg.r + SEP + fg.g + SEP + fg.b + "m" + ESC + "48;2" + bg.r + SEP + bg.g + SEP + bg.b + "m" + text + ESC + "39m" + ESC + "49m";
+  };
 
   // wrasse.js
   var initialized = false;
@@ -34824,30 +34828,47 @@ problem_1 = sum (check [1..999])
   };
   var interactive_terminal = (tree) => {
     wrasse.terminal.reset();
+    let linkProviders = [];
+    let curr_line = 1;
     let register_tree = (node, line, level) => {
-      let node_string = "	".repeat(level) + node[0];
-      wrasse.terminal.writeln(node_string);
-      wrasse.terminal.registerLinkProvider({
+      let prefix2 = "  ".repeat(level);
+      let node_string = node[0][0];
+      if (node[0][1]) {
+        if (node[1].length > 0) {
+          wrasse.terminal.writeln(prefix2 + "V " + node_string);
+        } else {
+          wrasse.terminal.writeln(prefix2 + "- " + node_string);
+        }
+      } else {
+        if (node[1].length > 0) {
+          wrasse.terminal.writeln(prefix2 + "> " + node_string);
+        } else {
+          wrasse.terminal.writeln(prefix2 + "- " + node_string);
+        }
+      }
+      curr_line++;
+      linkProviders.push(wrasse.terminal.registerLinkProvider({
         provideLinks(bufferLineNumber, callback) {
           callback([
             {
               text: node_string,
-              range: { start: { x: 1, y: line }, end: { x: 1 + node_string.length, y: line } },
+              range: { start: { x: prefix2.length + 1, y: line }, end: { x: prefix2.length + 2 + node_string.length, y: line } },
               activate() {
-                wrasse.terminal.write(ansiEscapes_default.cursorTo(1, line + 1));
-                wrasse.terminal.write(ansiEscapes_default.insertLine(node[1].length));
-                node[1].forEach((element) => {
-                  register_tree(element, ++line, level + 1);
-                });
+                linkProviders.forEach((x2) => x2.dispose());
+                node[0][1] = !node[0][1];
+                interactive_terminal(wrasse.tree);
               }
             }
           ]);
           return;
           callback(void 0);
         }
-      });
+      }));
+      if (node[0][1]) {
+        node[1].forEach((x2) => register_tree(x2, curr_line, level + 1));
+      }
     };
-    register_tree(tree, 1, 0);
+    register_tree(tree, curr_line, 0);
   };
   var handle_ghc = async (code) => {
     return ghc_hook(code);

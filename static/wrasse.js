@@ -111,19 +111,83 @@ let interactive_terminal = (tree) => {
 
   // tree has format [[curr string, active], [recursive children]]
 
-  // get lines to write
-  let recurse_getlines = (node, level) => {
+  // // get lines to write
+  // let recurse_getlines = (node, level) => {
+  //   if (node[0][1]) {
+  //     return ["\t".repeat(level) + node[0][0]] 
+  //       + node[1].reduce((prev, curr) => prev + recurse_getlines(curr, level+1), [])
+  //   } else {
+  //     return ["\t".repeat(level) + node[0][0]]
+  //   }
+  // }
+
+  // let lines = recurse_getlines(tree, 0)
+
+  let linkProviders = [];
+
+  let curr_line = 1
+
+  let register_tree = (node, line, level) => {
+    // write line
+    
+    let prefix = "  ".repeat(level) 
+    let node_string = node[0][0] 
+    // wrasse.terminal.writeln(ESC.colouredText({r:100, g:200, b:100}, {}, node_string));
+
+    // write tree string
     if (node[0][1]) {
-      return ["\t".repeat(level) + node[0][0]] 
-        + node[1].reduce((prev, curr) => prev + recurse_getlines(curr, level+1), [])
+      if (node[1].length > 0) {
+        wrasse.terminal.writeln(prefix + "V " + node_string);
+      } else {
+        wrasse.terminal.writeln(prefix + "- " + node_string);
+      }
     } else {
-      return ["\t".repeat(level) + node[0][0]]
+      if (node[1].length > 0) {
+        wrasse.terminal.writeln(prefix + "> " + node_string);
+      } else {
+        wrasse.terminal.writeln(prefix + "- " + node_string);
+      }
+    }
+    
+    curr_line++;
+
+
+    // register link provider
+    linkProviders.push(wrasse.terminal.registerLinkProvider({
+      provideLinks(bufferLineNumber, callback) {
+        callback([
+          {
+            text: node_string,
+            
+            range: { start: { x: prefix.length + 1, y: line }, end: { x: prefix.length + 2 + node_string.length, y: line } },
+            activate() {
+              // remove all link providers
+              linkProviders.forEach((x) => x.dispose())
+              node[0][1] = !node[0][1];
+              interactive_terminal(wrasse.tree)
+            }
+            //hover, leave
+          }
+        ]);
+        return;
+        // fallthrough failure state
+        callback(undefined);
+      }
+    }));
+
+    // recurse if active
+    if (node[0][1]) {
+      node[1].forEach(x => register_tree(x, curr_line, level+1))
     }
   }
 
-  let lines = recurse_getlines(tree, 0)
+  register_tree(tree, curr_line, 0);
 
-  let linkProviders = [];
+}
+
+
+
+/*
 
 
   let register_tree = (node, line, level) => {
@@ -131,7 +195,7 @@ let interactive_terminal = (tree) => {
     let node_string = "\t".repeat(level) + node[0]
     wrasse.terminal.writeln(node_string)
     // register link provider
-    wrasse.terminal.registerLinkProvider({
+    linkProviders.push(wrasse.terminal.registerLinkProvider({
       provideLinks(bufferLineNumber, callback) {
         callback([
           {
@@ -152,12 +216,10 @@ let interactive_terminal = (tree) => {
         // fallthrough failure state
         callback(undefined);
       }
-    });
+    }));
   }
+*/
 
-  register_tree(tree, 1, 0);
-
-}
 
 
 let handle_ghc = async (code) => {
