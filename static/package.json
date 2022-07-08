@@ -19,6 +19,7 @@
     "@openreplay/tracker": "^3.5.4",
     "@reduxjs/toolkit": "^1.8.0",
     "analytics": "^0.8.1",
+    "ansi-escapes": "^5.0.0",
     "esbuild": "^0.14.29",
     "nanoid": "^3.3.2",
     "ramda": "^0.28.0",

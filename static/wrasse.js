@@ -1,9 +1,11 @@
 import { Terminal as xTerminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit';
+import ESC from './ansiEscapes';
 
 let initialized = false;
 const WrasseTerminal = new xTerminal({
     convertEol: true,
+    scrollback: 1,
     cursorBlink: false,
     cursorStyle: "underline",
     disableStdin: true,
@@ -19,6 +21,11 @@ const html = {
     buttons : [document.getElementById('wrasse_0'), document.getElementById('wrasse_1'), document.getElementById('wrasse_2'), document.getElementById('wrasse_3')]
 }
 
+
+let scrollToTop = () => {
+  wrasse.terminal.scrollToTop()
+}
+
 let wrasse_setup = () => {
     console.log('wrasse init')
 
@@ -27,12 +34,11 @@ let wrasse_setup = () => {
     initialized = true;
 
     // ignore all keypresses
-    wrasse.terminal.attachCustomKeyEventHandler((_) => false);
+    // wrasse.terminal.attachCustomKeyEventHandler((_) => false);
     // wrasse.terminal.modes.mouseTrackingMode
     wrasse.terminal.modes.wraparoundMode = true;
     
 
-    wrasse.terminal.write('Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ')
 
     html.buttons[0].addEventListener('click', _ => {
         wrasse.switch_terminal(wrasse.data_0)
@@ -50,16 +56,12 @@ let wrasse_setup = () => {
         fitAddon.fit();
     });
 
-
-    // wrasse.terminal.onRender(({start, end}) => {
-    //     console.log(start, end)
-    //     if (start > 0) {
-    //         wrasse.terminal.scrollToTop()
-    //     }
-    // });
-
     // Make the terminal's size and geometry fit the size of #terminal-container
     fitAddon.fit();
+    wrasse.terminal.resize(wrasse.terminal.cols, 1000);
+
+    // write starter text
+    wrasse.terminal.write('Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ', scrollToTop)
 }
 
 let hook = async ({code, response}) => {
@@ -88,8 +90,59 @@ let switch_terminal = (data) => {
         data,
         null,
         2
-    ))
+    ), scrollToTop)
 
+
+    
+    wrasse.terminal.registerLinkProvider({
+      provideLinks(bufferLineNumber, callback) {
+        switch (bufferLineNumber) {
+          case 2:
+            callback([
+              {
+                text: '',
+                range: { start: { x: 28, y: 2 }, end: { x: 34, y: 4 } },
+                activate() {
+                  // wrasse.terminal.selectLines(0, 2)
+                  // wrasse.terminal.write("CSI Ps ; Ps H")
+                  // wrasse.terminal.write("\x9B1;1H")
+                  // wrasse.terminal.write("\x1B[1;1H TEXT")
+                  console.log(wrasse.terminal.buffer.active.baseY)
+                  console.log(wrasse.terminal.buffer.active.cursorY)
+                  console.log(wrasse.terminal.buffer.active.viewportY)
+                  wrasse.terminal.write(ESC.cursorTo(2, 0) + "to 2 0")
+                  wrasse.terminal.write(ESC.cursorTo(10, 10) + "to 55 0")
+                  wrasse.terminal.write(ESC.cursorRow(1) + "row 1")
+                  wrasse.terminal.write(ESC.cursorPos(2, 2) + "row 2 col 2")
+                  wrasse.terminal.write(ESC.insertLine(1) + "NEW LINE")
+                  console.log(wrasse.terminal.buffer.active.baseY)
+                  console.log(wrasse.terminal.buffer.active.cursorY)
+                  console.log(wrasse.terminal.buffer.active.viewportY)
+                  
+                }
+              },
+              {
+                text: '',
+                range: { start: { x: 37, y: 5 }, end: { x: 41, y: 7 } },
+                activate() {
+                  wrasse.terminal.selectLines(0, 2)
+                  wrasse.terminal.writeln("TEXT")
+                }
+              },
+              {
+                text: '',
+                range: { start: { x: 47, y: 8 }, end: { x: 51, y: 11 } },
+                activate() {
+                  wrasse.terminal.selectLines(0, 2)
+                  wrasse.terminal.writeln("TEXT")
+                }
+              }
+            ]);
+            return;
+          }
+          callback(undefined);
+        }
+      });
     // Make the terminal's size and geometry fit the size of #terminal-container
     fitAddon.fit();
 }
@@ -105,6 +158,10 @@ let ghc_hook = async (code) => {
     });
     return response.json();
 }
+
+
+
+
 
 const wrasse = {
     "hook": hook,

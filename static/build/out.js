@@ -34652,9 +34652,117 @@ problem_1 = sum (check [1..999])
   // wrasse.js
   var import_xterm = __toESM(require_xterm());
   var import_xterm_addon_fit = __toESM(require_xterm_addon_fit());
+
+  // ansiEscapes.js
+  var ESC = "\x1B[";
+  var OSC = "\x1B]";
+  var BEL = "\x07";
+  var SEP = ";";
+  var isTerminalApp = false;
+  var ansiEscapes = {};
+  ansiEscapes.cursorTo = (x2, y3) => {
+    if (typeof x2 !== "number") {
+      throw new TypeError("The `x` argument is required");
+    }
+    if (typeof y3 !== "number") {
+      return ESC + (x2 + 1) + "G";
+    }
+    return ESC + (y3 + 1) + ";" + (x2 + 1) + "H";
+  };
+  ansiEscapes.cursorMove = (x2, y3) => {
+    if (typeof x2 !== "number") {
+      throw new TypeError("The `x` argument is required");
+    }
+    let returnValue = "";
+    if (x2 < 0) {
+      returnValue += ESC + -x2 + "D";
+    } else if (x2 > 0) {
+      returnValue += ESC + x2 + "C";
+    }
+    if (y3 < 0) {
+      returnValue += ESC + -y3 + "A";
+    } else if (y3 > 0) {
+      returnValue += ESC + y3 + "B";
+    }
+    return returnValue;
+  };
+  ansiEscapes.cursorUp = (count = 1) => ESC + count + "A";
+  ansiEscapes.cursorDown = (count = 1) => ESC + count + "B";
+  ansiEscapes.cursorForward = (count = 1) => ESC + count + "C";
+  ansiEscapes.cursorBackward = (count = 1) => ESC + count + "D";
+  ansiEscapes.cursorLeft = ESC + "G";
+  ansiEscapes.cursorSavePosition = isTerminalApp ? "\x1B7" : ESC + "s";
+  ansiEscapes.cursorRestorePosition = isTerminalApp ? "\x1B8" : ESC + "u";
+  ansiEscapes.cursorGetPosition = ESC + "6n";
+  ansiEscapes.cursorNextLine = ESC + "E";
+  ansiEscapes.cursorPrevLine = ESC + "F";
+  ansiEscapes.cursorHide = ESC + "?25l";
+  ansiEscapes.cursorShow = ESC + "?25h";
+  ansiEscapes.eraseLines = (count) => {
+    let clear = "";
+    for (let i3 = 0; i3 < count; i3++) {
+      clear += ansiEscapes.eraseLine + (i3 < count - 1 ? ansiEscapes.cursorUp() : "");
+    }
+    if (count) {
+      clear += ansiEscapes.cursorLeft;
+    }
+    return clear;
+  };
+  ansiEscapes.eraseEndLine = ESC + "K";
+  ansiEscapes.eraseStartLine = ESC + "1K";
+  ansiEscapes.eraseLine = ESC + "2K";
+  ansiEscapes.eraseDown = ESC + "J";
+  ansiEscapes.eraseUp = ESC + "1J";
+  ansiEscapes.eraseScreen = ESC + "2J";
+  ansiEscapes.scrollUp = ESC + "S";
+  ansiEscapes.scrollDown = ESC + "T";
+  ansiEscapes.clearScreen = "\x1Bc";
+  ansiEscapes.beep = BEL;
+  ansiEscapes.link = (text, url) => {
+    return [
+      OSC,
+      "8",
+      SEP,
+      SEP,
+      url,
+      BEL,
+      text,
+      OSC,
+      "8",
+      SEP,
+      SEP,
+      BEL
+    ].join("");
+  };
+  ansiEscapes.image = (buffer, options = {}) => {
+    let returnValue = `${OSC}1337;File=inline=1`;
+    if (options.width) {
+      returnValue += `;width=${options.width}`;
+    }
+    if (options.height) {
+      returnValue += `;height=${options.height}`;
+    }
+    if (options.preserveAspectRatio === false) {
+      returnValue += ";preserveAspectRatio=0";
+    }
+    return returnValue + ":" + buffer.toString("base64") + BEL;
+  };
+  ansiEscapes.insertLine = (number) => {
+    return ESC + number + "L";
+  };
+  ansiEscapes.cursorRow = (row) => {
+    return ESC + row + "d";
+  };
+  ansiEscapes.cursorPos = (row, col) => {
+    return ESC + row + ";" + col + "d";
+  };
+  var ansiEscapes_default = ansiEscapes;
+
+  // wrasse.js
   var initialized = false;
   var WrasseTerminal = new import_xterm.Terminal({
     convertEol: true,
+    scrollback: 1,
     cursorBlink: false,
     cursorStyle: "underline",
     disableStdin: true,
@@ -34666,13 +34774,14 @@ problem_1 = sum (check [1..999])
     terminal: document.getElementById("terminal-container"),
     buttons: [document.getElementById("wrasse_0"), document.getElementById("wrasse_1"), document.getElementById("wrasse_2"), document.getElementById("wrasse_3")]
   };
+  var scrollToTop = () => {
+    wrasse.terminal.scrollToTop();
+  };
   var wrasse_setup = () => {
     console.log("wrasse init");
     wrasse.terminal.open(html.terminal);
     initialized = true;
-    wrasse.terminal.attachCustomKeyEventHandler((_3) => false);
     wrasse.terminal.modes.wraparoundMode = true;
-    wrasse.terminal.write("Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ");
     html.buttons[0].addEventListener("click", (_3) => {
       wrasse.switch_terminal(wrasse.data_0);
     });
@@ -34686,6 +34795,8 @@ problem_1 = sum (check [1..999])
       fitAddon.fit();
     });
     fitAddon.fit();
+    wrasse.terminal.resize(wrasse.terminal.cols, 1e3);
+    wrasse.terminal.write("Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ", scrollToTop);
   };
   var hook = async ({ code, response }) => {
     let data = await response;
@@ -34702,7 +34813,51 @@ problem_1 = sum (check [1..999])
   var switch_terminal = (data) => {
     wrasse.terminal.reset();
     wrasse.terminal.options.disableStdin = true;
-    wrasse.terminal.writeln(JSON.stringify(data, null, 2));
+    wrasse.terminal.writeln(JSON.stringify(data, null, 2), scrollToTop);
+    wrasse.terminal.registerLinkProvider({
+      provideLinks(bufferLineNumber, callback) {
+        switch (bufferLineNumber) {
+          case 2:
+            callback([
+              {
+                text: "",
+                range: { start: { x: 28, y: 2 }, end: { x: 34, y: 4 } },
+                activate() {
+                  console.log(wrasse.terminal.buffer.active.baseY);
+                  console.log(wrasse.terminal.buffer.active.cursorY);
+                  console.log(wrasse.terminal.buffer.active.viewportY);
+                  wrasse.terminal.write(ansiEscapes_default.cursorTo(2, 0) + "to 2 0");
+                  wrasse.terminal.write(ansiEscapes_default.cursorTo(10, 10) + "to 55 0");
+                  wrasse.terminal.write(ansiEscapes_default.cursorRow(1) + "row 1");
+                  wrasse.terminal.write(ansiEscapes_default.cursorPos(2, 2) + "row 2 col 2");
+                  wrasse.terminal.write(ansiEscapes_default.insertLine(1) + "NEW LINE");
+                  console.log(wrasse.terminal.buffer.active.baseY);
+                  console.log(wrasse.terminal.buffer.active.cursorY);
+                  console.log(wrasse.terminal.buffer.active.viewportY);
+                }
+              },
+              {
+                text: "",
+                range: { start: { x: 37, y: 5 }, end: { x: 41, y: 7 } },
+                activate() {
+                  wrasse.terminal.selectLines(0, 2);
+                  wrasse.terminal.writeln("TEXT");
+                }
+              },
+              {
+                text: "",
+                range: { start: { x: 47, y: 8 }, end: { x: 51, y: 11 } },
+                activate() {
+                  wrasse.terminal.selectLines(0, 2);
+                  wrasse.terminal.writeln("TEXT");
+                }
+              }
+            ]);
+            return;
+        }
+        callback(void 0);
+      }
+    });
     fitAddon.fit();
   };
   var handle_ghc = async (code) => {
