@@ -18,7 +18,7 @@ WrasseTerminal.loadAddon(fitAddon);
 
 const html = {
     terminal : document.getElementById('terminal-container'),
-    buttons : [document.getElementById('wrasse_0'), document.getElementById('wrasse_1'), document.getElementById('wrasse_2'), document.getElementById('wrasse_3')]
+    buttons : [document.getElementById('wrasse_0'), document.getElementById('wrasse_1'), document.getElementById('wrasse_2'), document.getElementById('wrasse_3'), document.getElementById("wrasse_tree")]
 }
 
 
@@ -56,6 +56,10 @@ let wrasse_setup = () => {
         fitAddon.fit();
     });
 
+    html.buttons[4].addEventListener('click', _ => {
+      wrasse.interactive_terminal(wrasse.tree)
+    });
+
     // Make the terminal's size and geometry fit the size of #terminal-container
     fitAddon.fit();
     wrasse.terminal.resize(wrasse.terminal.cols, 1000);
@@ -75,10 +79,14 @@ let hook = async ({code, response}) => {
     // send code to ghc handler
     let ghc_data = await handle_ghc(code);
 
+    console.log(ghc_data)
+
+    wrasse.tree = ghc_data.full
     wrasse.data_0 = ghc_data
     wrasse.data_1 = data
     wrasse.data_2 = { ghc: ghc_data, chameleon: data }
 
+    console.log(wrasse.tree)
     switch_terminal(wrasse.data_0)
 }
 
@@ -92,60 +100,65 @@ let switch_terminal = (data) => {
         2
     ), scrollToTop)
 
-
-    
-    wrasse.terminal.registerLinkProvider({
-      provideLinks(bufferLineNumber, callback) {
-        switch (bufferLineNumber) {
-          case 2:
-            callback([
-              {
-                text: '',
-                range: { start: { x: 28, y: 2 }, end: { x: 34, y: 4 } },
-                activate() {
-                  // wrasse.terminal.selectLines(0, 2)
-                  // wrasse.terminal.write("CSI Ps ; Ps H")
-                  // wrasse.terminal.write("\x9B1;1H")
-                  // wrasse.terminal.write("\x1B[1;1H TEXT")
-                  console.log(wrasse.terminal.buffer.active.baseY)
-                  console.log(wrasse.terminal.buffer.active.cursorY)
-                  console.log(wrasse.terminal.buffer.active.viewportY)
-                  wrasse.terminal.write(ESC.cursorTo(2, 0) + "to 2 0")
-                  wrasse.terminal.write(ESC.cursorTo(10, 10) + "to 55 0")
-                  wrasse.terminal.write(ESC.cursorRow(1) + "row 1")
-                  wrasse.terminal.write(ESC.cursorPos(2, 2) + "row 2 col 2")
-                  wrasse.terminal.write(ESC.insertLine(1) + "NEW LINE")
-                  console.log(wrasse.terminal.buffer.active.baseY)
-                  console.log(wrasse.terminal.buffer.active.cursorY)
-                  console.log(wrasse.terminal.buffer.active.viewportY)
-                  
-                }
-              },
-              {
-                text: '',
-                range: { start: { x: 37, y: 5 }, end: { x: 41, y: 7 } },
-                activate() {
-                  wrasse.terminal.selectLines(0, 2)
-                  wrasse.terminal.writeln("TEXT")
-                }
-              },
-              {
-                text: '',
-                range: { start: { x: 47, y: 8 }, end: { x: 51, y: 11 } },
-                activate() {
-                  wrasse.terminal.selectLines(0, 2)
-                  wrasse.terminal.writeln("TEXT")
-                }
-              }
-            ]);
-            return;
-          }
-          callback(undefined);
-        }
-      });
     // Make the terminal's size and geometry fit the size of #terminal-container
     fitAddon.fit();
 }
+
+
+let interactive_terminal = (tree) => {
+  // clear terminal
+  wrasse.terminal.reset()
+
+  // tree has format [[curr string, active], [recursive children]]
+
+  // get lines to write
+  let recurse_getlines = (node, level) => {
+    if (node[0][1]) {
+      return ["\t".repeat(level) + node[0][0]] 
+        + node[1].reduce((prev, curr) => prev + recurse_getlines(curr, level+1), [])
+    } else {
+      return ["\t".repeat(level) + node[0][0]]
+    }
+  }
+
+  let lines = recurse_getlines(tree, 0)
+
+  let linkProviders = [];
+
+
+  let register_tree = (node, line, level) => {
+    // write line
+    let node_string = "\t".repeat(level) + node[0]
+    wrasse.terminal.writeln(node_string)
+    // register link provider
+    wrasse.terminal.registerLinkProvider({
+      provideLinks(bufferLineNumber, callback) {
+        callback([
+          {
+            text: node_string,
+            
+            range: { start: { x: 1, y: line }, end: { x: 1 + node_string.length, y: line } },
+            activate() {
+              wrasse.terminal.write(ESC.cursorTo(1, line + 1))
+              wrasse.terminal.write(ESC.insertLine(node[1].length))
+              node[1].forEach(element => {
+                register_tree(element, ++line, level+1)
+              });
+            }
+            //hover, leave
+          }
+        ]);
+        return;
+        // fallthrough failure state
+        callback(undefined);
+      }
+    });
+  }
+
+  register_tree(tree, 1, 0);
+
+}
+
 
 let handle_ghc = async (code) => {
     return ghc_hook(code)
@@ -167,10 +180,12 @@ const wrasse = {
     "hook": hook,
     "setup": wrasse_setup,
     "terminal": WrasseTerminal,
+    "tree" : [],
     "data_0" : {},
     "data_1" : {},
     "data_2" : {},
-    "switch_terminal" : switch_terminal
+    "switch_terminal" : switch_terminal,
+    "interactive_terminal" : interactive_terminal
 };
 
 /*

@@ -15,7 +15,7 @@ data WrasseResult
     ghc :: String,
     types :: String,
     fixes :: String,
-    full :: Tree String,
+    full :: Tree (String, Bool),
     t :: [String]
   }
   deriving (Show, Generic)

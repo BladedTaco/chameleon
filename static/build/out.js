@@ -34772,7 +34772,7 @@ problem_1 = sum (check [1..999])
   WrasseTerminal.loadAddon(fitAddon);
   var html = {
     terminal: document.getElementById("terminal-container"),
-    buttons: [document.getElementById("wrasse_0"), document.getElementById("wrasse_1"), document.getElementById("wrasse_2"), document.getElementById("wrasse_3")]
+    buttons: [document.getElementById("wrasse_0"), document.getElementById("wrasse_1"), document.getElementById("wrasse_2"), document.getElementById("wrasse_3"), document.getElementById("wrasse_tree")]
   };
   var scrollToTop = () => {
     wrasse.terminal.scrollToTop();
@@ -34794,6 +34794,9 @@ problem_1 = sum (check [1..999])
     html.buttons[3].addEventListener("click", (_3) => {
       fitAddon.fit();
     });
+    html.buttons[4].addEventListener("click", (_3) => {
+      wrasse.interactive_terminal(wrasse.tree);
+    });
     fitAddon.fit();
     wrasse.terminal.resize(wrasse.terminal.cols, 1e3);
     wrasse.terminal.write("Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ", scrollToTop);
@@ -34805,60 +34808,46 @@ problem_1 = sum (check [1..999])
       wrasse.setup();
     }
     let ghc_data = await handle_ghc(code);
+    console.log(ghc_data);
+    wrasse.tree = ghc_data.full;
     wrasse.data_0 = ghc_data;
     wrasse.data_1 = data;
     wrasse.data_2 = { ghc: ghc_data, chameleon: data };
+    console.log(wrasse.tree);
     switch_terminal(wrasse.data_0);
   };
   var switch_terminal = (data) => {
     wrasse.terminal.reset();
     wrasse.terminal.options.disableStdin = true;
     wrasse.terminal.writeln(JSON.stringify(data, null, 2), scrollToTop);
-    wrasse.terminal.registerLinkProvider({
-      provideLinks(bufferLineNumber, callback) {
-        switch (bufferLineNumber) {
-          case 2:
-            callback([
-              {
-                text: "",
-                range: { start: { x: 28, y: 2 }, end: { x: 34, y: 4 } },
-                activate() {
-                  console.log(wrasse.terminal.buffer.active.baseY);
-                  console.log(wrasse.terminal.buffer.active.cursorY);
-                  console.log(wrasse.terminal.buffer.active.viewportY);
-                  wrasse.terminal.write(ansiEscapes_default.cursorTo(2, 0) + "to 2 0");
-                  wrasse.terminal.write(ansiEscapes_default.cursorTo(10, 10) + "to 55 0");
-                  wrasse.terminal.write(ansiEscapes_default.cursorRow(1) + "row 1");
-                  wrasse.terminal.write(ansiEscapes_default.cursorPos(2, 2) + "row 2 col 2");
-                  wrasse.terminal.write(ansiEscapes_default.insertLine(1) + "NEW LINE");
-                  console.log(wrasse.terminal.buffer.active.baseY);
-                  console.log(wrasse.terminal.buffer.active.cursorY);
-                  console.log(wrasse.terminal.buffer.active.viewportY);
-                }
-              },
-              {
-                text: "",
-                range: { start: { x: 37, y: 5 }, end: { x: 41, y: 7 } },
-                activate() {
-                  wrasse.terminal.selectLines(0, 2);
-                  wrasse.terminal.writeln("TEXT");
-                }
-              },
-              {
-                text: "",
-                range: { start: { x: 47, y: 8 }, end: { x: 51, y: 11 } },
-                activate() {
-                  wrasse.terminal.selectLines(0, 2);
-                  wrasse.terminal.writeln("TEXT");
-                }
-              }
-            ]);
-            return;
-        }
-        callback(void 0);
-      }
-    });
     fitAddon.fit();
+  };
+  var interactive_terminal = (tree) => {
+    wrasse.terminal.reset();
+    let register_tree = (node, line, level) => {
+      let node_string = "	".repeat(level) + node[0];
+      wrasse.terminal.writeln(node_string);
+      wrasse.terminal.registerLinkProvider({
+        provideLinks(bufferLineNumber, callback) {
+          callback([
+            {
+              text: node_string,
+              range: { start: { x: 1, y: line }, end: { x: 1 + node_string.length, y: line } },
+              activate() {
+                wrasse.terminal.write(ansiEscapes_default.cursorTo(1, line + 1));
+                wrasse.terminal.write(ansiEscapes_default.insertLine(node[1].length));
+                node[1].forEach((element) => {
+                  register_tree(element, ++line, level + 1);
+                });
+              }
+            }
+          ]);
+          return;
+          callback(void 0);
+        }
+      });
+    };
+    register_tree(tree, 1, 0);
   };
   var handle_ghc = async (code) => {
     return ghc_hook(code);
@@ -34874,10 +34863,12 @@ problem_1 = sum (check [1..999])
     "hook": hook,
     "setup": wrasse_setup,
     "terminal": WrasseTerminal,
+    "tree": [],
     "data_0": {},
     "data_1": {},
     "data_2": {},
-    "switch_terminal": switch_terminal
+    "switch_terminal": switch_terminal,
+    "interactive_terminal": interactive_terminal
   };
   var wrasse_default = wrasse;
 
