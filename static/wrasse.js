@@ -92,6 +92,10 @@ let hook = async ({code, response}) => {
 
 
 let switch_terminal = (data) => {
+  // clean disposables
+    perm.disposables.forEach(x => x.dispose())
+    perm.disposables = [];
+
     wrasse.terminal.reset()
     wrasse.terminal.options.disableStdin = true;
     wrasse.terminal.writeln(JSON.stringify(
@@ -102,6 +106,31 @@ let switch_terminal = (data) => {
 
     // Make the terminal's size and geometry fit the size of #terminal-container
     fitAddon.fit();
+
+    // star drawing
+    let starGen = (function *() {
+      while (true) {
+        for (const item of ["|", "/", "-", "\\"]) {
+          yield item;
+       }
+      }
+    })();
+
+    let numGen = (function *() {
+      let i = 0
+      while (true) {
+        yield ++i;
+      }
+    })();
+    
+    let recurse = async () => {
+      await new Promise(r => setTimeout(r, 1));
+      wrasse.terminal.write(ESC.cursorSavePosition 
+        + ESC.cursorTo((numGen.next().value % 5) + 30, 1) + starGen.next().value
+        + ESC.cursorRestorePosition
+        , recurse)
+    }
+    recurse();
 }
 
 
@@ -123,13 +152,12 @@ let interactive_terminal = (tree) => {
 
   // let lines = recurse_getlines(tree, 0)
 
-  let linkProviders = [];
-
   let curr_line = 1
 
-  let register_tree = (node, line, level) => {
+  let register_tree = (node, level) => {
     // write line
-    
+    let line = curr_line
+
     let prefix = "  ".repeat(level) 
     let node_string = node[0][0] 
     // wrasse.terminal.writeln(ESC.colouredText({r:100, g:200, b:100}, {}, node_string));
@@ -153,35 +181,39 @@ let interactive_terminal = (tree) => {
 
 
     // register link provider
-    linkProviders.push(wrasse.terminal.registerLinkProvider({
-      provideLinks(bufferLineNumber, callback) {
-        callback([
-          {
-            text: node_string,
-            
-            range: { start: { x: prefix.length + 1, y: line }, end: { x: prefix.length + 2 + node_string.length, y: line } },
-            activate() {
-              // remove all link providers
-              linkProviders.forEach((x) => x.dispose())
-              node[0][1] = !node[0][1];
-              interactive_terminal(wrasse.tree)
+    if (node[1].length > 0) {
+      perm.disposables.push(wrasse.terminal.registerLinkProvider({
+        provideLinks(bufferLineNumber, callback) {
+          callback([
+            {
+              text: node_string,
+              range: { 
+                start: { x: prefix.length + 1, y: line },
+                end: { x: prefix.length + 2 + node_string.length, y: line } 
+              },
+              activate() {
+                // remove all link providers
+                perm.disposables.forEach((x) => x.dispose())
+                node[0][1] = !node[0][1];
+                interactive_terminal(wrasse.tree)
+              }
+              //hover, leave
             }
-            //hover, leave
-          }
-        ]);
-        return;
-        // fallthrough failure state
-        callback(undefined);
-      }
-    }));
+          ]);
+          return;
+          // fallthrough failure state
+          callback(undefined);
+        }
+      }));
+    }
 
     // recurse if active
     if (node[0][1]) {
-      node[1].forEach(x => register_tree(x, curr_line, level+1))
+      node[1].forEach(x => register_tree(x, level+1))
     }
   }
 
-  register_tree(tree, curr_line, 0);
+  register_tree(tree, 0);
 
 }
 
@@ -235,7 +267,9 @@ let ghc_hook = async (code) => {
 }
 
 
-
+const perm = {
+  "disposables": []
+}
 
 
 const wrasse = {

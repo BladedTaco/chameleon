@@ -464,3 +464,9 @@ body {
 	 background-color: rgb(204, 204, 204);
 }
 
+.mainGrid {
+	/* position: absolute; */
+	display: grid;
+	grid-auto-columns: 1;
+	 grid-auto-flow: row;
+}

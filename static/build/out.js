@@ -34761,6 +34761,7 @@ problem_1 = sum (check [1..999])
     let bg = { r: 0, g: 0, b: 0, ...bg_col };
     return ESC + "38;2" + fg.r + SEP + fg.g + SEP + fg.b + "m" + ESC + "48;2" + bg.r + SEP + bg.g + SEP + bg.b + "m" + text + ESC + "39m" + ESC + "49m";
   };
+  var ansiEscapes_default = ansiEscapes;
 
   // wrasse.js
   var initialized = false;
@@ -34821,16 +34822,36 @@ problem_1 = sum (check [1..999])
     switch_terminal(wrasse.data_0);
   };
   var switch_terminal = (data) => {
+    perm.disposables.forEach((x2) => x2.dispose());
+    perm.disposables = [];
     wrasse.terminal.reset();
     wrasse.terminal.options.disableStdin = true;
     wrasse.terminal.writeln(JSON.stringify(data, null, 2), scrollToTop);
     fitAddon.fit();
+    let starGen = function* () {
+      while (true) {
+        for (const item of ["|", "/", "-", "\\"]) {
+          yield item;
+        }
+      }
+    }();
+    let numGen = function* () {
+      let i3 = 0;
+      while (true) {
+        yield ++i3;
+      }
+    }();
+    let recurse = async () => {
+      await new Promise((r3) => setTimeout(r3, 1));
+      wrasse.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(numGen.next().value % 5 + 30, 1) + starGen.next().value + ansiEscapes_default.cursorRestorePosition, recurse);
+    };
+    recurse();
   };
   var interactive_terminal = (tree) => {
     wrasse.terminal.reset();
-    let linkProviders = [];
     let curr_line = 1;
-    let register_tree = (node, line, level) => {
+    let register_tree = (node, level) => {
+      let line = curr_line;
       let prefix2 = "  ".repeat(level);
       let node_string = node[0][0];
       if (node[0][1]) {
@@ -34847,28 +34868,33 @@ problem_1 = sum (check [1..999])
         }
       }
       curr_line++;
-      linkProviders.push(wrasse.terminal.registerLinkProvider({
-        provideLinks(bufferLineNumber, callback) {
-          callback([
-            {
-              text: node_string,
-              range: { start: { x: prefix2.length + 1, y: line }, end: { x: prefix2.length + 2 + node_string.length, y: line } },
-              activate() {
-                linkProviders.forEach((x2) => x2.dispose());
-                node[0][1] = !node[0][1];
-                interactive_terminal(wrasse.tree);
+      if (node[1].length > 0) {
+        perm.disposables.push(wrasse.terminal.registerLinkProvider({
+          provideLinks(bufferLineNumber, callback) {
+            callback([
+              {
+                text: node_string,
+                range: {
+                  start: { x: prefix2.length + 1, y: line },
+                  end: { x: prefix2.length + 2 + node_string.length, y: line }
+                },
+                activate() {
+                  perm.disposables.forEach((x2) => x2.dispose());
+                  node[0][1] = !node[0][1];
+                  interactive_terminal(wrasse.tree);
+                }
               }
-            }
-          ]);
-          return;
-          callback(void 0);
-        }
-      }));
+            ]);
+            return;
+            callback(void 0);
+          }
+        }));
+      }
       if (node[0][1]) {
-        node[1].forEach((x2) => register_tree(x2, curr_line, level + 1));
+        node[1].forEach((x2) => register_tree(x2, level + 1));
       }
     };
-    register_tree(tree, curr_line, 0);
+    register_tree(tree, 0);
   };
   var handle_ghc = async (code) => {
     return ghc_hook(code);
@@ -34879,6 +34905,9 @@ problem_1 = sum (check [1..999])
       body: code
     });
     return response.json();
+  };
+  var perm = {
+    "disposables": []
   };
   var wrasse = {
     "hook": hook,

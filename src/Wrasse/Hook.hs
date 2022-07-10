@@ -87,7 +87,7 @@ ghcHook modName file = do
   result <- runGhc (Just libdir) (processGHC ref modName file)
   ref_out <- readIORef ref -- read the output IO stream
   -- return $ GHCResult (("ghc console: " ++) <$> lines ref_out) (fmap ("ghc result: " ++) result)
-  return (lines ref_out, intercalate ["", "\n", ""] $ lines <$> result)
+  return (lines ref_out, intercalate ["", "~", ""] $ lines <$> result)
 
 -- runs HLint
 hlintHook ::  FilePath -> IO  ([String], [String])
