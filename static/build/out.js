@@ -34750,6 +34750,9 @@ problem_1 = sum (check [1..999])
   ansiEscapes.insertLine = (number) => {
     return ESC + number + "L";
   };
+  ansiEscapes.deleteLine = (number) => {
+    return ESC + number + "M";
+  };
   ansiEscapes.cursorRow = (row) => {
     return ESC + row + "d";
   };
@@ -34814,12 +34817,20 @@ problem_1 = sum (check [1..999])
     }
     let ghc_data = await handle_ghc(code);
     console.log(ghc_data);
-    wrasse.tree = ghc_data.full;
+    wrasse.tree = parse_tree(ghc_data.full);
     wrasse.data_0 = ghc_data;
     wrasse.data_1 = data;
     wrasse.data_2 = { ghc: ghc_data, chameleon: data };
     console.log(wrasse.tree);
     switch_terminal(wrasse.data_0);
+  };
+  var parse_tree = (tree) => {
+    return {
+      content: tree[0][0],
+      active: tree[0][1],
+      line: tree[0][2],
+      children: tree[1].map(parse_tree)
+    };
   };
   var switch_terminal = (data) => {
     perm.disposables.forEach((x2) => x2.dispose());
@@ -34842,46 +34853,76 @@ problem_1 = sum (check [1..999])
       }
     }();
     let recurse = async () => {
-      await new Promise((r3) => setTimeout(r3, 1));
-      wrasse.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(numGen.next().value % 5 + 30, 1) + starGen.next().value + ansiEscapes_default.cursorRestorePosition, recurse);
+      await new Promise((r3) => setTimeout(r3, 100));
+      wrasse.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(numGen.next().value % 2 + 30, 1) + starGen.next().value + ansiEscapes_default.cursorRestorePosition, recurse);
     };
-    recurse();
   };
   var interactive_terminal = (tree) => {
-    wrasse.terminal.reset();
+    wrasse.terminal.clear();
     let curr_line = 1;
-    let register_tree = (node, level) => {
+    let write_text = (node, level, write = false) => {
       let line = curr_line;
       let prefix2 = "  ".repeat(level);
-      let node_string = node[0][0];
-      if (node[0][1]) {
-        if (node[1].length > 0) {
-          wrasse.terminal.writeln(prefix2 + "V " + node_string);
-        } else {
+      let node_string = node.content;
+      if (write) {
+        if (node.children.length == 0) {
           wrasse.terminal.writeln(prefix2 + "- " + node_string);
-        }
-      } else {
-        if (node[1].length > 0) {
-          wrasse.terminal.writeln(prefix2 + "> " + node_string);
         } else {
-          wrasse.terminal.writeln(prefix2 + "- " + node_string);
+          if (node.active) {
+            wrasse.terminal.writeln(prefix2 + "V " + node_string);
+          } else {
+            wrasse.terminal.writeln(prefix2 + "> " + node_string);
+          }
         }
       }
+      node.line = line;
       curr_line++;
-      if (node[1].length > 0) {
+      if (node.active) {
+        node.children.forEach((x2) => write_text(x2, level + 1, write));
+      }
+    };
+    let clean_lines = (node, level, mode) => {
+      if (mode === void 0) {
+        mode = node.active;
+      } else if (node.active == false)
+        return;
+      if (mode) {
+        node.children.slice().reverse().forEach((x2) => clean_lines(x2, level + 1, mode));
+        wrasse.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(0, node.line) + ansiEscapes_default.deleteLine(node.children.length) + ansiEscapes_default.cursorTo(2 * level, node.line - 1) + ">" + ansiEscapes_default.cursorRestorePosition);
+      } else {
+        wrasse.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(0, node.line) + ansiEscapes_default.insertLine(node.children.length));
+        let curr_line2 = node.line;
+        node.children.forEach((x2) => {
+          let prefix2 = "  ".repeat(level + 1);
+          if (x2.children.length == 0) {
+            wrasse.terminal.write(ansiEscapes_default.cursorTo(0, curr_line2) + prefix2 + "- " + x2.content);
+          } else {
+            wrasse.terminal.write(ansiEscapes_default.cursorTo(0, curr_line2) + prefix2 + "> " + x2.content);
+          }
+          curr_line2++;
+        });
+        wrasse.terminal.write(ansiEscapes_default.cursorTo(2 * level, node.line - 1) + "V" + ansiEscapes_default.cursorRestorePosition);
+        node.children.forEach((x2) => clean_lines(x2, level + 1, mode));
+      }
+    };
+    let register_links = (node, level) => {
+      if (node.children.length > 0) {
         perm.disposables.push(wrasse.terminal.registerLinkProvider({
           provideLinks(bufferLineNumber, callback) {
             callback([
               {
-                text: node_string,
+                text: node.content,
                 range: {
-                  start: { x: prefix2.length + 1, y: line },
-                  end: { x: prefix2.length + 2 + node_string.length, y: line }
+                  start: { x: level * 2 + 1, y: node.line },
+                  end: { x: level * 2 + 2 + node.content.length, y: node.line }
                 },
                 activate() {
                   perm.disposables.forEach((x2) => x2.dispose());
-                  node[0][1] = !node[0][1];
-                  interactive_terminal(wrasse.tree);
+                  clean_lines(node, level);
+                  node.active = !node.active;
+                  curr_line = 1;
+                  write_text(tree, 0, false);
+                  register_links(tree, 0);
                 }
               }
             ]);
@@ -34890,11 +34931,12 @@ problem_1 = sum (check [1..999])
           }
         }));
       }
-      if (node[0][1]) {
-        node[1].forEach((x2) => register_tree(x2, level + 1));
+      if (node.active) {
+        node.children.forEach((x2) => register_links(x2, level + 1));
       }
     };
-    register_tree(tree, 0);
+    write_text(tree, 0, true);
+    register_links(tree, 0);
   };
   var handle_ghc = async (code) => {
     return ghc_hook(code);
@@ -34913,7 +34955,7 @@ problem_1 = sum (check [1..999])
     "hook": hook,
     "setup": wrasse_setup,
     "terminal": WrasseTerminal,
-    "tree": [],
+    "tree": {},
     "data_0": {},
     "data_1": {},
     "data_2": {},

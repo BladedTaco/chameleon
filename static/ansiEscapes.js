@@ -120,6 +120,11 @@ ansiEscapes.insertLine = (number) => {
 	return ESC + number + "L";
 }
 
+ansiEscapes.deleteLine = (number) => {
+	return ESC + number + "M";
+}
+
+
 ansiEscapes.cursorRow = (row) => {
 	return ESC + row + 'd';
 }

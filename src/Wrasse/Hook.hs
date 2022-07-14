@@ -68,7 +68,7 @@ hook f = do
   createDirectoryIfMissing True $ takeDirectory file
   writeFile file s
   tools <- toolHook modName file
-  return $ WrasseResult tools "" "" "" ((, False) <$> multiLevel tools) (lines $ Data.Tree.drawTree $ filter (/= '\n') <$> multiLevel tools)
+  return $ WrasseResult tools "" "" "" ((, False, -1) <$> multiLevel tools) (lines $ Data.Tree.drawTree $ filter (/= '\n') <$> multiLevel tools)
 
 --
 toolHook :: String -> FilePath -> IO [(String, [String], [String])]
