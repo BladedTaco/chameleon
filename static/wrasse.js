@@ -7,9 +7,10 @@ const WrasseTerminal = new xTerminal({
     convertEol: true,
     scrollback: 1,
     cursorBlink: false,
-    cursorStyle: "underline",
+    cursorStyle: "bar",
+    cursorWidth: 1,
     disableStdin: true,
-    tabStopWidth: 2
+    tabStopWidth: 2,
     //font
     //windowsMode
 });
@@ -18,7 +19,18 @@ WrasseTerminal.loadAddon(fitAddon);
 
 const html = {
     terminal : document.getElementById('terminal-container'),
-    buttons : [document.getElementById('wrasse_0'), document.getElementById('wrasse_1'), document.getElementById('wrasse_2'), document.getElementById('wrasse_3'), document.getElementById("wrasse_tree")]
+    buttons : [
+      document.getElementById('wrasse_0'),
+      document.getElementById('wrasse_1'), 
+      document.getElementById('wrasse_2'), 
+      document.getElementById('wrasse_3'), 
+      document.getElementById("wrasse_tree")
+    ],
+    hover : {
+      shell : document.getElementById("wrasse-hover"),
+      content : document.getElementById("wrasse-hover-content"),
+    },
+    block: document.getElementById("wrasse-block"),
 }
 
 
@@ -66,6 +78,22 @@ let wrasse_setup = () => {
 
     // write starter text
     wrasse.terminal.write('Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ', scrollToTop)
+
+    // setup mouse followers
+    const onMouseMove = (e) =>{
+      html.hover.shell.style.left = e.pageX + 'px';
+      html.hover.shell.style.top = e.pageY + 'px';
+
+      if (wrasse.block_mouse) {
+        html.block.style.left = e.pageX + 'px';
+        html.block.style.top = e.pageY + 'px';
+      } else {
+        html.block.style.left =  e.pageX + 'px' - 100
+        html.block.style.top = e.pageY + 'px' - 100
+      }
+    }
+
+    document.addEventListener('mousemove', onMouseMove);
 }
 
 let hook = async ({code, response}) => {
@@ -143,91 +171,17 @@ let switch_terminal = (data) => {
 }
 
 
-// let interactive_terminal = (tree) => {
-//   // clear terminal
-//   // wrasse.terminal.reset()
-//   wrasse.terminal.clear()
-
-//   // tree has format [[curr string, active], [recursive children]]
-
-//   // // get lines to write
-//   // let recurse_getlines = (node, level) => {
-//   //   if (node[0][1]) {
-//   //     return ["\t".repeat(level) + node[0][0]] 
-//   //       + node[1].reduce((prev, curr) => prev + recurse_getlines(curr, level+1), [])
-//   //   } else {
-//   //     return ["\t".repeat(level) + node[0][0]]
-//   //   }
-//   // }
-
-//   // let lines = recurse_getlines(tree, 0)
-
-//   let curr_line = 1
-
-//   let register_tree = (node, level) => {
-//     // write line
-//     let line = curr_line
-
-//     let prefix = "  ".repeat(level) 
-//     let node_string = node[0][0] 
-//     // wrasse.terminal.writeln(ESC.colouredText({r:100, g:200, b:100}, {}, node_string));
-
-//     // write tree string
-//     if (node[0][1]) {
-//       if (node[1].length > 0) {
-//         wrasse.terminal.writeln(prefix + "V " + node_string);
-//       } else {
-//         wrasse.terminal.writeln(prefix + "- " + node_string);
-//       }
-//     } else {
-//       if (node[1].length > 0) {
-//         wrasse.terminal.writeln(prefix + "> " + node_string);
-//       } else {
-//         wrasse.terminal.writeln(prefix + "- " + node_string);
-//       }
-//     }
-    
-//     curr_line++;
-
-
-//     // register link provider
-//     if (node[1].length > 0) {
-//       perm.disposables.push(wrasse.terminal.registerLinkProvider({
-//         provideLinks(bufferLineNumber, callback) {
-//           callback([
-//             {
-//               text: node_string,
-//               range: { 
-//                 start: { x: prefix.length + 1, y: line },
-//                 end: { x: prefix.length + 2 + node_string.length, y: line } 
-//               },
-//               activate() {
-//                 // remove all link providers
-//                 perm.disposables.forEach((x) => x.dispose())
-//                 node[0][1] = !node[0][1];
-//                 interactive_terminal(wrasse.tree)
-//               }
-//               //hover, leave
-//             }
-//           ]);
-//           return;
-//           // fallthrough failure state
-//           callback(undefined);
-//         }
-//       }));
-//     }
-
-//     // recurse if active
-//     if (node[0][1]) {
-//       node[1].forEach(x => register_tree(x, level+1))
-//     }
-//   }
-
-//   register_tree(tree, 0);
-
-// }
-
-
+const set_hover_content = (text) => {
+  // hide/show based on if text is provided
+  if (typeof text === 'undefined' || text === "") {
+    // hide element
+    html.hover.shell.classList.add("hidden")
+  } else { 
+    // update text and show element
+    html.hover.content.innerText = text
+    html.hover.shell.classList.remove("hidden")
+  }
+}
 
 
 let interactive_terminal = (tree) => {
@@ -336,19 +290,27 @@ let interactive_terminal = (tree) => {
     }
   }
 
-  let register_links = (node, level) => {
+  let register_links = (node, level, ignoreLine) => {
     // register link provider
-    if (node.children.length > 0) {
+    if (node.children.length > 0 && node.line != ignoreLine) {
       const disp = wrasse.terminal.registerLinkProvider({
         provideLinks(bufferLineNumber, callback) {
+          // let once = false;
           callback([
             {
               text: node.content,
               range: { 
-                start: { x: level*2+ 1, y: node.line },
-                end: { x: level*2 + 2 + node.content.length, y: node.line } 
+                start: { x: level*2+ 1,                        y: node.line },
+                end:   { x: level*2 + 2 + node.content.length, y: node.line } 
               },
               activate() {
+                // if (once) {
+                //   return;
+                // }
+                // once = true;
+
+                wrasse.block_mouse = true;
+
                 // remove all link providers except this one
                 perm.disposables
                   .filter(x => x !== disp)
@@ -364,9 +326,22 @@ let interactive_terminal = (tree) => {
                 // update tree state
                 curr_line = 1
                 write_text(tree, 0, false)
-                register_links(tree, 0)
+                register_links(tree, 0, bufferLineNumber);
+
+                wrasse.terminal.write(ESC.cursorTo(0, bufferLineNumber-1),
+                () => {
+                  wrasse.block_mouse = false;
+                });
+              },
+              hover() {
+                wrasse.set_hover_content(`${Math.random()}
+                
+                This is a test text, it is normally found when 
+                I havent implemented something.`)
+              },
+              leave() {
+                wrasse.set_hover_content()
               }
-              //hover, leave
             }
           ]);
           return;
@@ -375,6 +350,7 @@ let interactive_terminal = (tree) => {
         }
       })
       
+      // push disposable
       perm.disposables.push(disp);
     }
 
@@ -387,42 +363,6 @@ let interactive_terminal = (tree) => {
 
   register_links(tree, 0)
 }
-
-
-
-/*
-
-
-  let register_tree = (node, line, level) => {
-    // write line
-    let node_string = "\t".repeat(level) + node[0]
-    wrasse.terminal.writeln(node_string)
-    // register link provider
-    linkProviders.push(wrasse.terminal.registerLinkProvider({
-      provideLinks(bufferLineNumber, callback) {
-        callback([
-          {
-            text: node_string,
-            
-            range: { start: { x: 1, y: line }, end: { x: 1 + node_string.length, y: line } },
-            activate() {
-              wrasse.terminal.write(ESC.cursorTo(1, line + 1))
-              wrasse.terminal.write(ESC.insertLine(node[1].length))
-              node[1].forEach(element => {
-                register_tree(element, ++line, level+1)
-              });
-            }
-            //hover, leave
-          }
-        ]);
-        return;
-        // fallthrough failure state
-        callback(undefined);
-      }
-    }));
-  }
-*/
-
 
 
 let handle_ghc = async (code) => {
@@ -451,8 +391,10 @@ const wrasse = {
     "data_0" : {},
     "data_1" : {},
     "data_2" : {},
+    "block_mouse" : false,
     "switch_terminal" : switch_terminal,
-    "interactive_terminal" : interactive_terminal
+    "interactive_terminal" : interactive_terminal,
+    "set_hover_content" : set_hover_content,
 };
 
 /*

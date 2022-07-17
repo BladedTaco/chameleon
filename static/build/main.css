@@ -470,3 +470,33 @@ body {
 	grid-auto-columns: 1;
 	 grid-auto-flow: row;
 }
+
+.wrasse-hover{
+	position:absolute;
+	display:inline-block;
+	transform:translate(20px, -12px) translateY(-100%);
+	border-radius:12px;
+	border: 3px solid black;
+	z-index: 10000;
+	text-align:left;
+	background-color: #0d4e57;
+	color: #d8d8d8;
+  }
+
+.wrasse-hover-content{
+	position:relative;
+	margin: 22px 22px;
+	z-index: 10001;
+	text-align:left;
+	background-color: #0d4e57;
+	color: #d8d8d8;
+}
+
+.wrasse-block{
+	position:absolute;
+	background-color: #0d4e57;
+	width:5px;
+	height:5px;
+	transform:translate(-50%, -50%);
+	z-index: 100000;
+  }

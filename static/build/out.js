@@ -34772,7 +34772,8 @@ problem_1 = sum (check [1..999])
     convertEol: true,
     scrollback: 1,
     cursorBlink: false,
-    cursorStyle: "underline",
+    cursorStyle: "bar",
+    cursorWidth: 1,
     disableStdin: true,
     tabStopWidth: 2
   });
@@ -34780,7 +34781,18 @@ problem_1 = sum (check [1..999])
   WrasseTerminal.loadAddon(fitAddon);
   var html = {
     terminal: document.getElementById("terminal-container"),
-    buttons: [document.getElementById("wrasse_0"), document.getElementById("wrasse_1"), document.getElementById("wrasse_2"), document.getElementById("wrasse_3"), document.getElementById("wrasse_tree")]
+    buttons: [
+      document.getElementById("wrasse_0"),
+      document.getElementById("wrasse_1"),
+      document.getElementById("wrasse_2"),
+      document.getElementById("wrasse_3"),
+      document.getElementById("wrasse_tree")
+    ],
+    hover: {
+      shell: document.getElementById("wrasse-hover"),
+      content: document.getElementById("wrasse-hover-content")
+    },
+    block: document.getElementById("wrasse-block")
   };
   var scrollToTop = () => {
     wrasse.terminal.scrollToTop();
@@ -34808,6 +34820,18 @@ problem_1 = sum (check [1..999])
     fitAddon.fit();
     wrasse.terminal.resize(wrasse.terminal.cols, 1e3);
     wrasse.terminal.write("Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ", scrollToTop);
+    const onMouseMove = (e3) => {
+      html.hover.shell.style.left = e3.pageX + "px";
+      html.hover.shell.style.top = e3.pageY + "px";
+      if (wrasse.block_mouse) {
+        html.block.style.left = e3.pageX + "px";
+        html.block.style.top = e3.pageY + "px";
+      } else {
+        html.block.style.left = e3.pageX + "px" - 100;
+        html.block.style.top = e3.pageY + "px" - 100;
+      }
+    };
+    document.addEventListener("mousemove", onMouseMove);
   };
   var hook = async ({ code, response }) => {
     let data = await response;
@@ -34857,6 +34881,14 @@ problem_1 = sum (check [1..999])
       wrasse.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(numGen.next().value % 2 + 30, 1) + starGen.next().value + ansiEscapes_default.cursorRestorePosition, recurse);
     };
   };
+  var set_hover_content = (text) => {
+    if (typeof text === "undefined" || text === "") {
+      html.hover.shell.classList.add("hidden");
+    } else {
+      html.hover.content.innerText = text;
+      html.hover.shell.classList.remove("hidden");
+    }
+  };
   var interactive_terminal = (tree) => {
     wrasse.terminal.clear();
     let curr_line = 1;
@@ -34905,8 +34937,8 @@ problem_1 = sum (check [1..999])
         node.children.forEach((x2) => clean_lines(x2, level + 1, mode));
       }
     };
-    let register_links = (node, level) => {
-      if (node.children.length > 0) {
+    let register_links = (node, level, ignoreLine) => {
+      if (node.children.length > 0 && node.line != ignoreLine) {
         const disp = wrasse.terminal.registerLinkProvider({
           provideLinks(bufferLineNumber, callback) {
             callback([
@@ -34917,18 +34949,26 @@ problem_1 = sum (check [1..999])
                   end: { x: level * 2 + 2 + node.content.length, y: node.line }
                 },
                 activate() {
-                  console.log(perm.disposables.slice());
+                  wrasse.block_mouse = true;
                   perm.disposables.filter((x2) => x2 !== disp).forEach((x2) => x2.dispose());
                   perm.disposables = [disp];
-                  console.log(perm.disposables.slice());
-                  console.log(disp);
                   clean_lines(node, level);
                   node.active = !node.active;
                   curr_line = 1;
                   write_text(tree, 0, false);
-                  register_links(tree, 0);
-                  console.log(perm.disposables.slice());
-                  console.log(disp);
+                  register_links(tree, 0, bufferLineNumber);
+                  wrasse.terminal.write(ansiEscapes_default.cursorTo(0, bufferLineNumber - 1), () => {
+                    wrasse.block_mouse = false;
+                  });
+                },
+                hover() {
+                  wrasse.set_hover_content(`${Math.random()}
+                
+                This is a test text, it is normally found when 
+                I havent implemented something.`);
+                },
+                leave() {
+                  wrasse.set_hover_content();
                 }
               }
             ]);
@@ -34966,8 +35006,10 @@ problem_1 = sum (check [1..999])
     "data_0": {},
     "data_1": {},
     "data_2": {},
+    "block_mouse": false,
     "switch_terminal": switch_terminal,
-    "interactive_terminal": interactive_terminal
+    "interactive_terminal": interactive_terminal,
+    "set_hover_content": set_hover_content
   };
   var wrasse_default = wrasse;
 
