@@ -34794,6 +34794,9 @@ problem_1 = sum (check [1..999])
     },
     block: document.getElementById("wrasse-block")
   };
+  var sleep = async (time) => {
+    await new Promise((r3) => setTimeout(r3, time));
+  };
   var scrollToTop = () => {
     wrasse.terminal.scrollToTop();
   };
@@ -34801,6 +34804,7 @@ problem_1 = sum (check [1..999])
     console.log("wrasse init");
     wrasse.terminal.open(html.terminal);
     initialized = true;
+    wrasse.terminal.modes.mouseTrackingMode = "any";
     wrasse.terminal.modes.wraparoundMode = true;
     html.buttons[0].addEventListener("click", (_3) => {
       wrasse.switch_terminal(wrasse.data_0);
@@ -34823,13 +34827,12 @@ problem_1 = sum (check [1..999])
     const onMouseMove = (e3) => {
       html.hover.shell.style.left = e3.pageX + "px";
       html.hover.shell.style.top = e3.pageY + "px";
-      if (wrasse.block_mouse) {
-        html.block.style.left = e3.pageX + "px";
-        html.block.style.top = e3.pageY + "px";
-      } else {
-        html.block.style.left = e3.pageX + "px" - 100;
-        html.block.style.top = e3.pageY + "px" - 100;
+      let off = 0;
+      if (html.block.classList.contains("hidden")) {
+        off = 100;
       }
+      html.block.style.left = e3.pageX - off + "px";
+      html.block.style.top = e3.pageY - off + "px";
     };
     document.addEventListener("mousemove", onMouseMove);
   };
@@ -34877,7 +34880,7 @@ problem_1 = sum (check [1..999])
       }
     }();
     let recurse = async () => {
-      await new Promise((r3) => setTimeout(r3, 100));
+      sleep(100);
       wrasse.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(numGen.next().value % 2 + 30, 1) + starGen.next().value + ansiEscapes_default.cursorRestorePosition, recurse);
     };
   };
@@ -34887,6 +34890,13 @@ problem_1 = sum (check [1..999])
     } else {
       html.hover.content.innerText = text;
       html.hover.shell.classList.remove("hidden");
+    }
+  };
+  var block_mouse = (bool) => {
+    if (!bool) {
+      html.block.classList.add("hidden");
+    } else {
+      html.block.classList.remove("hidden");
     }
   };
   var interactive_terminal = (tree) => {
@@ -34949,7 +34959,7 @@ problem_1 = sum (check [1..999])
                   end: { x: level * 2 + 2 + node.content.length, y: node.line }
                 },
                 activate() {
-                  wrasse.block_mouse = true;
+                  wrasse.block_mouse(true);
                   perm.disposables.filter((x2) => x2 !== disp).forEach((x2) => x2.dispose());
                   perm.disposables = [disp];
                   clean_lines(node, level);
@@ -34957,9 +34967,10 @@ problem_1 = sum (check [1..999])
                   curr_line = 1;
                   write_text(tree, 0, false);
                   register_links(tree, 0, bufferLineNumber);
-                  wrasse.terminal.write(ansiEscapes_default.cursorTo(0, bufferLineNumber - 1), () => {
-                    wrasse.block_mouse = false;
-                  });
+                  wrasse.terminal.write(ansiEscapes_default.cursorTo(0, bufferLineNumber - 1));
+                  wrasse.terminal.refresh(bufferLineNumber, bufferLineNumber + 1);
+                  fitAddon.fit();
+                  wrasse.block_mouse(false);
                 },
                 hover() {
                   wrasse.set_hover_content(`${Math.random()}
@@ -35006,10 +35017,10 @@ problem_1 = sum (check [1..999])
     "data_0": {},
     "data_1": {},
     "data_2": {},
-    "block_mouse": false,
     "switch_terminal": switch_terminal,
     "interactive_terminal": interactive_terminal,
-    "set_hover_content": set_hover_content
+    "set_hover_content": set_hover_content,
+    "block_mouse": block_mouse
   };
   var wrasse_default = wrasse;
 

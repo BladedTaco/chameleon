@@ -495,8 +495,8 @@ body {
 .wrasse-block{
 	position:absolute;
 	background-color: #0d4e57;
-	width:5px;
-	height:5px;
 	transform:translate(-50%, -50%);
+	width:20px;
+	height:20px;
 	z-index: 100000;
   }

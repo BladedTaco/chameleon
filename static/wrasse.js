@@ -34,6 +34,11 @@ const html = {
 }
 
 
+let sleep = async (time) => {
+  await new Promise(r => setTimeout(r, time));
+}
+
+
 let scrollToTop = () => {
   wrasse.terminal.scrollToTop()
 }
@@ -47,7 +52,7 @@ let wrasse_setup = () => {
 
     // ignore all keypresses
     // wrasse.terminal.attachCustomKeyEventHandler((_) => false);
-    // wrasse.terminal.modes.mouseTrackingMode
+    wrasse.terminal.modes.mouseTrackingMode = "any"
     wrasse.terminal.modes.wraparoundMode = true;
     
 
@@ -84,13 +89,13 @@ let wrasse_setup = () => {
       html.hover.shell.style.left = e.pageX + 'px';
       html.hover.shell.style.top = e.pageY + 'px';
 
-      if (wrasse.block_mouse) {
-        html.block.style.left = e.pageX + 'px';
-        html.block.style.top = e.pageY + 'px';
-      } else {
-        html.block.style.left =  e.pageX + 'px' - 100
-        html.block.style.top = e.pageY + 'px' - 100
+      let off = 0;
+      if (html.block.classList.contains("hidden")) {
+        off = 100;
       }
+
+      html.block.style.left = (e.pageX - off) + 'px';
+      html.block.style.top = (e.pageY - off) + 'px';
     }
 
     document.addEventListener('mousemove', onMouseMove);
@@ -161,7 +166,7 @@ let switch_terminal = (data) => {
     })();
     
     let recurse = async () => {
-      await new Promise(r => setTimeout(r, 100));
+      sleep(100);
       wrasse.terminal.write(ESC.cursorSavePosition 
         + ESC.cursorTo((numGen.next().value % 2) + 30, 1) + starGen.next().value
         + ESC.cursorRestorePosition
@@ -180,6 +185,16 @@ const set_hover_content = (text) => {
     // update text and show element
     html.hover.content.innerText = text
     html.hover.shell.classList.remove("hidden")
+  }
+}
+
+const block_mouse = (bool) => {
+  if (!bool) {
+    // hide element
+    html.block.classList.add("hidden")
+  } else { 
+    // show element
+    html.block.classList.remove("hidden")
   }
 }
 
@@ -295,7 +310,6 @@ let interactive_terminal = (tree) => {
     if (node.children.length > 0 && node.line != ignoreLine) {
       const disp = wrasse.terminal.registerLinkProvider({
         provideLinks(bufferLineNumber, callback) {
-          // let once = false;
           callback([
             {
               text: node.content,
@@ -304,13 +318,6 @@ let interactive_terminal = (tree) => {
                 end:   { x: level*2 + 2 + node.content.length, y: node.line } 
               },
               activate() {
-                // if (once) {
-                //   return;
-                // }
-                // once = true;
-
-                wrasse.block_mouse = true;
-
                 // remove all link providers except this one
                 perm.disposables
                   .filter(x => x !== disp)
@@ -328,10 +335,7 @@ let interactive_terminal = (tree) => {
                 write_text(tree, 0, false)
                 register_links(tree, 0, bufferLineNumber);
 
-                wrasse.terminal.write(ESC.cursorTo(0, bufferLineNumber-1),
-                () => {
-                  wrasse.block_mouse = false;
-                });
+                wrasse.terminal.write(ESC.cursorTo(0, bufferLineNumber-1));
               },
               hover() {
                 wrasse.set_hover_content(`${Math.random()}
@@ -391,10 +395,10 @@ const wrasse = {
     "data_0" : {},
     "data_1" : {},
     "data_2" : {},
-    "block_mouse" : false,
     "switch_terminal" : switch_terminal,
     "interactive_terminal" : interactive_terminal,
     "set_hover_content" : set_hover_content,
+    "block_mouse" : block_mouse,
 };
 
 /*
