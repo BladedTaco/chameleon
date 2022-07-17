@@ -339,7 +339,7 @@ let interactive_terminal = (tree) => {
   let register_links = (node, level) => {
     // register link provider
     if (node.children.length > 0) {
-      perm.disposables.push(wrasse.terminal.registerLinkProvider({
+      const disp = wrasse.terminal.registerLinkProvider({
         provideLinks(bufferLineNumber, callback) {
           callback([
             {
@@ -349,13 +349,19 @@ let interactive_terminal = (tree) => {
                 end: { x: level*2 + 2 + node.content.length, y: node.line } 
               },
               activate() {
-                // remove all link providers
-                perm.disposables.forEach((x) => x.dispose())
-                
+                // remove all link providers except this one
+                perm.disposables
+                  .filter(x => x !== disp)
+                  .forEach((x) => x.dispose())
+                perm.disposables = [disp];
+
+                // fix terminal output
                 clean_lines(node, level)
 
+                // flip state
                 node.active = !node.active;
 
+                // update tree state
                 curr_line = 1
                 write_text(tree, 0, false)
                 register_links(tree, 0)
@@ -367,7 +373,9 @@ let interactive_terminal = (tree) => {
           // fallthrough failure state
           callback(undefined);
         }
-      }));
+      })
+      
+      perm.disposables.push(disp);
     }
 
     if (node.active) {

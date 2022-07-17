@@ -34907,7 +34907,7 @@ problem_1 = sum (check [1..999])
     };
     let register_links = (node, level) => {
       if (node.children.length > 0) {
-        perm.disposables.push(wrasse.terminal.registerLinkProvider({
+        const disp = wrasse.terminal.registerLinkProvider({
           provideLinks(bufferLineNumber, callback) {
             callback([
               {
@@ -34917,19 +34917,26 @@ problem_1 = sum (check [1..999])
                   end: { x: level * 2 + 2 + node.content.length, y: node.line }
                 },
                 activate() {
-                  perm.disposables.forEach((x2) => x2.dispose());
+                  console.log(perm.disposables.slice());
+                  perm.disposables.filter((x2) => x2 !== disp).forEach((x2) => x2.dispose());
+                  perm.disposables = [disp];
+                  console.log(perm.disposables.slice());
+                  console.log(disp);
                   clean_lines(node, level);
                   node.active = !node.active;
                   curr_line = 1;
                   write_text(tree, 0, false);
                   register_links(tree, 0);
+                  console.log(perm.disposables.slice());
+                  console.log(disp);
                 }
               }
             ]);
             return;
             callback(void 0);
           }
-        }));
+        });
+        perm.disposables.push(disp);
       }
       if (node.active) {
         node.children.forEach((x2) => register_links(x2, level + 1));
