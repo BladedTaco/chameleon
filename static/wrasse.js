@@ -1,6 +1,7 @@
 import { Terminal as xTerminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit';
 import ESC from './ansiEscapes';
+import wrasseGHC from './wrasseGHC';
 
 let initialized = false;
 const WrasseTerminal = new xTerminal({
@@ -128,7 +129,8 @@ let parse_tree = (tree) => {
     content: tree[0][0],
     active: tree[0][1],
     line: tree[0][2],
-    children: tree[1].map(parse_tree)
+    children: tree[1].map(parse_tree),
+    link: undefined,
   }
 }
 
@@ -215,7 +217,7 @@ let interactive_terminal = (tree) => {
   
   let curr_line = 1;
 
-  let write_text = (node, level, write = false) => {
+  const write_text = (node, level, write = false) => {
     let line = curr_line
 
     let prefix = "  ".repeat(level) 
@@ -245,7 +247,7 @@ let interactive_terminal = (tree) => {
     }
   }
 
-  let clean_lines = (node, level, mode) => {
+  const clean_lines = (node, level, mode) => {
 
     // first call
     if (mode === undefined) {
@@ -305,49 +307,48 @@ let interactive_terminal = (tree) => {
     }
   }
 
-  let register_links = (node, level, ignoreLine) => {
+  const register_links = (node, level, ignoreLine) => {
     // register link provider
     if (node.children.length > 0 && node.line != ignoreLine) {
       const disp = wrasse.terminal.registerLinkProvider({
         provideLinks(bufferLineNumber, callback) {
-          callback([
-            {
-              text: node.content,
-              range: { 
-                start: { x: level*2+ 1,                        y: node.line },
-                end:   { x: level*2 + 2 + node.content.length, y: node.line } 
-              },
-              activate() {
-                // remove all link providers except this one
-                perm.disposables
-                  .filter(x => x !== disp)
-                  .forEach((x) => x.dispose())
-                perm.disposables = [disp];
+          node.link = {
+            text: node.content,
+            range: { 
+              start: { x: level*2+ 1,                        y: node.line },
+              end:   { x: level*2 + 2 + node.content.length, y: node.line } 
+            },
+            activate() {
+              // remove all link providers except this one
+              perm.disposables
+                .filter(x => x !== disp)
+                .forEach((x) => x.dispose())
+              perm.disposables = [disp];
 
-                // fix terminal output
-                clean_lines(node, level)
+              // fix terminal output
+              clean_lines(node, level)
 
-                // flip state
-                node.active = !node.active;
+              // flip state
+              node.active = !node.active;
 
-                // update tree state
-                curr_line = 1
-                write_text(tree, 0, false)
-                register_links(tree, 0, bufferLineNumber);
+              // update tree state
+              curr_line = 1
+              write_text(tree, 0, false)
+              register_links(tree, 0, bufferLineNumber);
 
-                wrasse.terminal.write(ESC.cursorTo(0, bufferLineNumber-1));
-              },
-              hover() {
-                wrasse.set_hover_content(`${Math.random()}
-                
-                This is a test text, it is normally found when 
-                I havent implemented something.`)
-              },
-              leave() {
-                wrasse.set_hover_content()
-              }
+              wrasse.terminal.write(ESC.cursorTo(0, bufferLineNumber-1));
+            },
+            hover() {
+              wrasse.set_hover_content(`${Math.random()}
+              
+              This is a test text, it is normally found when 
+              I havent implemented something.`)
+            },
+            leave() {
+              wrasse.set_hover_content()
             }
-          ]);
+          };
+          callback([node.link]);
           return;
           // fallthrough failure state
           callback(undefined);
@@ -360,6 +361,36 @@ let interactive_terminal = (tree) => {
 
     if (node.active) {
       node.children.forEach(x => register_links(x, level+1))
+    }
+  }
+
+  const register_keywords = (node) => {
+    if (node?.link) {
+      const {text, range} = node.link;
+      for (const match of text.matchAll(wrasseGHC.regex)) {
+        const disp = wrasse.terminal.registerLinkProvider({
+          provideLinks(bufferLineNumber, callback) {
+            callback([{
+              text: match[0],
+              range: { 
+                start: { x: range.start.x + match.index,                        y: node.line },
+                end:   { x: range.start.x + match.index + match[0].length,      y: node.line } 
+              },
+              activate() {
+              },
+              hover() {
+                wrasse.set_hover_content(wrasseGHC.map[match[0]])
+              },
+              leave() {
+                wrasse.set_hover_content()
+              }
+            }]);
+            return;
+            // fallthrough failure state
+            callback(undefined);
+          }
+        })
+      }
     }
   }
 

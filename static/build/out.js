@@ -34959,7 +34959,6 @@ problem_1 = sum (check [1..999])
                   end: { x: level * 2 + 2 + node.content.length, y: node.line }
                 },
                 activate() {
-                  wrasse.block_mouse(true);
                   perm.disposables.filter((x2) => x2 !== disp).forEach((x2) => x2.dispose());
                   perm.disposables = [disp];
                   clean_lines(node, level);
@@ -34968,9 +34967,6 @@ problem_1 = sum (check [1..999])
                   write_text(tree, 0, false);
                   register_links(tree, 0, bufferLineNumber);
                   wrasse.terminal.write(ansiEscapes_default.cursorTo(0, bufferLineNumber - 1));
-                  wrasse.terminal.refresh(bufferLineNumber, bufferLineNumber + 1);
-                  fitAddon.fit();
-                  wrasse.block_mouse(false);
                 },
                 hover() {
                   wrasse.set_hover_content(`${Math.random()}
