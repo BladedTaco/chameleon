@@ -5,7 +5,7 @@ const termMap = {
     
     A type is constructed using itself.
     This is not possible as type checking
-    must end.`,
+    must end at a concrete type.`,
     "Ambiguous occurrence" : `Ambiguous occurrence
     
     The compiler cannot tell which of
