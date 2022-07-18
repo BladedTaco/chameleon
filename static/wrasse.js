@@ -312,6 +312,7 @@ let interactive_terminal = (tree) => {
     if (node.children.length > 0 && node.line != ignoreLine) {
       const disp = wrasse.terminal.registerLinkProvider({
         provideLinks(bufferLineNumber, callback) {
+          let hovered = false;
           node.link = {
             text: node.content,
             range: { 
@@ -336,15 +337,25 @@ let interactive_terminal = (tree) => {
               write_text(tree, 0, false)
               register_links(tree, 0, bufferLineNumber);
 
+              perm.keywords.forEach(x => x.dispose())
+              perm.keywords = [];
+              register_keywords(tree)
+              console.log(perm.keywords.length)
+
               wrasse.terminal.write(ESC.cursorTo(0, bufferLineNumber-1));
             },
             hover() {
-              wrasse.set_hover_content(`${Math.random()}
-              
-              This is a test text, it is normally found when 
-              I havent implemented something.`)
+              hovered = true;
+              sleep(500).then(() => {
+                if (hovered) {
+                  wrasse.set_hover_content(node.active
+                    ? "click to collapse"
+                    : "click to expand")
+                }
+              })
             },
             leave() {
+              hovered = false;
               wrasse.set_hover_content()
             }
           };
@@ -357,6 +368,14 @@ let interactive_terminal = (tree) => {
       
       // push disposable
       perm.disposables.push(disp);
+    } else {
+      node.link = {
+        text: node.content,
+        range: { 
+          start: { x: level*2 + 1,                       y: node.line },
+          end:   { x: level*2 + 2 + node.content.length, y: node.line } 
+        },
+      }
     }
 
     if (node.active) {
@@ -367,14 +386,16 @@ let interactive_terminal = (tree) => {
   const register_keywords = (node) => {
     if (node?.link) {
       const {text, range} = node.link;
-      for (const match of text.matchAll(wrasseGHC.regex)) {
-        const disp = wrasse.terminal.registerLinkProvider({
+
+      // keywords
+      for (const match of text.matchAll(wrasseGHC.regex.keyword)) {
+        perm.keywords.push(wrasse.terminal.registerLinkProvider({
           provideLinks(bufferLineNumber, callback) {
             callback([{
               text: match[0],
               range: { 
-                start: { x: range.start.x + match.index,                        y: node.line },
-                end:   { x: range.start.x + match.index + match[0].length,      y: node.line } 
+                start: { x: range.start.x + match.index + 2,                    y: node.line },
+                end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line } 
               },
               activate() {
               },
@@ -389,14 +410,77 @@ let interactive_terminal = (tree) => {
             // fallthrough failure state
             callback(undefined);
           }
-        })
+        }));
+      }
+
+      // symbols (variables, constants, modules, etc.)
+      for (const match of text.matchAll(wrasseGHC.regex.symbol)) {
+        perm.keywords.push(wrasse.terminal.registerLinkProvider({
+          provideLinks(bufferLineNumber, callback) {
+            callback([{
+              text: match[0],
+              range: { 
+                start: { x: range.start.x + match.index + 2,                    y: node.line },
+                end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line } 
+              },
+              activate() {
+              },
+              hover() {
+                const {symbol} = match.groups;
+                
+                wrasse.set_hover_content(`${symbol}
+                
+                type: TODO
+                defined at: TODO
+                etc.: TODO`)
+              },
+              leave() {
+                wrasse.set_hover_content()
+              }
+            }]);
+            return;
+            // fallthrough failure state
+            callback(undefined);
+          }
+        }));
+      }
+
+      // code locations
+      for (const match of text.matchAll(wrasseGHC.regex.location)) {
+        perm.keywords.push(wrasse.terminal.registerLinkProvider({
+          provideLinks(bufferLineNumber, callback) {
+            callback([{
+              text: match[0],
+              range: { 
+                start: { x: range.start.x + match.index + 2,                    y: node.line },
+                end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line } 
+              },
+              activate() {
+              },
+              hover() {
+                const {line, colStart, colEnd} = match.groups;
+                
+                wrasse.set_hover_content(`not implemented, look at line ${line}, column ${colStart} to ${colEnd}`)
+              },
+              leave() {
+                wrasse.set_hover_content()
+              }
+            }]);
+            return;
+            // fallthrough failure state
+            callback(undefined);
+          }
+        }));
       }
     }
+    node?.children.forEach(register_keywords)
   }
 
   write_text(tree, 0, true);
 
   register_links(tree, 0)
+
+  register_keywords(tree)
 }
 
 
@@ -414,7 +498,8 @@ let ghc_hook = async (code) => {
 
 
 const perm = {
-  "disposables": []
+  "disposables": [],
+  "keywords": [],
 }
 
 

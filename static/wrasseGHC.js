@@ -6,7 +6,7 @@ const termMap = {
     A type is constructed using itself.
     This is not possible as type checking
     must end.`,
-    "ambiguous occurrence" : `Ambiguous occurrence
+    "Ambiguous occurrence" : `Ambiguous occurrence
     
     The compiler cannot tell which of
     the mentioned terms is the one that
@@ -14,12 +14,17 @@ const termMap = {
 }
 
 const wrasseGHC = {
-    regex : new RegExp(
+    regex : {
+        keyword : new RegExp(
             Object.keys(termMap)
             .map(x => `(${x})`)
             .join('|')
-        ),
+        , 'gi'),
+        symbol : /‘(?<symbol>[a-zA-Z.0-9]+)’/g,
+        location : /generated\/Infile.hs:(?<line>[0-9]+):(?<colStart>[0-9]+)(?<colEnd>\-[0-9]+)?/g,
+    },
     map : termMap,
+    
 }
 
 export default wrasseGHC;
