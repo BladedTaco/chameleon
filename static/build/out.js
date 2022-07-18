@@ -34766,6 +34766,29 @@ problem_1 = sum (check [1..999])
   };
   var ansiEscapes_default = ansiEscapes;
 
+  // wrasseGHC.js
+  var termMap = {
+    "infinite type": `Infinite Type
+    
+    A type is constructed using itself.
+    This is not possible as type checking
+    must end.`,
+    "Ambiguous occurrence": `Ambiguous occurrence
+    
+    The compiler cannot tell which of
+    the mentioned terms is the one that
+    you want to use`
+  };
+  var wrasseGHC = {
+    regex: {
+      keyword: new RegExp(Object.keys(termMap).map((x2) => `(${x2})`).join("|"), "gi"),
+      symbol: /‘(?<symbol>[a-zA-Z.0-9]+)’/g,
+      location: /generated\/Infile.hs:(?<line>[0-9]+):(?<colStart>[0-9]+)(?<colEnd>\-[0-9]+)?/g
+    },
+    map: termMap
+  };
+  var wrasseGHC_default = wrasseGHC;
+
   // wrasse.js
   var initialized = false;
   var WrasseTerminal = new import_xterm.Terminal({
@@ -34856,7 +34879,8 @@ problem_1 = sum (check [1..999])
       content: tree[0][0],
       active: tree[0][1],
       line: tree[0][2],
-      children: tree[1].map(parse_tree)
+      children: tree[1].map(parse_tree),
+      link: void 0
     };
   };
   var switch_terminal = (data) => {
@@ -34902,7 +34926,7 @@ problem_1 = sum (check [1..999])
   var interactive_terminal = (tree) => {
     wrasse.terminal.clear();
     let curr_line = 1;
-    let write_text = (node, level, write = false) => {
+    const write_text = (node, level, write = false) => {
       let line = curr_line;
       let prefix2 = "  ".repeat(level);
       let node_string = node.content;
@@ -34923,7 +34947,7 @@ problem_1 = sum (check [1..999])
         node.children.forEach((x2) => write_text(x2, level + 1, write));
       }
     };
-    let clean_lines = (node, level, mode) => {
+    const clean_lines = (node, level, mode) => {
       if (mode === void 0) {
         mode = node.active;
       } else if (node.active == false)
@@ -34947,50 +34971,147 @@ problem_1 = sum (check [1..999])
         node.children.forEach((x2) => clean_lines(x2, level + 1, mode));
       }
     };
-    let register_links = (node, level, ignoreLine) => {
+    const register_links = (node, level, ignoreLine) => {
       if (node.children.length > 0 && node.line != ignoreLine) {
         const disp = wrasse.terminal.registerLinkProvider({
           provideLinks(bufferLineNumber, callback) {
-            callback([
-              {
-                text: node.content,
-                range: {
-                  start: { x: level * 2 + 1, y: node.line },
-                  end: { x: level * 2 + 2 + node.content.length, y: node.line }
-                },
-                activate() {
-                  perm.disposables.filter((x2) => x2 !== disp).forEach((x2) => x2.dispose());
-                  perm.disposables = [disp];
-                  clean_lines(node, level);
-                  node.active = !node.active;
-                  curr_line = 1;
-                  write_text(tree, 0, false);
-                  register_links(tree, 0, bufferLineNumber);
-                  wrasse.terminal.write(ansiEscapes_default.cursorTo(0, bufferLineNumber - 1));
-                },
-                hover() {
-                  wrasse.set_hover_content(`${Math.random()}
-                
-                This is a test text, it is normally found when 
-                I havent implemented something.`);
-                },
-                leave() {
-                  wrasse.set_hover_content();
-                }
+            let hovered = false;
+            node.link = {
+              text: node.content,
+              range: {
+                start: { x: level * 2 + 1, y: node.line },
+                end: { x: level * 2 + 2 + node.content.length, y: node.line }
+              },
+              activate() {
+                perm.disposables.filter((x2) => x2 !== disp).forEach((x2) => x2.dispose());
+                perm.disposables = [disp];
+                clean_lines(node, level);
+                node.active = !node.active;
+                curr_line = 1;
+                write_text(tree, 0, false);
+                register_links(tree, 0, bufferLineNumber);
+                perm.keywords.forEach((x2) => x2.dispose());
+                perm.keywords = [];
+                register_keywords(tree);
+                console.log(perm.keywords.length);
+                wrasse.terminal.write(ansiEscapes_default.cursorTo(0, bufferLineNumber - 1));
+              },
+              hover() {
+                hovered = true;
+                sleep(500).then(() => {
+                  if (hovered) {
+                    wrasse.set_hover_content(node.active ? "click to collapse" : "click to expand");
+                  }
+                });
+              },
+              leave() {
+                hovered = false;
+                wrasse.set_hover_content();
               }
-            ]);
+            };
+            callback([node.link]);
             return;
             callback(void 0);
           }
         });
         perm.disposables.push(disp);
+      } else {
+        node.link = {
+          text: node.content,
+          range: {
+            start: { x: level * 2 + 1, y: node.line },
+            end: { x: level * 2 + 2 + node.content.length, y: node.line }
+          }
+        };
       }
       if (node.active) {
         node.children.forEach((x2) => register_links(x2, level + 1));
       }
     };
+    const register_keywords = (node) => {
+      if (node?.link) {
+        const { text, range } = node.link;
+        for (const match of text.matchAll(wrasseGHC_default.regex.keyword)) {
+          perm.keywords.push(wrasse.terminal.registerLinkProvider({
+            provideLinks(bufferLineNumber, callback) {
+              callback([{
+                text: match[0],
+                range: {
+                  start: { x: range.start.x + match.index + 2, y: node.line },
+                  end: { x: range.start.x + match.index + match[0].length + 1, y: node.line }
+                },
+                activate() {
+                },
+                hover() {
+                  wrasse.set_hover_content(wrasseGHC_default.map[match[0]]);
+                },
+                leave() {
+                  wrasse.set_hover_content();
+                }
+              }]);
+              return;
+              callback(void 0);
+            }
+          }));
+        }
+        for (const match of text.matchAll(wrasseGHC_default.regex.symbol)) {
+          perm.keywords.push(wrasse.terminal.registerLinkProvider({
+            provideLinks(bufferLineNumber, callback) {
+              callback([{
+                text: match[0],
+                range: {
+                  start: { x: range.start.x + match.index + 2, y: node.line },
+                  end: { x: range.start.x + match.index + match[0].length + 1, y: node.line }
+                },
+                activate() {
+                },
+                hover() {
+                  const { symbol } = match.groups;
+                  wrasse.set_hover_content(`${symbol}
+                
+                type: TODO
+                defined at: TODO
+                etc.: TODO`);
+                },
+                leave() {
+                  wrasse.set_hover_content();
+                }
+              }]);
+              return;
+              callback(void 0);
+            }
+          }));
+        }
+        for (const match of text.matchAll(wrasseGHC_default.regex.location)) {
+          perm.keywords.push(wrasse.terminal.registerLinkProvider({
+            provideLinks(bufferLineNumber, callback) {
+              callback([{
+                text: match[0],
+                range: {
+                  start: { x: range.start.x + match.index + 2, y: node.line },
+                  end: { x: range.start.x + match.index + match[0].length + 1, y: node.line }
+                },
+                activate() {
+                },
+                hover() {
+                  const { line, colStart, colEnd } = match.groups;
+                  wrasse.set_hover_content(`not implemented, look at line ${line}, column ${colStart} to ${colEnd}`);
+                },
+                leave() {
+                  wrasse.set_hover_content();
+                }
+              }]);
+              return;
+              callback(void 0);
+            }
+          }));
+        }
+      }
+      node?.children.forEach(register_keywords);
+    };
     write_text(tree, 0, true);
     register_links(tree, 0);
+    register_keywords(tree);
   };
   var handle_ghc = async (code) => {
     return ghc_hook(code);
@@ -35003,7 +35124,8 @@ problem_1 = sum (check [1..999])
     return response.json();
   };
   var perm = {
-    "disposables": []
+    "disposables": [],
+    "keywords": []
   };
   var wrasse = {
     "hook": hook,
