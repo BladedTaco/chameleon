@@ -117,8 +117,10 @@ let hook = async ({code, response}) => {
 
     wrasse.tree = parse_tree(ghc_data.full)
     wrasse.data_0 = ghc_data
+    wrasse.data_0.ghc.code = code.split("\n")
     wrasse.data_1 = data
     wrasse.data_2 = { ghc: ghc_data, chameleon: data }
+
 
     console.log(wrasse.tree)
     switch_terminal(wrasse.data_0)
@@ -139,6 +141,9 @@ let switch_terminal = (data) => {
   // clean disposables
     perm.disposables.forEach(x => x.dispose())
     perm.disposables = [];
+    perm.keywords.forEach(x => x.dispose())
+    perm.keywords = [];
+
 
     wrasse.terminal.reset()
     wrasse.terminal.options.disableStdin = true;
@@ -420,14 +425,15 @@ let interactive_terminal = (tree) => {
             callback([{
               text: match[0],
               range: { 
-                start: { x: range.start.x + match.index + 2,                    y: node.line },
-                end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line } 
+                start: { x: range.start.x + match.index + 3,                y: node.line },
+                end:   { x: range.start.x + match.index + match[0].length,  y: node.line } 
               },
               activate() {
               },
               hover() {
                 const {symbol} = match.groups;
                 
+
                 wrasse.set_hover_content(`${symbol}
                 
                 type: TODO
@@ -460,7 +466,13 @@ let interactive_terminal = (tree) => {
               hover() {
                 const {line, colStart, colEnd} = match.groups;
                 
-                wrasse.set_hover_content(`not implemented, look at line ${line}, column ${colStart} to ${colEnd}`)
+                let x = ""
+                if (wrasse?.data_0?.ghc?.code) {
+                  x = wrasse?.data_0?.ghc?.code[line-1];
+                }
+
+                wrasse.set_hover_content(`not implemented, look at line ${line}, column ${colStart} to ${colEnd}
+                ${x}`)
               },
               leave() {
                 wrasse.set_hover_content()

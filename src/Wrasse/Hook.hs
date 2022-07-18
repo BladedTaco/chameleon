@@ -43,17 +43,21 @@ import Data.Tree (Tree(..), drawTree)
 import Data.List (intercalate)
 
 import Wrasse.Tree (multiLevel)
+import Util (uncurry3)
+import Control.Lens (traverseOf, Each (each))
+import Control.Arrow
+import Agda.Utils.Tuple (uncurry4)
 
-main :: IO ()
-main = do
-  args <- getArgs :: IO [String]
-  ref <- liftIO $ newIORef ""
-  r <- runGhc (Just libdir) (processGHC ref "Example" (head args))
-  putStrLn "start output"
-  mconcat $ putStrLn <$> r
-  r' <- readIORef ref
-  putStrLn r'
-  putStrLn "end output"
+-- main :: IO ()
+-- main = do
+--   args <- getArgs :: IO [String]
+--   ref <- liftIO $ newIORef ""
+--   r <- runGhc (Just libdir) (processGHC ref "Example" (head args))
+--   putStrLn "start output"
+--   mconcat $ mapTup3 putStrLn  r
+--   r' <- readIORef ref
+--   putStrLn r'
+--   putStrLn "end output"
 
 ghcFile :: String -> FilePath
 ghcFile = ("generated/" ++) . (++ ".hs")
@@ -68,26 +72,39 @@ hook f = do
   createDirectoryIfMissing True $ takeDirectory file
   writeFile file s
   tools <- toolHook modName file
-  return $ WrasseResult tools "" "" "" ((, False, -1) <$> multiLevel tools) (lines $ Data.Tree.drawTree $ filter (/= '\n') <$> multiLevel tools)
+  ghcData <- ghcHook modName file
+  return $ WrasseResult tools ghcData "" "" ((, False, -1) <$> multiLevel tools) (lines $ Data.Tree.drawTree $ filter (/= '\n') <$> multiLevel tools)
 
 --
-toolHook :: String -> FilePath -> IO [(String, [String], [String])]
+toolHook :: String -> FilePath -> IO [(String, [(String, [String])])]
 toolHook modName file = do
-  ghc <- ghcHook modName file
-  hlint <- hlintHook file
+  (GHCResult g1 g2 g3 g4) <- ghcHook modName file
+  (h1, h2) <- hlintHook file
   return [
-    ("GHC", fst ghc, snd ghc),
-    ("HLint", fst hlint, snd hlint)
+    ("GHC", [ 
+      ("console", g1),
+      ("failStage", g2),
+      ("output", g3),
+      ("code", g4)
+    ]),
+    ("HLint", [
+      ("console", h1),
+      ("output", h2)
+    ])
     ]
 
 -- runs GHC
-ghcHook :: String -> FilePath -> IO ([String], [String])
+ghcHook :: String -> FilePath -> IO GHCResult
 ghcHook modName file = do
   ref <- liftIO $ newIORef "" -- make an output IO stream
   result <- runGhc (Just libdir) (processGHC ref modName file)
   ref_out <- readIORef ref -- read the output IO stream
   -- return $ GHCResult (("ghc console: " ++) <$> lines ref_out) (fmap ("ghc result: " ++) result)
-  return (lines ref_out, intercalate ["", "~", ""] $ lines <$> result)
+  -- return (lines ref_out, intercalate ["", "~", ""] $ lines <$> result)
+  return $ uncurry3 (GHCResult $ lines ref_out) $ mapTup3 lines result
+
+mapTup3 :: (t -> c) -> (t, t, t) -> (c, c, c)
+mapTup3 f (a, b, c) = (f a, f b, f c)
 
 -- runs HLint
 hlintHook ::  FilePath -> IO  ([String], [String])
@@ -128,7 +145,7 @@ logHandler ref dflags warn severity srcSpan style msg =
         printDoc = show (runSDoc locMsg cntx)
 
 -- the boilerplate GHC
-processGHC :: IORef String -> String -> FilePath -> Ghc [String]
+processGHC :: IORef String -> String -> FilePath -> Ghc (String, String, String)
 processGHC ref moduleName path = do
   dflags <- getSessionDynFlags
   -- ref <- liftIO $ newIORef ""
@@ -151,29 +168,31 @@ processGHC ref moduleName path = do
         targetContents = Nothing
       }
 
+
   eitherl <- gtry (load LoadAllTargets) :: Ghc (Either SourceError SuccessFlag)
   case eitherl of
     Left se -> do
       removeTarget hsTarketId
-      return ["Failed at stage: loading", show se]
+      return ("Failed at stage: loading", show se, "")
     Right sf -> do
       modSum <- getModSummary mn
       eitherp <- gtry (parseModule modSum) :: Ghc (Either SourceError ParsedModule)
       case eitherp of
         Left se -> do
-          return ["Failed at stage: parsing", show se]
+          return ("Failed at stage: parsing", show se, "")
         Right p -> do
           t <- gtry (typecheckModule p) :: Ghc (Either SourceError TypecheckedModule)
           case t of
             Left se -> do
               let ParsedModule _ ps imprts anns = p
-              return ["Failed at stage: type checking", show se, showSDocUnsafe $ ppr ps]
+              return ("Failed at stage: type checking", show se, showSDocUnsafe $ ppr ps)
+              -- return ("Failed at stage: type checking", show se, codeFile)
             Right tc -> do
               let TypecheckedModule _ (Just rs) ts modInfo (typeGlobalEnv, moduleDeets) = tc
               let hieFile = mkHieFile modSum typeGlobalEnv rs
 
 
-              return ["Program looks good"]
+              return ("Program looks good", "", "")
 
 
 -- the boilerplate GHC

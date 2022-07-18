@@ -12,7 +12,8 @@ import Data.Maybe (fromMaybe)
 multiLevel :: [ToolInfo] -> Tree String
 multiLevel = Node "Root" . fmap recurse
     where
-        recurse (nam, con, out) = Node nam [Node "console" $ layer con, Node "out" $ layer out]
+        recurse (nam, subs) = Node nam $ uncurry ((. layer) . Node) <$> subs
+        -- recurse (nam, con, out) = Node nam [Node "console" $ layer con, Node "out" $ layer out]
 
 layer :: [String] -> [Tree String]
 layer [] = []

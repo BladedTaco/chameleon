@@ -34772,7 +34772,7 @@ problem_1 = sum (check [1..999])
     
     A type is constructed using itself.
     This is not possible as type checking
-    must end.`,
+    must end at a concrete type.`,
     "Ambiguous occurrence": `Ambiguous occurrence
     
     The compiler cannot tell which of
@@ -34783,7 +34783,7 @@ problem_1 = sum (check [1..999])
     regex: {
       keyword: new RegExp(Object.keys(termMap).map((x2) => `(${x2})`).join("|"), "gi"),
       symbol: /‘(?<symbol>[a-zA-Z.0-9]+)’/g,
-      location: /generated\/Infile.hs:(?<line>[0-9]+):(?<colStart>[0-9]+)(?<colEnd>\-[0-9]+)?/g
+      location: /generated\/Infile.hs:(?<line>[0-9]+):(?<colStart>[0-9]+)(?:\-(?<colEnd>[0-9]+))?/g
     },
     map: termMap
   };
@@ -34869,6 +34869,7 @@ problem_1 = sum (check [1..999])
     console.log(ghc_data);
     wrasse.tree = parse_tree(ghc_data.full);
     wrasse.data_0 = ghc_data;
+    wrasse.data_0.ghc.code = code.split("\n");
     wrasse.data_1 = data;
     wrasse.data_2 = { ghc: ghc_data, chameleon: data };
     console.log(wrasse.tree);
@@ -34886,6 +34887,8 @@ problem_1 = sum (check [1..999])
   var switch_terminal = (data) => {
     perm.disposables.forEach((x2) => x2.dispose());
     perm.disposables = [];
+    perm.keywords.forEach((x2) => x2.dispose());
+    perm.keywords = [];
     wrasse.terminal.reset();
     wrasse.terminal.options.disableStdin = true;
     wrasse.terminal.writeln(JSON.stringify(data, null, 2), scrollToTop);
@@ -35060,8 +35063,8 @@ problem_1 = sum (check [1..999])
               callback([{
                 text: match[0],
                 range: {
-                  start: { x: range.start.x + match.index + 2, y: node.line },
-                  end: { x: range.start.x + match.index + match[0].length + 1, y: node.line }
+                  start: { x: range.start.x + match.index + 3, y: node.line },
+                  end: { x: range.start.x + match.index + match[0].length, y: node.line }
                 },
                 activate() {
                 },
@@ -35095,7 +35098,12 @@ problem_1 = sum (check [1..999])
                 },
                 hover() {
                   const { line, colStart, colEnd } = match.groups;
-                  wrasse.set_hover_content(`not implemented, look at line ${line}, column ${colStart} to ${colEnd}`);
+                  let x2 = "";
+                  if (wrasse?.data_0?.ghc?.code) {
+                    x2 = wrasse?.data_0?.ghc?.code[line];
+                  }
+                  wrasse.set_hover_content(`not implemented, look at line ${line}, column ${colStart} to ${colEnd}
+                ${x2}`);
                 },
                 leave() {
                   wrasse.set_hover_content();
