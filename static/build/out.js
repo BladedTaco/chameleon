@@ -35100,7 +35100,7 @@ problem_1 = sum (check [1..999])
                   const { line, colStart, colEnd } = match.groups;
                   let x2 = "";
                   if (wrasse?.data_0?.ghc?.code) {
-                    x2 = wrasse?.data_0?.ghc?.code[line];
+                    x2 = wrasse?.data_0?.ghc?.code[line - 1];
                   }
                   wrasse.set_hover_content(`not implemented, look at line ${line}, column ${colStart} to ${colEnd}
                 ${x2}`);
