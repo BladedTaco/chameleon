@@ -43,7 +43,7 @@ import Data.Tree (Tree(..), drawTree)
 import Data.List (intercalate)
 
 import Wrasse.Tree (multiLevel)
-import Util (uncurry3)
+import Util (uncurry3, OverridingBool (Always))
 import Control.Lens (traverseOf, Each (each))
 import Control.Arrow
 import Agda.Utils.Tuple (uncurry4)
@@ -156,8 +156,27 @@ processGHC ref moduleName path = do
       maxValidHoleFits = Nothing,
       refLevelHoleFits = Nothing,
       maxRefHoleFits = Nothing,
-      maxRelevantBinds = Nothing
+      maxRelevantBinds = Nothing,
+      useColor = Always,
+      maxErrors = Just 10
     }
+  -- general flags
+  let gflags = [ 
+          Opt_KeepGoing
+        , Opt_DiagnosticsShowCaret
+        , Opt_PrintPotentialInstances
+        , Opt_PrintTypecheckerElaboration
+        , Opt_HelpfulErrors
+        , Opt_ErrorSpans
+        ]
+  -- dump flags
+  let dpflags = [
+          -- Opt_D_dump_json
+        ]
+
+  let dflags' = foldl dopt_set dflags' dpflags
+  let dflags' = foldl gopt_set dflags' gflags
+
   setSessionDynFlags dflags'
   let mn = mkModuleName moduleName
   let hsTarketId = TargetFile path Nothing

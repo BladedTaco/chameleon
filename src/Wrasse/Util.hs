@@ -5,6 +5,18 @@ import Control.Arrow
 import Control.Monad
 
 
+-- >>> dropUntil (== 5) [1, 2, 3, 4, 5, 6, 7, 8, 9]
+-- [6,7,8,9]
+dropUntil :: (a -> Bool) -> [a] -> [a]
+dropUntil = Prelude.drop 1 <..> dropWhile . (not .)
+
+-- >>> multiple 10 (+2) 4
+-- 24
+multiple :: Int -> (a -> a) -> a -> a
+multiple 0 = const id
+multiple n = (.) =<< multiple (n - 1)
+-- multiple n f = multiple (n-1) f . f
+
 
 -- | Nested map
 --
