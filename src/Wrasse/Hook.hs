@@ -73,7 +73,7 @@ hook f = do
   writeFile file s
   tools <- toolHook modName file
   ghcData <- ghcHook modName file
-  return $ WrasseResult tools ghcData "" "" ((, False, -1) <$> multiLevel tools) (lines $ Data.Tree.drawTree $ filter (/= '\n') <$> multiLevel tools)
+  return $ WrasseResult tools ghcData "" "" ((, False, -1) <$> multiLevel tools) [] -- (lines $ Data.Tree.drawTree $ filter (/= '\n') <$> multiLevel tools)
 
 --
 toolHook :: String -> FilePath -> IO [(String, [(String, [String])])]
@@ -150,15 +150,15 @@ processGHC ref moduleName path = do
   dflags <- getSessionDynFlags
   -- ref <- liftIO $ newIORef ""
   let dflags' = dflags {
-      hscTarget = HscNothing,
-      ghcLink = NoLink,
-      log_action = logHandler ref,
-      maxValidHoleFits = Nothing,
-      refLevelHoleFits = Nothing,
-      maxRefHoleFits = Nothing,
-      maxRelevantBinds = Nothing,
-      useColor = Always,
-      maxErrors = Just 10
+      hscTarget = HscNothing
+    , ghcLink = NoLink
+    , log_action = logHandler ref
+    , maxValidHoleFits = Nothing
+    , refLevelHoleFits = Nothing
+    , maxRefHoleFits = Nothing
+    , maxRelevantBinds = Nothing
+    , useColor = Always
+    , maxErrors = Just 10
     }
   -- general flags
   let gflags = [ 
@@ -171,13 +171,13 @@ processGHC ref moduleName path = do
         ]
   -- dump flags
   let dpflags = [
-          -- Opt_D_dump_json
+          Opt_D_dump_json
         ]
 
-  let dflags' = foldl dopt_set dflags' dpflags
-  let dflags' = foldl gopt_set dflags' gflags
+  let dflags'' = foldl dopt_set dflags' dpflags
+  let dflags''' = foldl gopt_set dflags'' gflags
 
-  setSessionDynFlags dflags'
+  setSessionDynFlags dflags'''
   let mn = mkModuleName moduleName
   let hsTarketId = TargetFile path Nothing
   addTarget
@@ -204,14 +204,13 @@ processGHC ref moduleName path = do
           case t of
             Left se -> do
               let ParsedModule _ ps imprts anns = p
-              
+            
               -- return ("Failed at stage: type checking", show $ bagToList $ srcErrorMessages se, showSDocUnsafe $ ppr ps)
               return ("Failed at stage: type checking", show se, showSDocUnsafe $ ppr ps)
               -- return ("Failed at stage: type checking", show se, codeFile)
             Right tc -> do
               let TypecheckedModule _ (Just rs) ts modInfo (typeGlobalEnv, moduleDeets) = tc
               let hieFile = mkHieFile modSum typeGlobalEnv rs
-
 
               return ("Program looks good", "", "")
 
