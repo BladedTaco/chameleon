@@ -2,6 +2,7 @@ import { Terminal as xTerminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit';
 import ESC from './ansiEscapes';
 import wrasseGHC from './wrasseGHC';
+import messages from './messages';
 
 let initialized = false;
 const WrasseTerminal = new xTerminal({
@@ -100,6 +101,16 @@ let wrasse_setup = () => {
     }
 
     document.addEventListener('mousemove', onMouseMove);
+
+    (async () => {
+      let response = await fetch('/messages', {
+        method: 'POST',
+        body: 'messages',
+      });
+      let data = response.json();
+
+      console.log(data)
+    })();
 }
 
 let hook = async ({code, response}) => {

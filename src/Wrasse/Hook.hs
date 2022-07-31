@@ -185,6 +185,8 @@ processGHC ref moduleName path = do
           case t of
             Left se -> do
               let ParsedModule _ ps imprts anns = p
+              
+              -- return ("Failed at stage: type checking", show $ bagToList $ srcErrorMessages se, showSDocUnsafe $ ppr ps)
               return ("Failed at stage: type checking", show se, showSDocUnsafe $ ppr ps)
               -- return ("Failed at stage: type checking", show se, codeFile)
             Right tc -> do

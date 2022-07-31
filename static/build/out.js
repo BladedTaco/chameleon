@@ -34649,11 +34649,11 @@ problem_1 = sum (check [1..999])
     return Math.floor(Math.random() * max);
   }
 
-  // wrasse.js
+  // wrasse/wrasse.js
   var import_xterm = __toESM(require_xterm());
   var import_xterm_addon_fit = __toESM(require_xterm_addon_fit());
 
-  // ansiEscapes.js
+  // wrasse/ansiEscapes.js
   var ESC = "\x1B[";
   var OSC = "\x1B]";
   var BEL = "\x07";
@@ -34766,7 +34766,7 @@ problem_1 = sum (check [1..999])
   };
   var ansiEscapes_default = ansiEscapes;
 
-  // wrasseGHC.js
+  // wrasse/wrasseGHC.js
   var termMap = {
     "infinite type": `Infinite Type
     
@@ -34789,7 +34789,7 @@ problem_1 = sum (check [1..999])
   };
   var wrasseGHC_default = wrasseGHC;
 
-  // wrasse.js
+  // wrasse/wrasse.js
   var initialized = false;
   var WrasseTerminal = new import_xterm.Terminal({
     convertEol: true,
@@ -34858,6 +34858,14 @@ problem_1 = sum (check [1..999])
       html.block.style.top = e3.pageY - off + "px";
     };
     document.addEventListener("mousemove", onMouseMove);
+    (async () => {
+      let response = await fetch("/messages", {
+        method: "POST",
+        body: "messages"
+      });
+      let data = response.json();
+      console.log(data);
+    })();
   };
   var hook = async ({ code, response }) => {
     let data = await response;

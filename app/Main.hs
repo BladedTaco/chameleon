@@ -28,13 +28,14 @@ import Data.Monoid (mconcat)
 import Control.Monad.IO.Class
 import qualified Data.Text.Lazy as T
 import qualified Wrasse.Hook as Wrasse hiding (main)
-
+import qualified Wrasse.Messages as WrasseMsg
 
 import JsonInstance
 import Run hiding (main)
+import System.Directory
 
 main = scotty 5000 (
-    ghc
+    ghc >> messages >> ace
     >> typecheck
     >> home
     >> sourceMap
@@ -54,6 +55,19 @@ ghc = post "/ghc" $ do
     content <- body
     result <- liftAndCatchIO $ Wrasse.hook (BS.unpack content)
     json result
+
+
+messages :: ScottyM ()
+messages = post "/messages" $ do
+  content <- body
+  result <- liftAndCatchIO $ WrasseMsg.messageHook (BS.unpack content)
+  json result
+
+ace :: ScottyM ()
+ace = post "/ace" $ do
+  content <- body
+  result <- liftAndCatchIO $ getDirectoryContents =<< getCurrentDirectory 
+  json result
 ----------------------------------------------
 
 

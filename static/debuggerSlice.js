@@ -10,7 +10,7 @@ import {
   convertLocation,
   getRandomInt
 } from './util';
-import wrasse from './wrasse';
+import wrasse from './wrasse/wrasse';
 
 
 
