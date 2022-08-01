@@ -37,6 +37,7 @@ library
       Wrasse.Cleanup
       Wrasse.Fixes
       Wrasse.Hook
+      Wrasse.Instance
       Wrasse.Messages
       Wrasse.Tree
       Wrasse.TypeInfo

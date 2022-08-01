@@ -47,6 +47,7 @@ import Util (uncurry3, OverridingBool (Always))
 import Control.Lens (traverseOf, Each (each))
 import Control.Arrow
 import Agda.Utils.Tuple (uncurry4)
+import DriverPipeline (preprocess)
 
 -- main :: IO ()
 -- main = do
@@ -168,6 +169,7 @@ processGHC ref moduleName path = do
         , Opt_PrintTypecheckerElaboration
         , Opt_HelpfulErrors
         , Opt_ErrorSpans
+        , Opt_Haddock
         ]
   -- dump flags
   let dpflags = [
@@ -186,6 +188,19 @@ processGHC ref moduleName path = do
         targetAllowObjCode = False,
         targetContents = Nothing
       }
+
+  
+  -- ref <- liftIO $ newIORef "" -- make an output IO stream
+  -- result <- runGhc (Just libdir) (processGHC ref modName file)
+  -- ref_out <- readIORef ref -- read the output IO stream
+
+  session <- getSession
+  a <- liftIO $ preprocess session path Nothing Nothing
+  let b = (
+          case a of
+            Left bag -> show $ bagToList bag
+            Right x0 -> ("succ " ++) $ show $ snd x0
+          )
 
 
   eitherl <- gtry (load LoadAllTargets) :: Ghc (Either SourceError SuccessFlag)
@@ -206,12 +221,13 @@ processGHC ref moduleName path = do
               let ParsedModule _ ps imprts anns = p
             
               -- return ("Failed at stage: type checking", show $ bagToList $ srcErrorMessages se, showSDocUnsafe $ ppr ps)
-              return ("Failed at stage: type checking", show se, showSDocUnsafe $ ppr ps)
+              -- return ("Failed at stage: type checking", show se, showSDocUnsafe $ ppr ps)
+              return (b, show se, showSDocUnsafe $ ppr ps)
               -- return ("Failed at stage: type checking", show se, codeFile)
             Right tc -> do
               let TypecheckedModule _ (Just rs) ts modInfo (typeGlobalEnv, moduleDeets) = tc
               let hieFile = mkHieFile modSum typeGlobalEnv rs
-
+              
               return ("Program looks good", "", "")
 
 

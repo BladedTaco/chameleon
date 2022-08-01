@@ -33236,6 +33236,12 @@ printXML (Text text) = text
 
 -- Add all the natural numbers below 1000
 -- that are multiples of 3 or 5.
+-- This comment contains \u202Ebidirectional format\u202C chars
+
+add :: a -> a -> a
+add x y = x + y
+
+
 sum [] = 0
 sum [x] = x
 sum (x:xs) = x + sum xs

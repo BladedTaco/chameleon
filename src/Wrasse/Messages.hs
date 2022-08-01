@@ -8,7 +8,8 @@ import System.IO.Silently
 import GHC.IO.Handle
 import System.IO
 
-import Wrasse.Types (GHCMessage (GHCMessage))
+import Wrasse.Types (GHCMessage (GHCMessage), def)
+import Wrasse.Instance
 import Data.List (isPrefixOf, isSuffixOf)
 import Control.Exception (try)
 
@@ -45,10 +46,12 @@ readMessage f = do
             (get "summary: " c)
             (get "severity: " c)
             (get "introduced: " c)
+            (get "removed: " c)
             (get "extension: " c)
             (get "flag: " c)
             (filter (/= "") $ multiple 2 (dropUntil (== "---")) c)
+            def -- GHCExample
       else do
-        return $ GHCMessage  f "" "" "" "" "" [""]
+        return def
     where
         get k x = mconcat $ drop (length k) <$> filter (isPrefixOf k) x

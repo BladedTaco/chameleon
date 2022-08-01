@@ -28,3 +28,4 @@ instance ToJSON Affinity
 instance ToJSON GHCResult
 instance ToJSON WrasseResult
 instance ToJSON GHCMessage
+instance ToJSON GHCExample

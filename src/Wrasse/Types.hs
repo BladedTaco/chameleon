@@ -5,6 +5,12 @@ module Wrasse.Types where
 
 import Data.Tree (Tree (Node))
 import GHC.Generics (Generic)
+import Data.Map (Map, empty)
+
+
+-- | creates a default / empty instance. Normally used for padding
+class Default a where
+    def :: a
 
 
 type ToolInfo = (String, [(String, [String])])
@@ -15,7 +21,7 @@ data WrasseResult
     ghc :: GHCResult,
     types :: String,
     fixes :: String,
-    full :: Tree (String, Bool, Integer),
+    full :: Tree (String, Bool, Int),
     t :: [String]
   }
   deriving (Show, Generic)
@@ -31,16 +37,29 @@ data GHCResult
       }       
       deriving (Show, Generic)
 
+data GHCExample
+  = GHCExample
+      {
+        exTitle :: String
+      , errorMsg :: [String]
+      , explanation :: String
+      , beforeCode :: [String]
+      , afterCode :: [String]
+      }
+      deriving (Show, Generic)
+
 data GHCMessage
   = GHCMessage
       {
-        title :: String,
-        summary :: String,
-        severity :: String,
-        introduced :: String,
-        extension :: String,
-        flag :: String,
-        bodyText :: [String]
+        title :: String
+      , summary :: String
+      , severity :: String
+      , introduced :: String
+      , removed :: String
+      , extension :: String
+      , flag :: String
+      , bodyText :: [String]
+      , examples :: [GHCExample]
       }       
       deriving (Show, Generic)
 
@@ -68,3 +87,5 @@ Another usage of single quotes is in `TemplateHaskell`; please refer to the [GHC
 ```
 
     -}
+
+
