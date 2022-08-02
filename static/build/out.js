@@ -33236,10 +33236,11 @@ printXML (Text text) = text
 
 -- Add all the natural numbers below 1000
 -- that are multiples of 3 or 5.
+
 -- This comment contains \u202Ebidirectional format\u202C chars
 
-add :: a -> a -> a
-add x y = x + y
+-- add :: a -> a -> a
+-- add x y = x + y
 
 
 sum [] = 0
@@ -34789,7 +34790,8 @@ problem_1 = sum (check [1..999])
     regex: {
       keyword: new RegExp(Object.keys(termMap).map((x2) => `(${x2})`).join("|"), "gi"),
       symbol: /‘(?<symbol>[a-zA-Z.0-9]+)’/g,
-      location: /generated\/Infile.hs:(?<line>[0-9]+):(?<colStart>[0-9]+)(?:\-(?<colEnd>[0-9]+))?/g
+      location: /generated\/Infile.hs:(?<line>[0-9]+):(?<colStart>[0-9]+)(?:\-(?<colEnd>[0-9]+))?/g,
+      ambiguous: /‘(?<namespace>([a-zA-Z.0-9]+\.)+)(?<symbol>[a-zA-Z.0-9]+)’/g
     },
     map: termMap
   };
@@ -34952,9 +34954,9 @@ problem_1 = sum (check [1..999])
           wrasse.terminal.writeln(prefix2 + "- " + node_string);
         } else {
           if (node.active) {
-            wrasse.terminal.writeln(prefix2 + "V " + node_string);
+            wrasse.terminal.writeln(prefix2 + "\u25BC " + node_string);
           } else {
-            wrasse.terminal.writeln(prefix2 + "> " + node_string);
+            wrasse.terminal.writeln(prefix2 + "\u25BA " + node_string);
           }
         }
       }
@@ -34971,7 +34973,7 @@ problem_1 = sum (check [1..999])
         return;
       if (mode) {
         node.children.slice().reverse().forEach((x2) => clean_lines(x2, level + 1, mode));
-        wrasse.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(0, node.line) + ansiEscapes_default.deleteLine(node.children.length) + ansiEscapes_default.cursorTo(2 * level, node.line - 1) + ">" + ansiEscapes_default.cursorRestorePosition);
+        wrasse.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(0, node.line) + ansiEscapes_default.deleteLine(node.children.length) + ansiEscapes_default.cursorTo(2 * level, node.line - 1) + "\u25BA" + ansiEscapes_default.cursorRestorePosition);
       } else {
         wrasse.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(0, node.line) + ansiEscapes_default.insertLine(node.children.length));
         let curr_line2 = node.line;
@@ -34980,11 +34982,11 @@ problem_1 = sum (check [1..999])
           if (x2.children.length == 0) {
             wrasse.terminal.write(ansiEscapes_default.cursorTo(0, curr_line2) + prefix2 + "- " + x2.content);
           } else {
-            wrasse.terminal.write(ansiEscapes_default.cursorTo(0, curr_line2) + prefix2 + "> " + x2.content);
+            wrasse.terminal.write(ansiEscapes_default.cursorTo(0, curr_line2) + prefix2 + "\u25BA " + x2.content);
           }
           curr_line2++;
         });
-        wrasse.terminal.write(ansiEscapes_default.cursorTo(2 * level, node.line - 1) + "V" + ansiEscapes_default.cursorRestorePosition);
+        wrasse.terminal.write(ansiEscapes_default.cursorTo(2 * level, node.line - 1) + "\u25BC" + ansiEscapes_default.cursorRestorePosition);
         node.children.forEach((x2) => clean_lines(x2, level + 1, mode));
       }
     };
@@ -35048,6 +35050,74 @@ problem_1 = sum (check [1..999])
     const register_keywords = (node) => {
       if (node?.link) {
         const { text, range } = node.link;
+        for (const match of text.matchAll(wrasseGHC_default.regex.ambiguous)) {
+          perm.keywords.push(wrasse.terminal.registerLinkProvider({
+            provideLinks(bufferLineNumber, callback) {
+              const { namespace, symbol } = match.groups;
+              callback([{
+                text: match[0],
+                range: {
+                  start: { x: range.start.x + match.index + 3, y: node.line },
+                  end: { x: range.start.x + match.index + match[0].length, y: node.line }
+                },
+                activate() {
+                  if (node.active) {
+                    node.children = node.children.pop();
+                    return;
+                  }
+                  let starGen = function* () {
+                    while (true) {
+                      const frames = ["\u2598 ", "\u2580 ", "\u259D ", " \u2598", " \u258C", " \u2596", "\u2597 ", "\u2584 ", "\u2596 ", "\u258C "];
+                      for (const item of frames) {
+                        yield item;
+                      }
+                    }
+                  }();
+                  let finished = false;
+                  let recurse = async () => {
+                    await sleep(10);
+                    if (finished)
+                      return;
+                    wrasse.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(range.start.x - 1, node.line - 1) + starGen.next().value + ansiEscapes_default.cursorRestorePosition, recurse);
+                  };
+                  recurse();
+                  (async () => {
+                    console.log(wrasse);
+                    let code = wrasse.data_0?.ghc.code.map((x2) => {
+                      let arr = x2.split("=");
+                      if (arr.length <= 1) {
+                        return x2;
+                      }
+                      let new_x = arr.slice(1).join("=");
+                      return arr[0] + "=" + new_x.replace(symbol, `${namespace}${symbol}`);
+                    }).reduce((acc, curr) => {
+                      return acc + "\n" + curr;
+                    });
+                    await sleep(5e3);
+                    console.log(code);
+                    let response = await fetch("/ghc", {
+                      method: "POST",
+                      body: code
+                    });
+                    let data = await response.json();
+                    console.log(data);
+                    node.children.push(parse_tree(data.full));
+                    finished = true;
+                    wrasse.interactive_terminal(wrasse.tree);
+                  })();
+                },
+                hover() {
+                  wrasse.set_hover_content(`See what happens if you use '${symbol}'`);
+                },
+                leave() {
+                  wrasse.set_hover_content();
+                }
+              }]);
+              return;
+              callback(void 0);
+            }
+          }));
+        }
         for (const match of text.matchAll(wrasseGHC_default.regex.keyword)) {
           perm.keywords.push(wrasse.terminal.registerLinkProvider({
             provideLinks(bufferLineNumber, callback) {

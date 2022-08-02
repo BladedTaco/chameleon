@@ -216,9 +216,9 @@ processGHC ref moduleName path = do
           return ("Failed at stage: parsing", show se, "")
         Right p -> do
           t <- gtry (typecheckModule p) :: Ghc (Either SourceError TypecheckedModule)
+          let ParsedModule _ ps imprts anns = p
           case t of
             Left se -> do
-              let ParsedModule _ ps imprts anns = p
             
               -- return ("Failed at stage: type checking", show $ bagToList $ srcErrorMessages se, showSDocUnsafe $ ppr ps)
               -- return ("Failed at stage: type checking", show se, showSDocUnsafe $ ppr ps)
@@ -228,7 +228,7 @@ processGHC ref moduleName path = do
               let TypecheckedModule _ (Just rs) ts modInfo (typeGlobalEnv, moduleDeets) = tc
               let hieFile = mkHieFile modSum typeGlobalEnv rs
               
-              return ("Program looks good", "", "")
+              return ("Program looks good", "", showSDocUnsafe $ ppr ps)
 
 
 -- the boilerplate GHC

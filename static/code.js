@@ -419,10 +419,11 @@ const euler1 = n => `module Task${n} where
 
 -- Add all the natural numbers below 1000
 -- that are multiples of 3 or 5.
+
 -- This comment contains ‮bidirectional format‬ chars
 
-add :: a -> a -> a
-add x y = x + y
+-- add :: a -> a -> a
+-- add x y = x + y
 
 
 sum [] = 0

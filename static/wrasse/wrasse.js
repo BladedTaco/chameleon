@@ -246,9 +246,9 @@ let interactive_terminal = (tree) => {
         wrasse.terminal.writeln(prefix + "- " + node_string);
       } else {
         if (node.active) {
-          wrasse.terminal.writeln(prefix + "V " + node_string);
+          wrasse.terminal.writeln(prefix + "▼ " + node_string);
         } else {
-          wrasse.terminal.writeln(prefix + "> " + node_string);
+          wrasse.terminal.writeln(prefix + "► " + node_string);
         }
       }
     }
@@ -281,7 +281,7 @@ let interactive_terminal = (tree) => {
         ESC.cursorSavePosition +
         ESC.cursorTo(0, node.line) +
         ESC.deleteLine(node.children.length) +
-        ESC.cursorTo(2*level, node.line - 1) + ">" +
+        ESC.cursorTo(2*level, node.line - 1) + "►" +
         ESC.cursorRestorePosition
       )
     } else {
@@ -306,7 +306,7 @@ let interactive_terminal = (tree) => {
         } else {
           wrasse.terminal.write(
             ESC.cursorTo(0, curr_line) +
-            prefix + "> " + x.content
+            prefix + "► " + x.content
           );
         }
         curr_line++;
@@ -314,7 +314,7 @@ let interactive_terminal = (tree) => {
 
       // restore cursor
       wrasse.terminal.write(
-        ESC.cursorTo(2*level, node.line - 1) + "V" +
+        ESC.cursorTo(2*level, node.line - 1) + "▼" +
         ESC.cursorRestorePosition
       )
 
@@ -402,6 +402,101 @@ let interactive_terminal = (tree) => {
   const register_keywords = (node) => {
     if (node?.link) {
       const {text, range} = node.link;
+
+      // expandables
+      for (const match of text.matchAll(wrasseGHC.regex.ambiguous)) {
+        perm.keywords.push(wrasse.terminal.registerLinkProvider({
+          provideLinks(bufferLineNumber, callback) {
+            const {namespace, symbol} = match.groups;
+            callback([{
+              text: match[0],
+              range: { 
+                start: { x: range.start.x + match.index + 3,                y: node.line },
+                end:   { x: range.start.x + match.index + match[0].length,  y: node.line } 
+              },
+              activate() {
+
+                if (node.active) {
+                  node.children = node.children.pop();
+                  return;
+                }
+
+                            
+                // star drawing
+                let starGen = (function *() {
+                  while (true) {
+                    // const frames = ["◜", "◠", "◝", "◞", "◡", "◟"]
+                    // const frames = ["▖", "▘", "▝", "▗"]
+                    const frames = ["▘ ", "▀ ", "▝ ", " ▘", " ▌", " ▖", "▗ ", "▄ ", "▖ ", "▌ "] 
+                    // "▌","▀","▐","▄"
+                    // const frames = ["|", "/", "-", "\\"]
+                    for (const item of frames) {
+                      yield item;
+                  }
+                  }
+                })();
+                
+                let finished = false;
+
+                let recurse = async () => {
+                  await sleep(10);
+                  if (finished) return;
+
+                  wrasse.terminal.write(ESC.cursorSavePosition 
+                    + ESC.cursorTo(range.start.x - 1, node.line - 1) + starGen.next().value
+                    + ESC.cursorRestorePosition
+                    , recurse)
+                }
+                recurse();
+
+                (async () => {
+                  console.log(wrasse)
+
+                  let code = wrasse.data_0?.ghc.code
+                  .map((x) => {
+                    let arr = x.split('=');
+                    if (arr.length <= 1) {
+                      return x;
+                    }
+                    let new_x = arr.slice(1).join("=");
+                    return arr[0] + "=" + new_x.replace(symbol, `${namespace}${symbol}`);
+                  })
+                  .reduce((acc, curr) => {
+                    return acc + '\n' + curr;
+                  })
+
+                  await sleep(5000)
+
+                  console.log(code)
+
+                  let response = await fetch('/ghc', {
+                    method: 'POST',
+                    body: code,
+                  });
+                  let data = await response.json();
+
+
+                  console.log(data)
+                  node.children.push(parse_tree(data.full));
+
+                  finished = true;
+
+                  wrasse.interactive_terminal(wrasse.tree);
+                })();
+              },
+              hover() {
+                wrasse.set_hover_content(`See what happens if you use '${symbol}'`)
+              },
+              leave() {
+                wrasse.set_hover_content()
+              }
+            }]);
+            return;
+            // fallthrough failure state
+            callback(undefined);
+          }
+        }));
+      }
 
       // keywords
       for (const match of text.matchAll(wrasseGHC.regex.keyword)) {
