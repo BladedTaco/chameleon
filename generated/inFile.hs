@@ -14,7 +14,7 @@ sum [x] = x
 sum (x:xs) = x + Task1.sum xs
 
 check (x:xs)
-  | x `mod` 3 == 0 || x `mod` 5 == 0 = x + check xs
+  | x `mod` 3 == 0 || x `mod` 5 == 0 = x : check xs
   | otherwise = check xs
 
 problem_1 = Task1.sum (check [1..999])

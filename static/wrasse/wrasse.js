@@ -465,7 +465,7 @@ let interactive_terminal = (tree) => {
                     return acc + '\n' + curr;
                   })
 
-                  await sleep(5000)
+                  await sleep(1000)
 
                   console.log(code)
 
