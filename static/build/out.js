@@ -34797,11 +34797,202 @@ problem_1 = sum (check [1..999])
   };
   var wrasseGHC_default = wrasseGHC;
 
+  // wrasse/terminalWindows.js
+  var clamp3 = (min, num, max) => Math.min(Math.max(num, min), max);
+  var within2 = (min, num, max) => min <= num && num <= max;
+  String.prototype.splice = function(index, count, add) {
+    if (index < 0) {
+      index = this.length + index;
+      if (index < 0) {
+        index = 0;
+      }
+    }
+    return this.slice(0, index) + (add || "") + this.slice(index + count);
+  };
+  var Window = class {
+    constructor(terminal, x2, y3, width, height, options = { movable: false, scrollable: true, resizable: false }) {
+      this.terminal = terminal;
+      this.x = x2;
+      this.y = y3;
+      this.width = width;
+      this.height = height;
+      this.line = 0;
+      this.content = [];
+      this.cursor = { x: 0, y: 0, saved: { x: 0, y: 0 } };
+      this.movable = options.movable;
+      this.scrollable = options.scrollable;
+      this.resizable = options.resizable;
+      wrasse_default.html.terminal.addEventListener("wheel", (event) => {
+        if (!this.scrollable)
+          return;
+        if (!this.mouseWithin(event.offsetX, event.offsetY))
+          return;
+        const dir = Math.sign(event.deltaY);
+        if (event.shiftKey) {
+          this.move(dir, 0, true);
+        } else if (event.altKey) {
+          this.move(0, dir, true);
+        } else {
+          this.line = clamp3(0, this.line + dir, this.content.length - this.height);
+        }
+        this.draw();
+      }, {
+        capture: true,
+        passive: false
+      });
+    }
+    reset() {
+      this.clean();
+      this.content = [];
+    }
+    write(content, callback) {
+      const handleEscape = (content2) => {
+        const regex = /\u001B\[(?<nums>([0-9]+;)*)?(?<num>([0-9]+))(?<char>[a-zA-Z])/g;
+        let cutString = [];
+        let lastIndex = 0;
+        let anyMatches = false;
+        for (const match of content2.matchAll(regex)) {
+          anyMatches = true;
+          let { nums, num, char } = match.groups;
+          let cut = { prefix: match.input.slice(lastIndex, match.index), esc: () => {
+          } };
+          lastIndex = match.index + match[0].length;
+          nums = nums?.split(";") || [];
+          nums.filter((x2) => x2 === "");
+          nums.push(num);
+          switch (char) {
+            case "G":
+              cut.esc = () => {
+                this.cursor = { ...this.cursor, x: num + 1 };
+              };
+              break;
+            case "H":
+              cut.esc = () => {
+                this.cursor = { ...this.cursor, x: nums[0] + 1, y: nums[1] + 1 };
+              };
+              break;
+            case "s":
+              cut.esc = () => {
+                this.cursor.saved = { x: this.cursor.x, y: this.cursor.y };
+              };
+              break;
+            case "u":
+              cut.esc = () => {
+                this.cursor = { ...this.cursor, ...this.cursor.saved };
+              };
+              break;
+            case "L":
+              cut.esc = () => {
+                this.content.splice(this.cursor.y, 0, Array(num).fill(""));
+              };
+              break;
+            case "M":
+              cut.esc = () => {
+                this.content.splice(this.cursor.y, num);
+              };
+              break;
+            default:
+              console.log(nums);
+              console.log(`UNMATCHED ESCAPE SEQUENCE: ESC[${nums.join(";") + char}`);
+              break;
+          }
+          cutString.push(cut);
+        }
+        if (anyMatches == false)
+          return [{ prefix: content2, esc: () => {
+          } }];
+        return cutString;
+      };
+      for (const { prefix: prefix2, esc } of handleEscape(content)) {
+        let oldCursor = { ...this.cursor };
+        for (const line of prefix2.split("\n")) {
+          while (this.cursor.y >= this.content.length) {
+            this.content.push("");
+          }
+          this.content[this.cursor.y] = this.content[this.cursor.y].padEnd(this.cursor.x).splice(this.cursor.x, line.length, line);
+          this.cursor.x += line.length;
+          oldCursor = { ...this.cursor };
+          this.cursor.y += 1;
+          this.cursor.x = 0;
+        }
+        this.cursor = oldCursor;
+        esc();
+        while (this.cursor.y >= this.content.length) {
+          this.content.push("");
+        }
+      }
+      this.draw();
+      console.log(this);
+      this.terminal.write("", callback);
+    }
+    writeln(content, callback) {
+      return this.write(content + "\n", callback);
+    }
+    mouseWithin(relX, relY) {
+      const cellHeight = wrasse_default.html.terminal.offsetHeight / wrasse_default.terminal.rows;
+      const cellWidth = wrasse_default.html.terminal.offsetWidth / wrasse_default.terminal.cols;
+      return within2(this.x - 0.5, relX / cellWidth - 1, this.x + this.width + 0.5) && within2(this.y - 0.5, relY / cellHeight - 1, this.y + this.height + 0.5);
+    }
+    resize(width, height, relative) {
+      if (!this.resizable)
+        return;
+      if (relative) {
+        width += this.width;
+        height += this.height;
+      }
+      this.clean();
+      this.width = width;
+      this.height = height;
+      this.draw();
+    }
+    expand() {
+      this.resize(this.terminal.cols, this.terminal.rows);
+    }
+    move(x2, y3, relative) {
+      if (!this.movable)
+        return;
+      if (relative) {
+        x2 += this.x;
+        y3 += this.y;
+      }
+      x2 = clamp3(0, x2, this.terminal.cols);
+      y3 = clamp3(0, y3, this.terminal.rows);
+      this.clean();
+      this.x = x2;
+      this.y = y3;
+      this.draw();
+    }
+    *lines() {
+      for (const line of this.content.slice(this.line, this.line + this.height)) {
+        yield line.slice(0, this.width);
+      }
+    }
+    draw() {
+      this.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(this.x, this.y) + `\u2554${"\u2550".repeat(this.width)}\u2557` + ansiEscapes_default.cursorTo(this.x, this.y + this.height + 1) + `\u255A${"\u2550".repeat(this.width)}\u255D`);
+      let lines = this.lines();
+      for (let i3 = 1; i3 <= this.height; i3++) {
+        this.terminal.write(`${ansiEscapes_default.cursorTo(this.x, this.y + i3)}\u2551${(lines.next().value || "").padEnd(this.width)}\u2551`);
+      }
+      this.terminal.write(ansiEscapes_default.cursorRestorePosition);
+    }
+    clean() {
+      this.terminal.write(ansiEscapes_default.cursorSavePosition);
+      for (let i3 = 0; i3 <= this.height + 1; i3++) {
+        this.terminal.write(`${ansiEscapes_default.cursorTo(this.x, this.y + i3)}${"".padEnd(this.width + 2)}`);
+      }
+      this.terminal.write(ansiEscapes_default.cursorRestorePosition);
+    }
+  };
+  var termWindows = {
+    "Window": Window
+  };
+  var terminalWindows_default = termWindows;
+
   // wrasse/wrasse.js
   var initialized = false;
   var WrasseTerminal = new import_xterm.Terminal({
     convertEol: true,
-    scrollback: 1,
+    scrollback: 0,
     cursorBlink: false,
     cursorStyle: "bar",
     cursorWidth: 1,
@@ -34831,9 +35022,16 @@ problem_1 = sum (check [1..999])
   var scrollToTop = () => {
     wrasse.terminal.scrollToTop();
   };
+  var fitTerminal = () => {
+    fitAddon.fit();
+    wrasse.window.resizable = true;
+    wrasse.window.expand();
+    wrasse.window.resizable = false;
+  };
   var wrasse_setup = () => {
     console.log("wrasse init");
     wrasse.terminal.open(html.terminal);
+    wrasse.window = new terminalWindows_default.Window(WrasseTerminal, 2, 2, 10, 10);
     initialized = true;
     wrasse.terminal.modes.mouseTrackingMode = "any";
     wrasse.terminal.modes.wraparoundMode = true;
@@ -34845,16 +35043,28 @@ problem_1 = sum (check [1..999])
     });
     html.buttons[2].addEventListener("click", (_3) => {
       wrasse.switch_terminal(wrasse.data_2);
+      let win = new terminalWindows_default.Window(wrasse.terminal, 5, 5, 10, 5);
+      win.content = [
+        "1234567",
+        " - ",
+        "23432423423423",
+        "sdfdsfdf",
+        "",
+        ",",
+        "sdfd",
+        "34"
+      ];
+      win.draw();
+      perm.windows.push(win);
     });
     html.buttons[3].addEventListener("click", (_3) => {
-      fitAddon.fit();
+      fitTerminal();
     });
     html.buttons[4].addEventListener("click", (_3) => {
       wrasse.interactive_terminal(wrasse.tree);
     });
-    fitAddon.fit();
-    wrasse.terminal.resize(wrasse.terminal.cols, 1e3);
-    wrasse.terminal.write("Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ", scrollToTop);
+    fitTerminal();
+    wrasse.window.write("Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ", scrollToTop);
     const onMouseMove = (e3) => {
       html.hover.shell.style.left = e3.pageX + "px";
       html.hover.shell.style.top = e3.pageY + "px";
@@ -34906,9 +35116,10 @@ problem_1 = sum (check [1..999])
     perm.keywords.forEach((x2) => x2.dispose());
     perm.keywords = [];
     wrasse.terminal.reset();
+    wrasse.window.reset();
     wrasse.terminal.options.disableStdin = true;
-    wrasse.terminal.writeln(JSON.stringify(data, null, 2), scrollToTop);
-    fitAddon.fit();
+    wrasse.window.writeln(JSON.stringify(data, null, 2), scrollToTop);
+    fitTerminal();
     let starGen = function* () {
       while (true) {
         for (const item of ["|", "/", "-", "\\"]) {
@@ -34924,7 +35135,7 @@ problem_1 = sum (check [1..999])
     }();
     let recurse = async () => {
       sleep(100);
-      wrasse.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(numGen.next().value % 2 + 30, 1) + starGen.next().value + ansiEscapes_default.cursorRestorePosition, recurse);
+      wrasse.window.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(numGen.next().value % 2 + 30, 1) + starGen.next().value + ansiEscapes_default.cursorRestorePosition, recurse);
     };
   };
   var set_hover_content = (text) => {
@@ -34951,12 +35162,12 @@ problem_1 = sum (check [1..999])
       let node_string = node.content;
       if (write) {
         if (node.children.length == 0) {
-          wrasse.terminal.writeln(prefix2 + "- " + node_string);
+          wrasse.window.writeln(prefix2 + "- " + node_string);
         } else {
           if (node.active) {
-            wrasse.terminal.writeln(prefix2 + "\u25BC " + node_string);
+            wrasse.window.writeln(prefix2 + "\u25BC " + node_string);
           } else {
-            wrasse.terminal.writeln(prefix2 + "\u25BA " + node_string);
+            wrasse.window.writeln(prefix2 + "\u25BA " + node_string);
           }
         }
       }
@@ -34973,20 +35184,20 @@ problem_1 = sum (check [1..999])
         return;
       if (mode) {
         node.children.slice().reverse().forEach((x2) => clean_lines(x2, level + 1, mode));
-        wrasse.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(0, node.line) + ansiEscapes_default.deleteLine(node.children.length) + ansiEscapes_default.cursorTo(2 * level, node.line - 1) + "\u25BA" + ansiEscapes_default.cursorRestorePosition);
+        wrasse.window.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(0, node.line) + ansiEscapes_default.deleteLine(node.children.length) + ansiEscapes_default.cursorTo(2 * level, node.line - 1) + "\u25BA" + ansiEscapes_default.cursorRestorePosition);
       } else {
-        wrasse.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(0, node.line) + ansiEscapes_default.insertLine(node.children.length));
+        wrasse.window.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(0, node.line) + ansiEscapes_default.insertLine(node.children.length));
         let curr_line2 = node.line;
         node.children.forEach((x2) => {
           let prefix2 = "  ".repeat(level + 1);
           if (x2.children.length == 0) {
-            wrasse.terminal.write(ansiEscapes_default.cursorTo(0, curr_line2) + prefix2 + "- " + x2.content);
+            wrasse.window.write(ansiEscapes_default.cursorTo(0, curr_line2) + prefix2 + "- " + x2.content);
           } else {
-            wrasse.terminal.write(ansiEscapes_default.cursorTo(0, curr_line2) + prefix2 + "\u25BA " + x2.content);
+            wrasse.window.write(ansiEscapes_default.cursorTo(0, curr_line2) + prefix2 + "\u25BA " + x2.content);
           }
           curr_line2++;
         });
-        wrasse.terminal.write(ansiEscapes_default.cursorTo(2 * level, node.line - 1) + "\u25BC" + ansiEscapes_default.cursorRestorePosition);
+        wrasse.window.write(ansiEscapes_default.cursorTo(2 * level, node.line - 1) + "\u25BC" + ansiEscapes_default.cursorRestorePosition);
         node.children.forEach((x2) => clean_lines(x2, level + 1, mode));
       }
     };
@@ -35013,7 +35224,7 @@ problem_1 = sum (check [1..999])
                 perm.keywords = [];
                 register_keywords(tree);
                 console.log(perm.keywords.length);
-                wrasse.terminal.write(ansiEscapes_default.cursorTo(0, bufferLineNumber - 1));
+                wrasse.window.write(ansiEscapes_default.cursorTo(0, bufferLineNumber - 1));
               },
               hover() {
                 hovered = true;
@@ -35078,7 +35289,7 @@ problem_1 = sum (check [1..999])
                     await sleep(10);
                     if (finished)
                       return;
-                    wrasse.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(range.start.x - 1, node.line - 1) + starGen.next().value + ansiEscapes_default.cursorRestorePosition, recurse);
+                    wrasse.window.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(range.start.x - 1, node.line - 1) + starGen.next().value + ansiEscapes_default.cursorRestorePosition, recurse);
                   };
                   recurse();
                   (async () => {
@@ -35093,7 +35304,7 @@ problem_1 = sum (check [1..999])
                     }).reduce((acc, curr) => {
                       return acc + "\n" + curr;
                     });
-                    await sleep(5e3);
+                    await sleep(1e3);
                     console.log(code);
                     let response = await fetch("/ghc", {
                       method: "POST",
@@ -35217,12 +35428,15 @@ problem_1 = sum (check [1..999])
   };
   var perm = {
     "disposables": [],
-    "keywords": []
+    "keywords": [],
+    "windows": []
   };
   var wrasse = {
+    "html": html,
     "hook": hook,
     "setup": wrasse_setup,
     "terminal": WrasseTerminal,
+    "window": void 0,
     "tree": {},
     "data_0": {},
     "data_1": {},

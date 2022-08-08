@@ -3,11 +3,12 @@ import { FitAddon } from 'xterm-addon-fit';
 import ESC from './ansiEscapes';
 import wrasseGHC from './wrasseGHC';
 import messages from './messages';
+import tWin from './terminalWindows' ;
 
 let initialized = false;
 const WrasseTerminal = new xTerminal({
     convertEol: true,
-    scrollback: 1,
+    scrollback: 0,
     cursorBlink: false,
     cursorStyle: "bar",
     cursorWidth: 1,
@@ -45,10 +46,19 @@ let scrollToTop = () => {
   wrasse.terminal.scrollToTop()
 }
 
+const fitTerminal = () => {
+  fitAddon.fit();
+  wrasse.window.resizable = true;
+  wrasse.window.expand();
+  wrasse.window.resizable = false;
+}
+
 let wrasse_setup = () => {
     console.log('wrasse init')
 
     wrasse.terminal.open(html.terminal);
+
+    wrasse.window = new tWin.Window(WrasseTerminal, 2, 2, 10, 10);
 
     initialized = true;
 
@@ -56,8 +66,6 @@ let wrasse_setup = () => {
     // wrasse.terminal.attachCustomKeyEventHandler((_) => false);
     wrasse.terminal.modes.mouseTrackingMode = "any"
     wrasse.terminal.modes.wraparoundMode = true;
-    
-
 
     html.buttons[0].addEventListener('click', _ => {
         wrasse.switch_terminal(wrasse.data_0)
@@ -69,10 +77,23 @@ let wrasse_setup = () => {
 
     html.buttons[2].addEventListener('click', _ => {
         wrasse.switch_terminal(wrasse.data_2)
+        let win = new tWin.Window(wrasse.terminal, 5, 5, 10, 5);
+        win.content = [
+          "1234567",
+          " - ", 
+          "23432423423423",
+          "sdfdsfdf",
+          "",
+          ",",
+          "sdfd",
+          "34"
+        ]
+        win.draw();
+        perm.windows.push(win);
     });
 
     html.buttons[3].addEventListener('click', _ => {
-        fitAddon.fit();
+        fitTerminal();
     });
 
     html.buttons[4].addEventListener('click', _ => {
@@ -80,11 +101,11 @@ let wrasse_setup = () => {
     });
 
     // Make the terminal's size and geometry fit the size of #terminal-container
-    fitAddon.fit();
-    wrasse.terminal.resize(wrasse.terminal.cols, 1000);
+    fitTerminal();
+    // wrasse.terminal.resize(wrasse.terminal.cols, 1000);
 
     // write starter text
-    wrasse.terminal.write('Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ', scrollToTop)
+    wrasse.window.write('Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ', scrollToTop)
 
     // setup mouse followers
     const onMouseMove = (e) =>{
@@ -155,17 +176,17 @@ let switch_terminal = (data) => {
     perm.keywords.forEach(x => x.dispose())
     perm.keywords = [];
 
-
     wrasse.terminal.reset()
+    wrasse.window.reset();
     wrasse.terminal.options.disableStdin = true;
-    wrasse.terminal.writeln(JSON.stringify(
+    wrasse.window.writeln(JSON.stringify(
         data,
         null,
         2
     ), scrollToTop)
 
     // Make the terminal's size and geometry fit the size of #terminal-container
-    fitAddon.fit();
+    fitTerminal();
 
     // star drawing
     let starGen = (function *() {
@@ -185,7 +206,7 @@ let switch_terminal = (data) => {
     
     let recurse = async () => {
       sleep(100);
-      wrasse.terminal.write(ESC.cursorSavePosition 
+      wrasse.window.write(ESC.cursorSavePosition 
         + ESC.cursorTo((numGen.next().value % 2) + 30, 1) + starGen.next().value
         + ESC.cursorRestorePosition
         , recurse)
@@ -238,17 +259,17 @@ let interactive_terminal = (tree) => {
 
     let prefix = "  ".repeat(level) 
     let node_string = node.content //JSON.stringify(node)// node.content
-    // wrasse.terminal.writeln(ESC.colouredText({r:100, g:200, b:100}, {}, node_string));
+    // wrasse.window.writeln(ESC.colouredText({r:100, g:200, b:100}, {}, node_string));
 
     // write tree string
     if (write) {
       if (node.children.length == 0) {
-        wrasse.terminal.writeln(prefix + "- " + node_string);
+        wrasse.window.writeln(prefix + "- " + node_string);
       } else {
         if (node.active) {
-          wrasse.terminal.writeln(prefix + "▼ " + node_string);
+          wrasse.window.writeln(prefix + "▼ " + node_string);
         } else {
-          wrasse.terminal.writeln(prefix + "► " + node_string);
+          wrasse.window.writeln(prefix + "► " + node_string);
         }
       }
     }
@@ -277,7 +298,7 @@ let interactive_terminal = (tree) => {
       node.children.slice().reverse().forEach(x => clean_lines(x, level+1, mode))
 
       // delete own lines.
-      wrasse.terminal.write(
+      wrasse.window.write(
         ESC.cursorSavePosition +
         ESC.cursorTo(0, node.line) +
         ESC.deleteLine(node.children.length) +
@@ -288,7 +309,7 @@ let interactive_terminal = (tree) => {
       ///write in new lines
       
       // insert childnum empty lines
-      wrasse.terminal.write(
+      wrasse.window.write(
         ESC.cursorSavePosition +
         ESC.cursorTo(0, node.line) +
         ESC.insertLine(node.children.length)
@@ -299,12 +320,12 @@ let interactive_terminal = (tree) => {
       node.children.forEach(x => {
         let prefix = "  ".repeat(level+1)
         if (x.children.length == 0) {
-          wrasse.terminal.write(
+          wrasse.window.write(
             ESC.cursorTo(0, curr_line) +
             prefix + "- " + x.content
           );
         } else {
-          wrasse.terminal.write(
+          wrasse.window.write(
             ESC.cursorTo(0, curr_line) +
             prefix + "► " + x.content
           );
@@ -313,7 +334,7 @@ let interactive_terminal = (tree) => {
       });
 
       // restore cursor
-      wrasse.terminal.write(
+      wrasse.window.write(
         ESC.cursorTo(2*level, node.line - 1) + "▼" +
         ESC.cursorRestorePosition
       )
@@ -358,7 +379,7 @@ let interactive_terminal = (tree) => {
               register_keywords(tree)
               console.log(perm.keywords.length)
 
-              wrasse.terminal.write(ESC.cursorTo(0, bufferLineNumber-1));
+              wrasse.window.write(ESC.cursorTo(0, bufferLineNumber-1));
             },
             hover() {
               hovered = true;
@@ -442,7 +463,7 @@ let interactive_terminal = (tree) => {
                   await sleep(10);
                   if (finished) return;
 
-                  wrasse.terminal.write(ESC.cursorSavePosition 
+                  wrasse.window.write(ESC.cursorSavePosition 
                     + ESC.cursorTo(range.start.x - 1, node.line - 1) + starGen.next().value
                     + ESC.cursorRestorePosition
                     , recurse)
@@ -618,13 +639,16 @@ let ghc_hook = async (code) => {
 const perm = {
   "disposables": [],
   "keywords": [],
+  "windows": [],
 }
 
 
 const wrasse = {
+    "html" : html,
     "hook": hook,
     "setup": wrasse_setup,
     "terminal": WrasseTerminal,
+    "window" : undefined,
     "tree" : {},
     "data_0" : {},
     "data_1" : {},
