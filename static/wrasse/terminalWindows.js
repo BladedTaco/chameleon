@@ -1,8 +1,6 @@
 import ESC from "./ansiEscapes";
 import wrasse from "./wrasse";
-
-const clamp = (min, num, max) => Math.min(Math.max(num, min), max);
-const within = (min, num, max) => min <= num && num <= max;
+import {sleep, clamp, within, group_n} from './util';
 
 String.prototype.splice = function (index, count, add) {
     // We cannot pass negative indexes directly to the 2nd slicing operation.
@@ -17,41 +15,77 @@ String.prototype.splice = function (index, count, add) {
   }
 
 class Window {
-    constructor(terminal, x, y, width, height, options = {movable: false, scrollable: true, resizable: false}) {
+    constructor(terminal, x, y, width, height, options) {
         this.terminal = terminal;
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
+        this.x = Math.ceil(x);
+        this.y = Math.ceil(y);
+        this.width = Math.floor(width);
+        this.height = Math.floor(height);
         this.line = 0;
-        this.content = [];
+        this.content = [""];
         this.cursor = {x:0, y:0, saved: {x:0, y:0}};
+        options = {movable : false, scrollable : true, resizable : false, ...options};
         this.movable = options.movable;
         this.scrollable = options.scrollable;
         this.resizable = options.resizable;
 
+        Window.setup();
+    }
 
+    // statics
+    static drawReq = {
+        request: false,
+        setup : false,
+        callbacks : [],
+    };
+
+    onWheel(event) {
+        if (!this.scrollable) return false;
+        if (!this.mouseWithin(event.offsetX, event.offsetY)) return false;
+
+        const dir = Math.sign(event.deltaY);
+        if (event.shiftKey) {
+            this.move(dir, 0, true);
+        } else if (event.altKey) {
+            this.move(0, dir, true);
+        } else {
+            this.line = clamp(0, 
+                this.line + dir,
+                this.content.length - this.height
+            );
+        }
+        this.requestDraw();
+        return true;
+    }
+
+    static setup() {
+        if (Window.drawReq.setup) return;
+        Window.drawReq.setup = true;
+
+        // setup scrolling
         wrasse.html.terminal.addEventListener('wheel', (event) => {
-            if (!this.scrollable) return;
-            if (!this.mouseWithin(event.offsetX, event.offsetY)) return;
-
-            const dir = Math.sign(event.deltaY);
-            if (event.shiftKey) {
-                this.move(dir, 0, true);
-            } else if (event.altKey) {
-                this.move(0, dir, true);
-            } else {
-                this.line = clamp(0, 
-                    this.line + dir,
-                    this.content.length - this.height
-                );
+            for (let i = wrasse.perm.windows.length - 1; i >= 0; i--) {
+                if (wrasse.perm.windows[i].onWheel(event)) return;
             }
-            this.draw();
+            wrasse.window.onWheel(event);
         }, {
             capture : true,
             passive : false,
         });
 
+        // setup draw requests
+        (async () => {
+            while(true) {
+                if (Window.drawReq.request) {
+                    wrasse.window.draw();
+                    wrasse.perm.windows.forEach(x => x.draw());
+                    Window.drawReq.request = false;
+                    Window.drawReq.callbacks.forEach(x => x());
+                    Window.drawReq.callbacks = [];
+                }
+                await sleep(1);
+            }
+        })();
     }
 
     /*
@@ -64,25 +98,28 @@ class Window {
 
     reset() {
         this.clean();
-        this.content = [];
+        this.content = [""];
+        this.cursor = {x:0, y:0, saved: {x:0, y:0}};
+        this.line = 0;
     }
 
     write(content, callback) {
         const handleEscape = (content) => {
             // special character regex
-            const regex = /\u001B\[(?<nums>([0-9]+;)*)?(?<num>([0-9]+))(?<char>[a-zA-Z])/g;
+            const regex = /\u001B\[(?:(?<nums>(?:[0-9]+;)*)(?<num>(?:[0-9]+)))?(?<char>[a-zA-Z])/gi;
 
             // handle special characters
             let cutString = [];
-            let lastIndex = 0;
             let anyMatches = false;
-            for (const match of content.matchAll(regex)) {
+            for (const [prefix, _nums, num, char] of group_n(content.split(regex), 4)) {
+                let cut = {prefix, esc: ()=>{}};
+                if ((_nums || num || char) === undefined) {
+                    cutString.push(cut)
+                    break;
+                }
                 anyMatches = true;
-                let {nums, num, char} = match.groups;
-                let cut = {prefix: match.input.slice(lastIndex, match.index), esc: ()=>{}};
-                lastIndex = match.index + match[0].length;
-                nums = nums?.split(';') || [];
-                nums.filter(x => x === '');
+                let nums = (_nums?.split(';') || [])
+                    .filter(x => x !== '');
                 nums.push(num);
                 switch (char) {
                     // // Colours
@@ -99,7 +136,7 @@ class Window {
                     break;
                     case 'H':
                         cut.esc = () => {
-                            this.cursor = {...this.cursor, x: nums[0]+1, y: nums[1]+1};
+                            this.cursor = {...this.cursor, x: +nums[1]-1, y: +nums[0]-1};
                         }
                     break;
                     // Save Cursor
@@ -114,16 +151,16 @@ class Window {
                             this.cursor = {...this.cursor, ...this.cursor.saved};
                         }
                     break;
-                    // Insert Line
+                    // Insert Line (current line pushed up)
                     case 'L':
                         cut.esc = () => {
-                            this.content.splice(this.cursor.y, 0, Array(num).fill(""));
+                            this.content.splice(this.cursor.y+1, 0, ...Array(+nums[0]).fill(""));
                         }
                     break;
-                    // Delete Line
+                    // Delete Line (current line delted)
                     case 'M':
                         cut.esc = () => {
-                            this.content.splice(this.cursor.y, num);
+                            this.content.splice(this.cursor.y, +num);
                         }
                     break;
                     // Fallthrough
@@ -140,9 +177,12 @@ class Window {
         };
 
         // write the string to the window
+        console.log({content})
         for (const {prefix, esc} of handleEscape(content)) {
+            console.log({prefix})
             let oldCursor = {...this.cursor};
             for (const line of prefix.split('\n')) {
+                console.log({line})
                 // ensure cursor isn't off content bounds
                 while (this.cursor.y >= this.content.length) {
                     this.content.push("");
@@ -167,10 +207,8 @@ class Window {
             }
         }
 
-        this.draw();
-        console.log(this)
-
-        this.terminal.write("", callback);
+        this.requestDraw(callback);
+        console.log(JSON.parse(JSON.stringify({content:this.content, cursor:this.cursor})));
     }
 
     writeln(content, callback) {
@@ -199,11 +237,12 @@ class Window {
         // update size
         this.width = width;
         this.height = height;
-        this.draw();
+        this.requestDraw();
     }
 
     expand() {
-        this.resize(this.terminal.cols, this.terminal.rows);
+        this.move(0, 0, false);
+        this.resize(this.terminal.cols - 2, this.terminal.rows - 2);
     }
 
     move(x, y, relative) {
@@ -215,8 +254,8 @@ class Window {
             y += this.y;
         }
 
-        x = clamp(0, x, this.terminal.cols)
-        y = clamp(0, y, this.terminal.rows)
+        x = clamp(0, x, this.terminal.cols - this.width - 2)
+        y = clamp(0, y, this.terminal.rows - this.height - 2)
 
         // clean old position
         this.clean();
@@ -224,7 +263,7 @@ class Window {
         // update position
         this.x = x;
         this.y = y;
-        this.draw();
+        this.requestDraw();
     }
 
     *lines() {
@@ -236,31 +275,35 @@ class Window {
     
     draw() {
         // draw top and bottom border
-        this.terminal.write(
+        let writeString =
             ESC.cursorSavePosition 
           + ESC.cursorTo(this.x, this.y) 
           + `╔${"═".repeat(this.width)}╗`
           + ESC.cursorTo(this.x, this.y + this.height + 1) 
-          + `╚${"═".repeat(this.width)}╝`
-        )
+          + `╚${"═".repeat(this.width)}╝`;
+        
             
         // draw content
         let lines = this.lines();
         for (let i = 1; i <= this.height; i++) {
-            this.terminal.write(
-                `${ESC.cursorTo(this.x, this.y + i)}║${(lines.next().value || "").padEnd(this.width)}║`
-            );
+            writeString += `${ESC.cursorTo(this.x, this.y + i)}║${(lines.next().value || "").padEnd(this.width)}║`;
         }
 
         // restore cursor
-        this.terminal.write(ESC.cursorRestorePosition);
+        this.terminal.write(writeString + ESC.cursorRestorePosition);
     }
     
+    requestDraw(callback) {
+        // request draw
+        Window.drawReq.request = true;
+        if (callback) Window.drawReq.callbacks.push(callback);
+    }
+
     clean() {
         // save cursor
         this.terminal.write(ESC.cursorSavePosition )
             
-        // draw content
+        // draw clear
         for (let i = 0; i <= this.height+1; i++) {
             this.terminal.write(
                 `${ESC.cursorTo(this.x, this.y + i)}${"".padEnd(this.width + 2)}`

@@ -4,6 +4,7 @@ import ESC from './ansiEscapes';
 import wrasseGHC from './wrasseGHC';
 import messages from './messages';
 import tWin from './terminalWindows' ;
+import {sleep, clamp, within} from './util';
 
 let initialized = false;
 const WrasseTerminal = new xTerminal({
@@ -37,19 +38,19 @@ const html = {
 }
 
 
-let sleep = async (time) => {
-  await new Promise(r => setTimeout(r, time));
-}
 
 
 let scrollToTop = () => {
-  wrasse.terminal.scrollToTop()
+  wrasse.window.line = 0;
+  wrasse.window.requestDraw();
 }
 
 const fitTerminal = () => {
   fitAddon.fit();
   wrasse.window.resizable = true;
+  wrasse.window.movable = true;
   wrasse.window.expand();
+  wrasse.window.movable = false;
   wrasse.window.resizable = false;
 }
 
@@ -77,7 +78,7 @@ let wrasse_setup = () => {
 
     html.buttons[2].addEventListener('click', _ => {
         wrasse.switch_terminal(wrasse.data_2)
-        let win = new tWin.Window(wrasse.terminal, 5, 5, 10, 5);
+        let win = new tWin.Window(wrasse.terminal, 5, 5, 10, 5, {movable : true, scrollable : true});
         win.content = [
           "1234567",
           " - ", 
@@ -175,15 +176,18 @@ let switch_terminal = (data) => {
     perm.disposables = [];
     perm.keywords.forEach(x => x.dispose())
     perm.keywords = [];
+    perm.windows = [];
 
     wrasse.terminal.reset()
     wrasse.window.reset();
     wrasse.terminal.options.disableStdin = true;
-    wrasse.window.writeln(JSON.stringify(
-        data,
-        null,
-        2
-    ), scrollToTop)
+    if (data) {
+      wrasse.window.writeln(JSON.stringify(
+          data,
+          null,
+          2
+      ), scrollToTop)
+    }
 
     // Make the terminal's size and geometry fit the size of #terminal-container
     fitTerminal();
@@ -224,6 +228,8 @@ const set_hover_content = (text) => {
     // update text and show element
     html.hover.content.innerText = text
     html.hover.shell.classList.remove("hidden")
+    perm.windows[0].content = (text || "").split('\n');
+    perm.windows[0].requestDraw();
   }
 }
 
@@ -241,7 +247,7 @@ const block_mouse = (bool) => {
 let interactive_terminal = (tree) => {
   // clear terminal
   // wrasse.terminal.reset()
-  wrasse.terminal.clear()
+  switch_terminal();
 
   // let parse_tree = (tree) => {
   //   return {
@@ -252,7 +258,17 @@ let interactive_terminal = (tree) => {
   //   }
   // }
   
-  let curr_line = 1;
+  let hoverWin = new tWin.Window(
+    wrasse.terminal,
+    wrasse.terminal.cols / 2,
+    0,
+    wrasse.terminal.cols / 2 - 2,
+    wrasse.terminal.rows / 2,
+    {}
+  );
+  perm.windows.push(hoverWin);
+
+  let curr_line = 0;
 
   const write_text = (node, level, write = false) => {
     let line = curr_line
@@ -300,9 +316,9 @@ let interactive_terminal = (tree) => {
       // delete own lines.
       wrasse.window.write(
         ESC.cursorSavePosition +
-        ESC.cursorTo(0, node.line) +
+        ESC.cursorTo(0, node.line+1) +
         ESC.deleteLine(node.children.length) +
-        ESC.cursorTo(2*level, node.line - 1) + "►" +
+        ESC.cursorTo(2*level, node.line) + "►" +
         ESC.cursorRestorePosition
       )
     } else {
@@ -315,7 +331,7 @@ let interactive_terminal = (tree) => {
         ESC.insertLine(node.children.length)
       )
 
-      let curr_line = node.line;
+      let curr_line = node.line+1;
       // write each child line
       node.children.forEach(x => {
         let prefix = "  ".repeat(level+1)
@@ -335,7 +351,7 @@ let interactive_terminal = (tree) => {
 
       // restore cursor
       wrasse.window.write(
-        ESC.cursorTo(2*level, node.line - 1) + "▼" +
+        ESC.cursorTo(2*level, node.line) + "▼" +
         ESC.cursorRestorePosition
       )
 
@@ -353,8 +369,8 @@ let interactive_terminal = (tree) => {
           node.link = {
             text: node.content,
             range: { 
-              start: { x: level*2+ 1,                        y: node.line },
-              end:   { x: level*2 + 2 + node.content.length, y: node.line } 
+              start: { x: level*2+ 1,                        y: node.line+2 },
+              end:   { x: level*2 + 2 + node.content.length, y: node.line+2 } 
             },
             activate() {
               // remove all link providers except this one
@@ -370,7 +386,7 @@ let interactive_terminal = (tree) => {
               node.active = !node.active;
 
               // update tree state
-              curr_line = 1
+              curr_line = 0
               write_text(tree, 0, false)
               register_links(tree, 0, bufferLineNumber);
 
@@ -409,8 +425,8 @@ let interactive_terminal = (tree) => {
       node.link = {
         text: node.content,
         range: { 
-          start: { x: level*2 + 1,                       y: node.line },
-          end:   { x: level*2 + 2 + node.content.length, y: node.line } 
+          start: { x: level*2 + 1,                       y: node.line + 2 },
+          end:   { x: level*2 + 2 + node.content.length, y: node.line + 2 } 
         },
       }
     }
@@ -432,8 +448,8 @@ let interactive_terminal = (tree) => {
             callback([{
               text: match[0],
               range: { 
-                start: { x: range.start.x + match.index + 3,                y: node.line },
-                end:   { x: range.start.x + match.index + match[0].length,  y: node.line } 
+                start: { x: range.start.x + match.index + 3,                y: node.line + 2 },
+                end:   { x: range.start.x + match.index + match[0].length,  y: node.line + 2 } 
               },
               activate() {
 
@@ -526,8 +542,8 @@ let interactive_terminal = (tree) => {
             callback([{
               text: match[0],
               range: { 
-                start: { x: range.start.x + match.index + 2,                    y: node.line },
-                end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line } 
+                start: { x: range.start.x + match.index + 2,                    y: node.line + 2 },
+                end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line + 2 } 
               },
               activate() {
               },
@@ -552,8 +568,8 @@ let interactive_terminal = (tree) => {
             callback([{
               text: match[0],
               range: { 
-                start: { x: range.start.x + match.index + 3,                y: node.line },
-                end:   { x: range.start.x + match.index + match[0].length,  y: node.line } 
+                start: { x: range.start.x + match.index + 3,                y: node.line + 2 },
+                end:   { x: range.start.x + match.index + match[0].length,  y: node.line + 2 } 
               },
               activate() {
               },
@@ -585,8 +601,8 @@ let interactive_terminal = (tree) => {
             callback([{
               text: match[0],
               range: { 
-                start: { x: range.start.x + match.index + 2,                    y: node.line },
-                end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line } 
+                start: { x: range.start.x + match.index + 2,                    y: node.line + 2 },
+                end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line + 2 } 
               },
               activate() {
               },
@@ -645,6 +661,7 @@ const perm = {
 
 const wrasse = {
     "html" : html,
+    "perm" : perm,
     "hook": hook,
     "setup": wrasse_setup,
     "terminal": WrasseTerminal,

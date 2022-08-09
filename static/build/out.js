@@ -5,6 +5,7 @@
   var __getOwnPropNames = Object.getOwnPropertyNames;
   var __getProtoOf = Object.getPrototypeOf;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
   var __commonJS = (cb, mod) => function __require() {
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
   };
@@ -17,6 +18,10 @@
     return to;
   };
   var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target, mod));
+  var __publicField = (obj, key, value) => {
+    __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+    return value;
+  };
 
   // node_modules/object-assign/index.js
   var require_object_assign = __commonJS({
@@ -32235,18 +32240,18 @@ For more info, visit https://reactjs.org/link/mock-scheduler`);
   var __getOwnPropSymbols = Object.getOwnPropertySymbols;
   var __hasOwnProp2 = Object.prototype.hasOwnProperty;
   var __propIsEnum = Object.prototype.propertyIsEnumerable;
-  var __defNormalProp = function(obj, key, value) {
+  var __defNormalProp2 = function(obj, key, value) {
     return key in obj ? __defProp2(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
   };
   var __spreadValues = function(a3, b3) {
     for (var prop3 in b3 || (b3 = {}))
       if (__hasOwnProp2.call(b3, prop3))
-        __defNormalProp(a3, prop3, b3[prop3]);
+        __defNormalProp2(a3, prop3, b3[prop3]);
     if (__getOwnPropSymbols)
       for (var _i = 0, _c = __getOwnPropSymbols(b3); _i < _c.length; _i++) {
         var prop3 = _c[_i];
         if (__propIsEnum.call(b3, prop3))
-          __defNormalProp(a3, prop3, b3[prop3]);
+          __defNormalProp2(a3, prop3, b3[prop3]);
       }
     return a3;
   };
@@ -34797,9 +34802,27 @@ problem_1 = sum (check [1..999])
   };
   var wrasseGHC_default = wrasseGHC;
 
-  // wrasse/terminalWindows.js
-  var clamp3 = (min, num, max) => Math.min(Math.max(num, min), max);
+  // wrasse/util.js
+  var sleep = async (time) => {
+    await new Promise((r3) => setTimeout(r3, time));
+  };
+  var clamp3 = (min, num, max) => Math.max(min, Math.min(num, max));
   var within2 = (min, num, max) => min <= num && num <= max;
+  function* group_n(arr, n3) {
+    let out = [];
+    for (const el of arr) {
+      out.push(el);
+      if (out.length == n3) {
+        yield out;
+        out = [];
+      }
+    }
+    if (out != []) {
+      yield out;
+    }
+  }
+
+  // wrasse/terminalWindows.js
   String.prototype.splice = function(index, count, add) {
     if (index < 0) {
       index = this.length + index;
@@ -34809,56 +34832,85 @@ problem_1 = sum (check [1..999])
     }
     return this.slice(0, index) + (add || "") + this.slice(index + count);
   };
-  var Window = class {
-    constructor(terminal, x2, y3, width, height, options = { movable: false, scrollable: true, resizable: false }) {
+  var _Window = class {
+    constructor(terminal, x2, y3, width, height, options) {
       this.terminal = terminal;
-      this.x = x2;
-      this.y = y3;
-      this.width = width;
-      this.height = height;
+      this.x = Math.ceil(x2);
+      this.y = Math.ceil(y3);
+      this.width = Math.floor(width);
+      this.height = Math.floor(height);
       this.line = 0;
-      this.content = [];
+      this.content = [""];
       this.cursor = { x: 0, y: 0, saved: { x: 0, y: 0 } };
+      options = { movable: false, scrollable: true, resizable: false, ...options };
       this.movable = options.movable;
       this.scrollable = options.scrollable;
       this.resizable = options.resizable;
+      _Window.setup();
+    }
+    onWheel(event) {
+      if (!this.scrollable)
+        return false;
+      if (!this.mouseWithin(event.offsetX, event.offsetY))
+        return false;
+      const dir = Math.sign(event.deltaY);
+      if (event.shiftKey) {
+        this.move(dir, 0, true);
+      } else if (event.altKey) {
+        this.move(0, dir, true);
+      } else {
+        this.line = clamp3(0, this.line + dir, this.content.length - this.height);
+      }
+      this.requestDraw();
+      return true;
+    }
+    static setup() {
+      if (_Window.drawReq.setup)
+        return;
+      _Window.drawReq.setup = true;
       wrasse_default.html.terminal.addEventListener("wheel", (event) => {
-        if (!this.scrollable)
-          return;
-        if (!this.mouseWithin(event.offsetX, event.offsetY))
-          return;
-        const dir = Math.sign(event.deltaY);
-        if (event.shiftKey) {
-          this.move(dir, 0, true);
-        } else if (event.altKey) {
-          this.move(0, dir, true);
-        } else {
-          this.line = clamp3(0, this.line + dir, this.content.length - this.height);
+        for (let i3 = wrasse_default.perm.windows.length - 1; i3 >= 0; i3--) {
+          if (wrasse_default.perm.windows[i3].onWheel(event))
+            return;
         }
-        this.draw();
+        wrasse_default.window.onWheel(event);
       }, {
         capture: true,
         passive: false
       });
+      (async () => {
+        while (true) {
+          if (_Window.drawReq.request) {
+            wrasse_default.window.draw();
+            wrasse_default.perm.windows.forEach((x2) => x2.draw());
+            _Window.drawReq.request = false;
+            _Window.drawReq.callbacks.forEach((x2) => x2());
+            _Window.drawReq.callbacks = [];
+          }
+          await sleep(1);
+        }
+      })();
     }
     reset() {
       this.clean();
-      this.content = [];
+      this.content = [""];
+      this.cursor = { x: 0, y: 0, saved: { x: 0, y: 0 } };
+      this.line = 0;
     }
     write(content, callback) {
       const handleEscape = (content2) => {
-        const regex = /\u001B\[(?<nums>([0-9]+;)*)?(?<num>([0-9]+))(?<char>[a-zA-Z])/g;
+        const regex = /\u001B\[(?:(?<nums>(?:[0-9]+;)*)(?<num>(?:[0-9]+)))?(?<char>[a-zA-Z])/gi;
         let cutString = [];
-        let lastIndex = 0;
         let anyMatches = false;
-        for (const match of content2.matchAll(regex)) {
-          anyMatches = true;
-          let { nums, num, char } = match.groups;
-          let cut = { prefix: match.input.slice(lastIndex, match.index), esc: () => {
+        for (const [prefix2, _nums, num, char] of group_n(content2.split(regex), 4)) {
+          let cut = { prefix: prefix2, esc: () => {
           } };
-          lastIndex = match.index + match[0].length;
-          nums = nums?.split(";") || [];
-          nums.filter((x2) => x2 === "");
+          if ((_nums || num || char) === void 0) {
+            cutString.push(cut);
+            break;
+          }
+          anyMatches = true;
+          let nums = (_nums?.split(";") || []).filter((x2) => x2 !== "");
           nums.push(num);
           switch (char) {
             case "G":
@@ -34868,7 +34920,7 @@ problem_1 = sum (check [1..999])
               break;
             case "H":
               cut.esc = () => {
-                this.cursor = { ...this.cursor, x: nums[0] + 1, y: nums[1] + 1 };
+                this.cursor = { ...this.cursor, x: +nums[1] - 1, y: +nums[0] - 1 };
               };
               break;
             case "s":
@@ -34883,12 +34935,12 @@ problem_1 = sum (check [1..999])
               break;
             case "L":
               cut.esc = () => {
-                this.content.splice(this.cursor.y, 0, Array(num).fill(""));
+                this.content.splice(this.cursor.y + 1, 0, ...Array(+nums[0]).fill(""));
               };
               break;
             case "M":
               cut.esc = () => {
-                this.content.splice(this.cursor.y, num);
+                this.content.splice(this.cursor.y, +num);
               };
               break;
             default:
@@ -34903,9 +34955,12 @@ problem_1 = sum (check [1..999])
           } }];
         return cutString;
       };
+      console.log({ content });
       for (const { prefix: prefix2, esc } of handleEscape(content)) {
+        console.log({ prefix: prefix2 });
         let oldCursor = { ...this.cursor };
         for (const line of prefix2.split("\n")) {
+          console.log({ line });
           while (this.cursor.y >= this.content.length) {
             this.content.push("");
           }
@@ -34921,9 +34976,8 @@ problem_1 = sum (check [1..999])
           this.content.push("");
         }
       }
-      this.draw();
-      console.log(this);
-      this.terminal.write("", callback);
+      this.requestDraw(callback);
+      console.log(JSON.parse(JSON.stringify({ content: this.content, cursor: this.cursor })));
     }
     writeln(content, callback) {
       return this.write(content + "\n", callback);
@@ -34943,10 +34997,11 @@ problem_1 = sum (check [1..999])
       this.clean();
       this.width = width;
       this.height = height;
-      this.draw();
+      this.requestDraw();
     }
     expand() {
-      this.resize(this.terminal.cols, this.terminal.rows);
+      this.move(0, 0, false);
+      this.resize(this.terminal.cols - 2, this.terminal.rows - 2);
     }
     move(x2, y3, relative) {
       if (!this.movable)
@@ -34955,12 +35010,12 @@ problem_1 = sum (check [1..999])
         x2 += this.x;
         y3 += this.y;
       }
-      x2 = clamp3(0, x2, this.terminal.cols);
-      y3 = clamp3(0, y3, this.terminal.rows);
+      x2 = clamp3(0, x2, this.terminal.cols - this.width - 2);
+      y3 = clamp3(0, y3, this.terminal.rows - this.height - 2);
       this.clean();
       this.x = x2;
       this.y = y3;
-      this.draw();
+      this.requestDraw();
     }
     *lines() {
       for (const line of this.content.slice(this.line, this.line + this.height)) {
@@ -34968,12 +35023,17 @@ problem_1 = sum (check [1..999])
       }
     }
     draw() {
-      this.terminal.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(this.x, this.y) + `\u2554${"\u2550".repeat(this.width)}\u2557` + ansiEscapes_default.cursorTo(this.x, this.y + this.height + 1) + `\u255A${"\u2550".repeat(this.width)}\u255D`);
+      let writeString = ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(this.x, this.y) + `\u2554${"\u2550".repeat(this.width)}\u2557` + ansiEscapes_default.cursorTo(this.x, this.y + this.height + 1) + `\u255A${"\u2550".repeat(this.width)}\u255D`;
       let lines = this.lines();
       for (let i3 = 1; i3 <= this.height; i3++) {
-        this.terminal.write(`${ansiEscapes_default.cursorTo(this.x, this.y + i3)}\u2551${(lines.next().value || "").padEnd(this.width)}\u2551`);
+        writeString += `${ansiEscapes_default.cursorTo(this.x, this.y + i3)}\u2551${(lines.next().value || "").padEnd(this.width)}\u2551`;
       }
-      this.terminal.write(ansiEscapes_default.cursorRestorePosition);
+      this.terminal.write(writeString + ansiEscapes_default.cursorRestorePosition);
+    }
+    requestDraw(callback) {
+      _Window.drawReq.request = true;
+      if (callback)
+        _Window.drawReq.callbacks.push(callback);
     }
     clean() {
       this.terminal.write(ansiEscapes_default.cursorSavePosition);
@@ -34983,6 +35043,12 @@ problem_1 = sum (check [1..999])
       this.terminal.write(ansiEscapes_default.cursorRestorePosition);
     }
   };
+  var Window = _Window;
+  __publicField(Window, "drawReq", {
+    request: false,
+    setup: false,
+    callbacks: []
+  });
   var termWindows = {
     "Window": Window
   };
@@ -35016,16 +35082,16 @@ problem_1 = sum (check [1..999])
     },
     block: document.getElementById("wrasse-block")
   };
-  var sleep = async (time) => {
-    await new Promise((r3) => setTimeout(r3, time));
-  };
   var scrollToTop = () => {
-    wrasse.terminal.scrollToTop();
+    wrasse.window.line = 0;
+    wrasse.window.requestDraw();
   };
   var fitTerminal = () => {
     fitAddon.fit();
     wrasse.window.resizable = true;
+    wrasse.window.movable = true;
     wrasse.window.expand();
+    wrasse.window.movable = false;
     wrasse.window.resizable = false;
   };
   var wrasse_setup = () => {
@@ -35043,7 +35109,7 @@ problem_1 = sum (check [1..999])
     });
     html.buttons[2].addEventListener("click", (_3) => {
       wrasse.switch_terminal(wrasse.data_2);
-      let win = new terminalWindows_default.Window(wrasse.terminal, 5, 5, 10, 5);
+      let win = new terminalWindows_default.Window(wrasse.terminal, 5, 5, 10, 5, { movable: true, scrollable: true });
       win.content = [
         "1234567",
         " - ",
@@ -35115,10 +35181,13 @@ problem_1 = sum (check [1..999])
     perm.disposables = [];
     perm.keywords.forEach((x2) => x2.dispose());
     perm.keywords = [];
+    perm.windows = [];
     wrasse.terminal.reset();
     wrasse.window.reset();
     wrasse.terminal.options.disableStdin = true;
-    wrasse.window.writeln(JSON.stringify(data, null, 2), scrollToTop);
+    if (data) {
+      wrasse.window.writeln(JSON.stringify(data, null, 2), scrollToTop);
+    }
     fitTerminal();
     let starGen = function* () {
       while (true) {
@@ -35144,6 +35213,8 @@ problem_1 = sum (check [1..999])
     } else {
       html.hover.content.innerText = text;
       html.hover.shell.classList.remove("hidden");
+      perm.windows[0].content = (text || "").split("\n");
+      perm.windows[0].requestDraw();
     }
   };
   var block_mouse = (bool) => {
@@ -35154,8 +35225,10 @@ problem_1 = sum (check [1..999])
     }
   };
   var interactive_terminal = (tree) => {
-    wrasse.terminal.clear();
-    let curr_line = 1;
+    switch_terminal();
+    let hoverWin = new terminalWindows_default.Window(wrasse.terminal, wrasse.terminal.cols / 2, 0, wrasse.terminal.cols / 2 - 2, wrasse.terminal.rows / 2, {});
+    perm.windows.push(hoverWin);
+    let curr_line = 0;
     const write_text = (node, level, write = false) => {
       let line = curr_line;
       let prefix2 = "  ".repeat(level);
@@ -35184,10 +35257,10 @@ problem_1 = sum (check [1..999])
         return;
       if (mode) {
         node.children.slice().reverse().forEach((x2) => clean_lines(x2, level + 1, mode));
-        wrasse.window.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(0, node.line) + ansiEscapes_default.deleteLine(node.children.length) + ansiEscapes_default.cursorTo(2 * level, node.line - 1) + "\u25BA" + ansiEscapes_default.cursorRestorePosition);
+        wrasse.window.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(0, node.line + 1) + ansiEscapes_default.deleteLine(node.children.length) + ansiEscapes_default.cursorTo(2 * level, node.line) + "\u25BA" + ansiEscapes_default.cursorRestorePosition);
       } else {
         wrasse.window.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(0, node.line) + ansiEscapes_default.insertLine(node.children.length));
-        let curr_line2 = node.line;
+        let curr_line2 = node.line + 1;
         node.children.forEach((x2) => {
           let prefix2 = "  ".repeat(level + 1);
           if (x2.children.length == 0) {
@@ -35197,7 +35270,7 @@ problem_1 = sum (check [1..999])
           }
           curr_line2++;
         });
-        wrasse.window.write(ansiEscapes_default.cursorTo(2 * level, node.line - 1) + "\u25BC" + ansiEscapes_default.cursorRestorePosition);
+        wrasse.window.write(ansiEscapes_default.cursorTo(2 * level, node.line) + "\u25BC" + ansiEscapes_default.cursorRestorePosition);
         node.children.forEach((x2) => clean_lines(x2, level + 1, mode));
       }
     };
@@ -35209,15 +35282,15 @@ problem_1 = sum (check [1..999])
             node.link = {
               text: node.content,
               range: {
-                start: { x: level * 2 + 1, y: node.line },
-                end: { x: level * 2 + 2 + node.content.length, y: node.line }
+                start: { x: level * 2 + 1, y: node.line + 2 },
+                end: { x: level * 2 + 2 + node.content.length, y: node.line + 2 }
               },
               activate() {
                 perm.disposables.filter((x2) => x2 !== disp).forEach((x2) => x2.dispose());
                 perm.disposables = [disp];
                 clean_lines(node, level);
                 node.active = !node.active;
-                curr_line = 1;
+                curr_line = 0;
                 write_text(tree, 0, false);
                 register_links(tree, 0, bufferLineNumber);
                 perm.keywords.forEach((x2) => x2.dispose());
@@ -35249,8 +35322,8 @@ problem_1 = sum (check [1..999])
         node.link = {
           text: node.content,
           range: {
-            start: { x: level * 2 + 1, y: node.line },
-            end: { x: level * 2 + 2 + node.content.length, y: node.line }
+            start: { x: level * 2 + 1, y: node.line + 2 },
+            end: { x: level * 2 + 2 + node.content.length, y: node.line + 2 }
           }
         };
       }
@@ -35268,8 +35341,8 @@ problem_1 = sum (check [1..999])
               callback([{
                 text: match[0],
                 range: {
-                  start: { x: range.start.x + match.index + 3, y: node.line },
-                  end: { x: range.start.x + match.index + match[0].length, y: node.line }
+                  start: { x: range.start.x + match.index + 3, y: node.line + 2 },
+                  end: { x: range.start.x + match.index + match[0].length, y: node.line + 2 }
                 },
                 activate() {
                   if (node.active) {
@@ -35335,8 +35408,8 @@ problem_1 = sum (check [1..999])
               callback([{
                 text: match[0],
                 range: {
-                  start: { x: range.start.x + match.index + 2, y: node.line },
-                  end: { x: range.start.x + match.index + match[0].length + 1, y: node.line }
+                  start: { x: range.start.x + match.index + 2, y: node.line + 2 },
+                  end: { x: range.start.x + match.index + match[0].length + 1, y: node.line + 2 }
                 },
                 activate() {
                 },
@@ -35358,8 +35431,8 @@ problem_1 = sum (check [1..999])
               callback([{
                 text: match[0],
                 range: {
-                  start: { x: range.start.x + match.index + 3, y: node.line },
-                  end: { x: range.start.x + match.index + match[0].length, y: node.line }
+                  start: { x: range.start.x + match.index + 3, y: node.line + 2 },
+                  end: { x: range.start.x + match.index + match[0].length, y: node.line + 2 }
                 },
                 activate() {
                 },
@@ -35386,8 +35459,8 @@ problem_1 = sum (check [1..999])
               callback([{
                 text: match[0],
                 range: {
-                  start: { x: range.start.x + match.index + 2, y: node.line },
-                  end: { x: range.start.x + match.index + match[0].length + 1, y: node.line }
+                  start: { x: range.start.x + match.index + 2, y: node.line + 2 },
+                  end: { x: range.start.x + match.index + match[0].length + 1, y: node.line + 2 }
                 },
                 activate() {
                 },
@@ -35433,6 +35506,7 @@ problem_1 = sum (check [1..999])
   };
   var wrasse = {
     "html": html,
+    "perm": perm,
     "hook": hook,
     "setup": wrasse_setup,
     "terminal": WrasseTerminal,
