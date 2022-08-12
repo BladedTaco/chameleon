@@ -5,6 +5,8 @@ const sleep = async (time) => {
 const clamp = (min, num, max) => Math.max( min, Math.min(num, max));
 const within = (min, num, max) => min <= num && num <= max;
 
+const null_func = () => {};
+
 function* group_n(arr, n) {
     let out = [];
     for (const el of arr) {
@@ -19,4 +21,4 @@ function* group_n(arr, n) {
     }
 }
 
-export {sleep, clamp, within, group_n};
+export {sleep, clamp, within, group_n, null_func};

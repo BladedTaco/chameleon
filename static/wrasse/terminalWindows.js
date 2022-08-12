@@ -1,6 +1,6 @@
 import ESC from "./ansiEscapes";
 import wrasse from "./wrasse";
-import {sleep, clamp, within, group_n} from './util';
+import {sleep, clamp, within, group_n, null_func} from './util';
 
 String.prototype.splice = function (index, count, add) {
     // We cannot pass negative indexes directly to the 2nd slicing operation.
@@ -12,7 +12,26 @@ String.prototype.splice = function (index, count, add) {
     }
   
     return this.slice(0, index) + (add || "") + this.slice(index + count);
-  }
+}
+
+class Link {
+    constructor(window, range, funcs, colour) {
+        this.window = window;
+        this.range = {
+            start : {x : 0, y : 0, ...range.start},
+            end : {x : 0, y : 0, ...range.end},
+        }
+        this.funcs = {
+            enter : null_func,
+            leave : null_func,
+            click : null_func,
+            ...funcs
+        }
+        this.colour = colour ?? ESC.Colour.Red;
+
+        this.active = false;
+    }
+}
 
 class Window {
     constructor(terminal, x, y, width, height, options) {
@@ -28,6 +47,8 @@ class Window {
         this.movable = options.movable;
         this.scrollable = options.scrollable;
         this.resizable = options.resizable;
+        this.links = [];
+        this.active = false;
 
         Window.setup();
     }
@@ -39,39 +60,14 @@ class Window {
         callbacks : [],
     };
 
-    onWheel(event) {
-        if (!this.scrollable) return false;
-        if (!this.mouseWithin(event.offsetX, event.offsetY)) return false;
-
-        const dir = Math.sign(event.deltaY);
-        if (event.shiftKey) {
-            this.move(dir, 0, true);
-        } else if (event.altKey) {
-            this.move(0, dir, true);
-        } else {
-            this.line = clamp(0, 
-                this.line + dir,
-                this.content.length - this.height
-            );
-        }
-        this.requestDraw();
-        return true;
-    }
-
     static setup() {
         if (Window.drawReq.setup) return;
         Window.drawReq.setup = true;
 
-        // setup scrolling
-        wrasse.html.terminal.addEventListener('wheel', (event) => {
-            for (let i = wrasse.perm.windows.length - 1; i >= 0; i--) {
-                if (wrasse.perm.windows[i].onWheel(event)) return;
-            }
-            wrasse.window.onWheel(event);
-        }, {
-            capture : true,
-            passive : false,
-        });
+        // setup events
+        Window.setupEvent('wheel', 'onWheel');
+        Window.setupEvent('mousemove', 'onMouseMove');
+        Window.setupEvent('click', 'onMouseClick');
 
         // setup draw requests
         (async () => {
@@ -88,6 +84,78 @@ class Window {
         })();
     }
 
+    static setupEvent(eventType, eventFunc) {
+        wrasse.html.terminal.addEventListener(eventType, (event) => {
+            for (let i = wrasse.perm.windows.length - 1; i >= 0; i--) {
+                if (wrasse.perm.windows[i][eventFunc](event)) return;
+            }
+            wrasse.window[eventFunc](event);
+        }, {
+            capture : true,
+            passive : false,
+        });
+    }
+
+
+    onWheel(event) {
+        if (!this.scrollable || !this.active) return false;
+
+        const dir = Math.sign(event.deltaY);
+        if (event.shiftKey) {
+            this.move(dir, 0, true);
+        } else if (event.altKey) {
+            this.move(0, dir, true);
+        } else {
+            this.line = clamp(0, 
+                this.line + dir,
+                this.content.length - this.height
+            );
+        }
+        this.onMouseMove();
+        this.requestDraw();
+        return true;
+    }
+
+    onMouseMove(event) {
+        this.active = this.mouseWithin(event.offsetX, event.offsetY);
+        // exit if mouse not within
+        if (!this.active) return false;
+
+        // get cell x and y
+        const {x, y} = this.mouseToCell(event.offsetX, event.offsetY);
+
+        this.links
+            // get links changing state
+            .filter(curr => (
+                    within(curr.range.start.x, x, curr.range.end.x)
+                    && within(curr.range.start.y, y, curr.range.end.y)
+                ) != curr.active
+            )
+            // perform enter/exit functions and flip state
+            .forEach(x => {
+                x.active 
+                    ? x.funcs.leave()
+                    : x.funcs.enter();
+                x.active = !x.active;
+            });
+
+        this.requestDraw();
+        return true;
+    }
+
+    onClick(event) {
+        // exit if mouse not within
+        if (!this.active) return false;
+
+        // get active links
+        this.links
+            .filter(x => x.active)
+            .forEach(x => x.funcs.click());
+
+        this.requestDraw();
+        return true;
+    }
+
     /*
         ESC.cursorSavePosition
         ESC.cursorRestorePosition
@@ -95,6 +163,12 @@ class Window {
         ESC.cusorTo
         ESC.insertLine
     */
+
+    addLink(range, funcs, colour) {
+        this.links.push(new Link(
+            window, range, funcs, colour
+        ));
+    }
 
     reset() {
         this.clean();
@@ -216,10 +290,18 @@ class Window {
     }
 
     mouseWithin(relX, relY) {
+        const {x, y} = mouseToCell(relX, relY);
+        return within(this.x - 0.5, x, this.x + this.width  + 0.5)
+            && within(this.y - 0.5, y, this.y + this.height + 0.5);
+    }
+
+    mouseToCell(relX, relY) {
         const cellHeight = wrasse.html.terminal.offsetHeight / wrasse.terminal.rows;
         const cellWidth  = wrasse.html.terminal.offsetWidth  / wrasse.terminal.cols;
-        return within(this.x - 0.5, relX / cellWidth  - 1, this.x + this.width  + 0.5)
-            && within(this.y - 0.5, relY / cellHeight - 1, this.y + this.height + 0.5);
+        return {
+            x : relX / cellWidth  - 1,
+            y : relY / cellHeight - 1,
+        }
     }
 
     resize(width, height, relative) {

@@ -144,4 +144,16 @@ ansiEscapes.colouredText = (fg_col, bg_col, text) => {
 }
 
 
+class Colour {
+	static Red = new Colour({r: 255});
+	static Blue = new Colour({b : 255});
+	static Green = new Colour({g : 255});
+
+	constructor({r, g, b}) {
+		this.r = r ?? 0;
+		this.g = g ?? 0;
+		this.b = b ?? 0;
+	}
+}
+
 export default ansiEscapes;
