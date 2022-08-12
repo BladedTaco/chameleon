@@ -21,13 +21,25 @@ class Link {
             start : {x : 0, y : 0, ...range.start},
             end : {x : 0, y : 0, ...range.end},
         }
+        this.colour = {r:0, g:0, b:0, ...(colour ?? ESC.Colour.Red)}
+        const link = this;
         this.funcs = {
-            enter : null_func,
-            leave : null_func,
+            enter : () => {
+                link.window.write(
+                    ESC.cursorSavePosition +
+                    ESC.cursorTo(link.range.start.x, link.range.start.y) + 
+                    ESC.colouredText({}, link.colour, "|")
+                        .split("|")
+                        .join(ESC.cursorTo(link.range.end.x, link.range.end.y)) +
+                    ESC.cursorRestorePosition
+                )
+            },
+            leave : () => {
+                link.window.content[link.range.start.y].esc = []
+            },
             click : null_func,
             ...funcs
         }
-        this.colour = colour ?? ESC.Colour.Red;
 
         this.active = false;
     }
@@ -122,8 +134,8 @@ class Window {
         if (!this.active) return false;
 
         // get cell x and y
-        const {x, y} = this.mouseToCell(event.offsetX, event.offsetY);
-
+        let {x, y} = this.mouseToCell(event.offsetX, event.offsetY);
+        y += this.line 
         this.links
             // get links changing state
             .filter(curr => (
@@ -137,6 +149,7 @@ class Window {
                     ? x.funcs.leave()
                     : x.funcs.enter();
                 x.active = !x.active;
+                this.requestDraw();
             });
 
         // this.requestDraw();
@@ -166,7 +179,7 @@ class Window {
 
     addLink(range, funcs, colour) {
         this.links.push(new Link(
-            window, range, funcs, colour
+            this, range, funcs, colour
         ));
     }
 
@@ -230,7 +243,11 @@ class Window {
                     // Insert Line (current line pushed up)
                     case 'L':
                         cut.esc = () => {
-                            this.content.splice(this.cursor.y+1, 0, ...Array(+nums[0]).fill({text:"", esc:[]}));
+                            this.content.splice(
+                                this.cursor.y+1,
+                                0, 
+                                ...Array.from({length: +nums[0]}, _ => ({text:"", esc:[]}))
+                            );
                         }
                     break;
                     // Delete Line (current line delted)
@@ -257,12 +274,9 @@ class Window {
         };
 
         // write the string to the window
-        console.log({text})
         for (const {prefix, esc} of handleEscape(text)) {
-            console.log({prefix})
             let oldCursor = {...this.cursor};
             for (const line of (prefix ?? "").split('\n')) {
-                console.log({line})
                 // ensure cursor isn't off content bounds
                 while (this.cursor.y >= this.content.length) {
                     this.content.push({text:"", esc:[]});
@@ -272,9 +286,9 @@ class Window {
                     .padEnd(this.cursor.x)
                     .splice(this.cursor.x, line.length, line);
                 // overwrite escape sequences too
-                // this.content[this.cursor.y].esc = this.content[this.cursor.y].esc
-                //     .filter(({pos}) => !within(0, pos - this.cursor.x, line.length))
-                // // intercalate cursor reset
+                this.content[this.cursor.y].esc = this.content[this.cursor.y].esc
+                    .filter(({pos}) => !within(1, pos - this.cursor.x, line.length - 2))
+                // intercalate cursor reset
                 this.cursor.x += line.length;
                 oldCursor = {...this.cursor};
                 this.cursor.y += 1
@@ -284,7 +298,6 @@ class Window {
             this.cursor = oldCursor;
             // handle escape characters
             let add = esc();
-            console.log({add})
             if (add) {
                 this.content[this.cursor.y].esc.push({pos : this.cursor.x, seq : add})
             }
@@ -312,8 +325,8 @@ class Window {
         const cellHeight = wrasse.html.terminal.offsetHeight / wrasse.terminal.rows;
         const cellWidth  = wrasse.html.terminal.offsetWidth  / wrasse.terminal.cols;
         return {
-            x : relX / cellWidth  - 1,
-            y : relY / cellHeight - 1,
+            x : Math.floor(relX / cellWidth  - 1),
+            y : Math.floor(relY / cellHeight - 1),
         }
     }
 
@@ -363,7 +376,6 @@ class Window {
 
     *lines() {
         for (const line of this.content.slice(this.line, this.line + this.height)) {
-            console.log({line})
             yield {
                 text: line.text.slice(0, this.width),
                 esc: line.esc.filter(({pos}) => within(0, pos, this.width))
@@ -381,15 +393,12 @@ class Window {
           + ESC.cursorTo(this.x, this.y + this.height + 1) 
           + `╚${"═".repeat(this.width)}╝`;
         
-            
         // draw content
         let lines = this.lines();
         for (let i = 1; i <= this.height; i++) {
             // get the next line
             const {text, esc} = lines.next().value ?? {text:"", esc:[]};
-            
-            console.log({text, esc})
-
+        
             // add it to the write string
             writeString += `${ESC.cursorTo(this.x, this.y + i)}║${
                 // sort escape sequences by position
@@ -402,7 +411,6 @@ class Window {
                 )
             }║`;
         }
-        console.log({writeString})
         // restore cursor
         this.terminal.write(writeString + ESC.cursorRestorePosition);
     }

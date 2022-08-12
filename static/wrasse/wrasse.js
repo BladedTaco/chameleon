@@ -280,6 +280,7 @@ let interactive_terminal = (tree) => {
 
     // write tree string
     if (write) {
+      console.log({node})
       if (node.children.length == 0) {
         wrasse.window.writeln(prefix + ESC.colouredText(ESC.Colour.Blue, ESC.Colour.Red, "- ") + node_string);
       } else {
@@ -364,6 +365,15 @@ let interactive_terminal = (tree) => {
   const register_links = (node, level, ignoreLine) => {
     // register link provider
     if (node.children.length > 0 && node.line != ignoreLine) {
+
+      wrasse.window.addLink(
+        { 
+          start: { x: level*2+ 1,                        y: node.line },
+          end:   { x: level*2 + 2 + node.content.length, y: node.line } 
+        },
+        {}
+      )
+
       const disp = wrasse.terminal.registerLinkProvider({
         provideLinks(bufferLineNumber, callback) {
           let hovered = false;

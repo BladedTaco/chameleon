@@ -34849,13 +34849,18 @@ problem_1 = sum (check [1..999])
         start: { x: 0, y: 0, ...range.start },
         end: { x: 0, y: 0, ...range.end }
       };
+      this.colour = { r: 0, g: 0, b: 0, ...colour ?? ansiEscapes_default.Colour.Red };
+      const link = this;
       this.funcs = {
-        enter: null_func,
-        leave: null_func,
+        enter: () => {
+          link.window.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(link.range.start.x, link.range.start.y) + ansiEscapes_default.colouredText({}, link.colour, "|").split("|").join(ansiEscapes_default.cursorTo(link.range.end.x, link.range.end.y)) + ansiEscapes_default.cursorRestorePosition);
+        },
+        leave: () => {
+          link.window.content[link.range.start.y].esc = [];
+        },
         click: null_func,
         ...funcs
       };
-      this.colour = colour ?? ansiEscapes_default.Colour.Red;
       this.active = false;
     }
   };
@@ -34928,10 +34933,12 @@ problem_1 = sum (check [1..999])
       this.active = this.mouseWithin(event.offsetX, event.offsetY);
       if (!this.active)
         return false;
-      const { x: x2, y: y3 } = this.mouseToCell(event.offsetX, event.offsetY);
+      let { x: x2, y: y3 } = this.mouseToCell(event.offsetX, event.offsetY);
+      y3 += this.line;
       this.links.filter((curr) => (within2(curr.range.start.x, x2, curr.range.end.x) && within2(curr.range.start.y, y3, curr.range.end.y)) != curr.active).forEach((x3) => {
         x3.active ? x3.funcs.leave() : x3.funcs.enter();
         x3.active = !x3.active;
+        this.requestDraw();
       });
       return true;
     }
@@ -34942,7 +34949,7 @@ problem_1 = sum (check [1..999])
       return true;
     }
     addLink(range, funcs, colour) {
-      this.links.push(new Link(window, range, funcs, colour));
+      this.links.push(new Link(this, range, funcs, colour));
     }
     reset() {
       this.clean();
@@ -34988,7 +34995,7 @@ problem_1 = sum (check [1..999])
               break;
             case "L":
               cut.esc = () => {
-                this.content.splice(this.cursor.y + 1, 0, ...Array(+nums[0]).fill({ text: "", esc: [] }));
+                this.content.splice(this.cursor.y + 1, 0, ...Array.from({ length: +nums[0] }, (_3) => ({ text: "", esc: [] })));
               };
               break;
             case "M":
@@ -35010,16 +35017,14 @@ problem_1 = sum (check [1..999])
           return [{ prefix: text2, esc: null_func }];
         return cutString;
       };
-      console.log({ text });
       for (const { prefix: prefix2, esc } of handleEscape(text)) {
-        console.log({ prefix: prefix2 });
         let oldCursor = { ...this.cursor };
         for (const line of (prefix2 ?? "").split("\n")) {
-          console.log({ line });
           while (this.cursor.y >= this.content.length) {
             this.content.push({ text: "", esc: [] });
           }
           this.content[this.cursor.y].text = this.content[this.cursor.y].text.padEnd(this.cursor.x).splice(this.cursor.x, line.length, line);
+          this.content[this.cursor.y].esc = this.content[this.cursor.y].esc.filter(({ pos }) => !within2(1, pos - this.cursor.x, line.length - 2));
           this.cursor.x += line.length;
           oldCursor = { ...this.cursor };
           this.cursor.y += 1;
@@ -35027,7 +35032,6 @@ problem_1 = sum (check [1..999])
         }
         this.cursor = oldCursor;
         let add = esc();
-        console.log({ add });
         if (add) {
           this.content[this.cursor.y].esc.push({ pos: this.cursor.x, seq: add });
         }
@@ -35049,8 +35053,8 @@ problem_1 = sum (check [1..999])
       const cellHeight = wrasse_default.html.terminal.offsetHeight / wrasse_default.terminal.rows;
       const cellWidth = wrasse_default.html.terminal.offsetWidth / wrasse_default.terminal.cols;
       return {
-        x: relX / cellWidth - 1,
-        y: relY / cellHeight - 1
+        x: Math.floor(relX / cellWidth - 1),
+        y: Math.floor(relY / cellHeight - 1)
       };
     }
     resize(width, height, relative) {
@@ -35085,7 +35089,6 @@ problem_1 = sum (check [1..999])
     }
     *lines() {
       for (const line of this.content.slice(this.line, this.line + this.height)) {
-        console.log({ line });
         yield {
           text: line.text.slice(0, this.width),
           esc: line.esc.filter(({ pos }) => within2(0, pos, this.width))
@@ -35097,10 +35100,8 @@ problem_1 = sum (check [1..999])
       let lines = this.lines();
       for (let i3 = 1; i3 <= this.height; i3++) {
         const { text, esc } = lines.next().value ?? { text: "", esc: [] };
-        console.log({ text, esc });
         writeString += `${ansiEscapes_default.cursorTo(this.x, this.y + i3)}\u2551${esc.sort((a3, b3) => a3.pos - b3.pos).reduceRight((acc, { pos, seq }) => acc.splice(pos, 0, seq), (text || "").padEnd(this.width))}\u2551`;
       }
-      console.log({ writeString });
       this.terminal.write(writeString + ansiEscapes_default.cursorRestorePosition);
     }
     requestDraw(callback) {
@@ -35307,6 +35308,7 @@ $ `, scrollToTop);
       let prefix2 = "  ".repeat(level);
       let node_string = node.content;
       if (write) {
+        console.log({ node });
         if (node.children.length == 0) {
           wrasse.window.writeln(prefix2 + ansiEscapes_default.colouredText(ansiEscapes_default.Colour.Blue, ansiEscapes_default.Colour.Red, "- ") + node_string);
         } else {
@@ -35349,6 +35351,10 @@ $ `, scrollToTop);
     };
     const register_links = (node, level, ignoreLine) => {
       if (node.children.length > 0 && node.line != ignoreLine) {
+        wrasse.window.addLink({
+          start: { x: level * 2 + 1, y: node.line },
+          end: { x: level * 2 + 2 + node.content.length, y: node.line }
+        }, {});
         const disp = wrasse.terminal.registerLinkProvider({
           provideLinks(bufferLineNumber, callback) {
             let hovered = false;
