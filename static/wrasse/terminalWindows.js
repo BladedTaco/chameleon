@@ -22,9 +22,8 @@ class Link {
             end : {x : 0, y : 0, ...range.end},
         }
         this.colour = {r:0, g:0, b:0, ...(colour ?? ESC.Colour.Red)}
-        const link = this;
         this.funcs = {
-            enter : () => {
+            enter : (link) => {
                 link.window.write(
                     ESC.cursorSavePosition +
                     ESC.cursorTo(link.range.start.x, link.range.start.y) + 
@@ -33,12 +32,13 @@ class Link {
                         .join(ESC.cursorTo(link.range.end.x, link.range.end.y)) +
                     ESC.cursorRestorePosition
                 )
+                funcs?.enter?.(link);
             },
-            leave : () => {
+            leave : (link) => {
                 link.window.content[link.range.start.y].esc = []
+                funcs?.leave?.(link);
             },
-            click : null_func,
-            ...funcs
+            click : (link) => funcs?.click?.(link)
         }
 
         this.active = false;
@@ -146,8 +146,8 @@ class Window {
             // perform enter/exit functions and flip state
             .forEach(x => {
                 x.active 
-                    ? x.funcs.leave()
-                    : x.funcs.enter();
+                    ? x.funcs.leave(x)
+                    : x.funcs.enter(x);
                 x.active = !x.active;
                 this.requestDraw();
             });
@@ -163,7 +163,7 @@ class Window {
         // get active links
         this.links
             .filter(x => x.active)
-            .forEach(x => x.funcs.click());
+            .forEach(x => x.funcs.click(x));
 
         // this.requestDraw();
         return true;
@@ -178,8 +178,9 @@ class Window {
     */
 
     addLink(range, funcs, colour) {
+        const window = this;
         this.links.push(new Link(
-            this, range, funcs, colour
+            window, range, funcs, colour
         ));
     }
 

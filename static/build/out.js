@@ -34850,16 +34850,16 @@ problem_1 = sum (check [1..999])
         end: { x: 0, y: 0, ...range.end }
       };
       this.colour = { r: 0, g: 0, b: 0, ...colour ?? ansiEscapes_default.Colour.Red };
-      const link = this;
       this.funcs = {
-        enter: () => {
+        enter: (link) => {
           link.window.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(link.range.start.x, link.range.start.y) + ansiEscapes_default.colouredText({}, link.colour, "|").split("|").join(ansiEscapes_default.cursorTo(link.range.end.x, link.range.end.y)) + ansiEscapes_default.cursorRestorePosition);
+          funcs?.enter?.(link);
         },
-        leave: () => {
+        leave: (link) => {
           link.window.content[link.range.start.y].esc = [];
+          funcs?.leave?.(link);
         },
-        click: null_func,
-        ...funcs
+        click: (link) => funcs?.click?.(link)
       };
       this.active = false;
     }
@@ -34936,7 +34936,7 @@ problem_1 = sum (check [1..999])
       let { x: x2, y: y3 } = this.mouseToCell(event.offsetX, event.offsetY);
       y3 += this.line;
       this.links.filter((curr) => (within2(curr.range.start.x, x2, curr.range.end.x) && within2(curr.range.start.y, y3, curr.range.end.y)) != curr.active).forEach((x3) => {
-        x3.active ? x3.funcs.leave() : x3.funcs.enter();
+        x3.active ? x3.funcs.leave(x3) : x3.funcs.enter(x3);
         x3.active = !x3.active;
         this.requestDraw();
       });
@@ -34945,11 +34945,12 @@ problem_1 = sum (check [1..999])
     onClick(event) {
       if (!this.active)
         return false;
-      this.links.filter((x2) => x2.active).forEach((x2) => x2.funcs.click());
+      this.links.filter((x2) => x2.active).forEach((x2) => x2.funcs.click(x2));
       return true;
     }
     addLink(range, funcs, colour) {
-      this.links.push(new Link(this, range, funcs, colour));
+      const window2 = this;
+      this.links.push(new Link(window2, range, funcs, colour));
     }
     reset() {
       this.clean();
@@ -35351,60 +35352,38 @@ $ `, scrollToTop);
     };
     const register_links = (node, level, ignoreLine) => {
       if (node.children.length > 0 && node.line != ignoreLine) {
+        let hovered = false;
         wrasse.window.addLink({
           start: { x: level * 2 + 1, y: node.line },
           end: { x: level * 2 + 2 + node.content.length, y: node.line }
-        }, {});
-        const disp = wrasse.terminal.registerLinkProvider({
-          provideLinks(bufferLineNumber, callback) {
-            let hovered = false;
-            node.link = {
-              text: node.content,
-              range: {
-                start: { x: level * 2 + 1, y: node.line + 2 },
-                end: { x: level * 2 + 2 + node.content.length, y: node.line + 2 }
-              },
-              activate() {
-                perm.disposables.filter((x2) => x2 !== disp).forEach((x2) => x2.dispose());
-                perm.disposables = [disp];
-                clean_lines(node, level);
-                node.active = !node.active;
-                curr_line = 0;
-                write_text(tree, 0, false);
-                register_links(tree, 0, bufferLineNumber);
-                perm.keywords.forEach((x2) => x2.dispose());
-                perm.keywords = [];
-                register_keywords(tree);
-                console.log(perm.keywords.length);
-                wrasse.window.write(ansiEscapes_default.cursorTo(0, bufferLineNumber - 1));
-              },
-              hover() {
-                hovered = true;
-                sleep(500).then(() => {
-                  if (hovered) {
-                    wrasse.set_hover_content(node.active ? "click to collapse" : "click to expand");
-                  }
-                });
-              },
-              leave() {
-                hovered = false;
-                wrasse.set_hover_content();
+        }, {
+          click(link) {
+            link.window.links = [link];
+            clean_lines(node, level);
+            node.active = !node.active;
+            curr_line = 0;
+            write_text(tree, 0, false);
+            register_links(tree, 0, node.line);
+            perm.keywords.forEach((x2) => x2.dispose());
+            perm.keywords = [];
+            register_keywords(tree);
+            console.log(perm.keywords.length);
+            wrasse.window.write(ansiEscapes_default.cursorTo(0, node.line - 1));
+          },
+          enter(link) {
+            hovered = true;
+            sleep(500).then(() => {
+              if (hovered) {
+                wrasse.set_hover_content(node.active ? "click to collapse" : "click to expand");
               }
-            };
-            callback([node.link]);
-            return;
-            callback(void 0);
+            });
+          },
+          leave(link) {
+            hovered = false;
+            wrasse.set_hover_content();
           }
         });
         perm.disposables.push(disp);
-      } else {
-        node.link = {
-          text: node.content,
-          range: {
-            start: { x: level * 2 + 1, y: node.line + 2 },
-            end: { x: level * 2 + 2 + node.content.length, y: node.line + 2 }
-          }
-        };
       }
       if (node.active) {
         node.children.forEach((x2) => register_links(x2, level + 1));

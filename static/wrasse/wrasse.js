@@ -365,81 +365,51 @@ let interactive_terminal = (tree) => {
   const register_links = (node, level, ignoreLine) => {
     // register link provider
     if (node.children.length > 0 && node.line != ignoreLine) {
-
+      let hovered = false;
       wrasse.window.addLink(
         { 
           start: { x: level*2+ 1,                        y: node.line },
           end:   { x: level*2 + 2 + node.content.length, y: node.line } 
         },
-        {}
-      )
+        {
+          click(link) {
+            // remove all link providers except this one
+            link.window.links = [link]
 
-      const disp = wrasse.terminal.registerLinkProvider({
-        provideLinks(bufferLineNumber, callback) {
-          let hovered = false;
-          node.link = {
-            text: node.content,
-            range: { 
-              start: { x: level*2+ 1,                        y: node.line+2 },
-              end:   { x: level*2 + 2 + node.content.length, y: node.line+2 } 
-            },
-            activate() {
-              // remove all link providers except this one
-              perm.disposables
-                .filter(x => x !== disp)
-                .forEach((x) => x.dispose())
-              perm.disposables = [disp];
+            // fix terminal output
+            clean_lines(node, level)
 
-              // fix terminal output
-              clean_lines(node, level)
+            // flip state
+            node.active = !node.active;
 
-              // flip state
-              node.active = !node.active;
+            // update tree state
+            curr_line = 0
+            write_text(tree, 0, false)
+            register_links(tree, 0, node.line);
 
-              // update tree state
-              curr_line = 0
-              write_text(tree, 0, false)
-              register_links(tree, 0, bufferLineNumber);
+            perm.keywords.forEach(x => x.dispose())
+            perm.keywords = [];
+            register_keywords(tree)
+            console.log(perm.keywords.length)
 
-              perm.keywords.forEach(x => x.dispose())
-              perm.keywords = [];
-              register_keywords(tree)
-              console.log(perm.keywords.length)
-
-              wrasse.window.write(ESC.cursorTo(0, bufferLineNumber-1));
-            },
-            hover() {
-              hovered = true;
-              sleep(500).then(() => {
-                if (hovered) {
-                  wrasse.set_hover_content(node.active
-                    ? "click to collapse"
-                    : "click to expand")
-                }
-              })
-            },
-            leave() {
-              hovered = false;
-              wrasse.set_hover_content()
-            }
-          };
-          callback([node.link]);
-          return;
-          // fallthrough failure state
-          callback(undefined);
-        }
-      })
-      
-      // push disposable
-      perm.disposables.push(disp);
-    } else {
-      node.link = {
-        text: node.content,
-        range: { 
-          start: { x: level*2 + 1,                       y: node.line + 2 },
-          end:   { x: level*2 + 2 + node.content.length, y: node.line + 2 } 
-        },
-      }
+            wrasse.window.write(ESC.cursorTo(0, node.line-1));
+          },
+          enter(link) {
+            hovered = true;
+            sleep(500).then(() => {
+              if (hovered) {
+                wrasse.set_hover_content(node.active
+                  ? "click to collapse"
+                  : "click to expand")
+              }
+            })
+          },
+          leave(link) {
+            hovered = false;
+            wrasse.set_hover_content()
+          }
+        } 
+      );
     }
 
     if (node.active) {
@@ -473,11 +443,7 @@ let interactive_terminal = (tree) => {
                 // star drawing
                 let starGen = (function *() {
                   while (true) {
-                    // const frames = ["◜", "◠", "◝", "◞", "◡", "◟"]
-                    // const frames = ["▖", "▘", "▝", "▗"]
                     const frames = ["▘ ", "▀ ", "▝ ", " ▘", " ▌", " ▖", "▗ ", "▄ ", "▖ ", "▌ "] 
-                    // "▌","▀","▐","▄"
-                    // const frames = ["|", "/", "-", "\\"]
                     for (const item of frames) {
                       yield item;
                   }
