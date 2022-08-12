@@ -99,6 +99,7 @@ ghcHook :: String -> FilePath -> IO GHCResult
 ghcHook modName file = do
   ref <- liftIO $ newIORef "" -- make an output IO stream
   result <- runGhc (Just libdir) (processGHC ref modName file)
+  -- result <- runGhc (Just "/home/lethe/haskell/ghc/_build/stage1/lib") (processGHC ref modName file)
   ref_out <- readIORef ref -- read the output IO stream
   -- return $ GHCResult (("ghc console: " ++) <$> lines ref_out) (fmap ("ghc result: " ++) result)
   -- return (lines ref_out, intercalate ["", "~", ""] $ lines <$> result)

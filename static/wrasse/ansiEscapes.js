@@ -137,14 +137,14 @@ ansiEscapes.colouredText = (fg_col, bg_col, text) => {
 	let fg = {r:0, g:0, b:0, ...fg_col}
 	let bg = {r:0, g:0, b:0, ...bg_col}
 	// return text string
-	return ESC + "38;2" + fg.r + SEP + fg.g + SEP + fg.b + "m"
-		 + ESC + "48;2" + bg.r + SEP + bg.g + SEP + bg.b + "m"
+	return ESC + "38;2" + SEP + fg.r + SEP + fg.g + SEP + fg.b + "m"
+		 + ESC + "48;2" + SEP + bg.r + SEP + bg.g + SEP + bg.b + "m"
 		 + text 
 		 + ESC + "39m" + ESC + "49m"
 }
 
 
-class Colour {
+ansiEscapes.Colour = class Colour {
 	static Red = new Colour({r: 255});
 	static Blue = new Colour({b : 255});
 	static Green = new Colour({g : 255});
@@ -155,5 +155,6 @@ class Colour {
 		this.b = b ?? 0;
 	}
 }
+
 
 export default ansiEscapes;

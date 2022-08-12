@@ -41,7 +41,7 @@ class Window {
         this.width = Math.floor(width);
         this.height = Math.floor(height);
         this.line = 0;
-        this.content = [""];
+        this.content = [{text:"", esc:[]}];
         this.cursor = {x:0, y:0, saved: {x:0, y:0}};
         options = {movable : false, scrollable : true, resizable : false, ...options};
         this.movable = options.movable;
@@ -67,7 +67,7 @@ class Window {
         // setup events
         Window.setupEvent('wheel', 'onWheel');
         Window.setupEvent('mousemove', 'onMouseMove');
-        Window.setupEvent('click', 'onMouseClick');
+        Window.setupEvent('click', 'onClick');
 
         // setup draw requests
         (async () => {
@@ -139,7 +139,7 @@ class Window {
                 x.active = !x.active;
             });
 
-        this.requestDraw();
+        // this.requestDraw();
         return true;
     }
 
@@ -152,7 +152,7 @@ class Window {
             .filter(x => x.active)
             .forEach(x => x.funcs.click());
 
-        this.requestDraw();
+        // this.requestDraw();
         return true;
     }
 
@@ -172,21 +172,23 @@ class Window {
 
     reset() {
         this.clean();
-        this.content = [""];
+        this.content = [{text:"", esc:[]}];
         this.cursor = {x:0, y:0, saved: {x:0, y:0}};
         this.line = 0;
+
+        return this;
     }
 
-    write(content, callback) {
-        const handleEscape = (content) => {
+    write(text, callback) {
+        const handleEscape = (text) => {
             // special character regex
             const regex = /\u001B\[(?:(?<nums>(?:[0-9]+;)*)(?<num>(?:[0-9]+)))?(?<char>[a-zA-Z])/gi;
 
             // handle special characters
             let cutString = [];
             let anyMatches = false;
-            for (const [prefix, _nums, num, char] of group_n(content.split(regex), 4)) {
-                let cut = {prefix, esc: ()=>{}};
+            for (const [prefix, _nums, num, char] of group_n(text.split(regex), 4)) {
+                let cut = {prefix, esc: null_func};
                 if ((_nums || num || char) === undefined) {
                     cutString.push(cut)
                     break;
@@ -228,7 +230,7 @@ class Window {
                     // Insert Line (current line pushed up)
                     case 'L':
                         cut.esc = () => {
-                            this.content.splice(this.cursor.y+1, 0, ...Array(+nums[0]).fill(""));
+                            this.content.splice(this.cursor.y+1, 0, ...Array(+nums[0]).fill({text:"", esc:[]}));
                         }
                     break;
                     // Delete Line (current line delted)
@@ -237,35 +239,42 @@ class Window {
                             this.content.splice(this.cursor.y, +num);
                         }
                     break;
+                    // Colours
+                    case 'm':
+                        cut.esc = () => `\u001B[${nums.join(";") + char}`
+                    break;
                     // Fallthrough
                     default:
-                        console.log(nums)
                         console.log(`UNMATCHED ESCAPE SEQUENCE: ESC[${nums.join(";") + char}`)
+                        cut.esc = () => `\u001B[${nums.join(";") + char}`
                     break;
                 }
                 cutString.push(cut);
             }
-            if (anyMatches == false) return [{prefix: content, esc: ()=>{}}];
+            if (anyMatches == false) return [{prefix: text, esc: null_func}];
 
             return cutString;
         };
 
         // write the string to the window
-        console.log({content})
-        for (const {prefix, esc} of handleEscape(content)) {
+        console.log({text})
+        for (const {prefix, esc} of handleEscape(text)) {
             console.log({prefix})
             let oldCursor = {...this.cursor};
-            for (const line of prefix.split('\n')) {
+            for (const line of (prefix ?? "").split('\n')) {
                 console.log({line})
                 // ensure cursor isn't off content bounds
                 while (this.cursor.y >= this.content.length) {
-                    this.content.push("");
+                    this.content.push({text:"", esc:[]});
                 }
                 // overwrite content with line
-                this.content[this.cursor.y] = this.content[this.cursor.y]
+                this.content[this.cursor.y].text = this.content[this.cursor.y].text
                     .padEnd(this.cursor.x)
                     .splice(this.cursor.x, line.length, line);
-                // intercalate cursor reset
+                // overwrite escape sequences too
+                // this.content[this.cursor.y].esc = this.content[this.cursor.y].esc
+                //     .filter(({pos}) => !within(0, pos - this.cursor.x, line.length))
+                // // intercalate cursor reset
                 this.cursor.x += line.length;
                 oldCursor = {...this.cursor};
                 this.cursor.y += 1
@@ -274,10 +283,14 @@ class Window {
             // restore last oldCursor
             this.cursor = oldCursor;
             // handle escape characters
-            esc();
+            let add = esc();
+            console.log({add})
+            if (add) {
+                this.content[this.cursor.y].esc.push({pos : this.cursor.x, seq : add})
+            }
             // ensure cursor isn't off content bounds
             while (this.cursor.y >= this.content.length) {
-                this.content.push("");
+                this.content.push({text:"", esc:[]});
             }
         }
 
@@ -285,12 +298,12 @@ class Window {
         console.log(JSON.parse(JSON.stringify({content:this.content, cursor:this.cursor})));
     }
 
-    writeln(content, callback) {
-        return this.write(content + "\n", callback);
+    writeln(text, callback) {
+        return this.write(text + "\n", callback);
     }
 
     mouseWithin(relX, relY) {
-        const {x, y} = mouseToCell(relX, relY);
+        const {x, y} = this.mouseToCell(relX, relY);
         return within(this.x - 0.5, x, this.x + this.width  + 0.5)
             && within(this.y - 0.5, y, this.y + this.height + 0.5);
     }
@@ -350,7 +363,11 @@ class Window {
 
     *lines() {
         for (const line of this.content.slice(this.line, this.line + this.height)) {
-            yield line.slice(0, this.width);
+            console.log({line})
+            yield {
+                text: line.text.slice(0, this.width),
+                esc: line.esc.filter(({pos}) => within(0, pos, this.width))
+            }
         }
     }
 
@@ -368,9 +385,24 @@ class Window {
         // draw content
         let lines = this.lines();
         for (let i = 1; i <= this.height; i++) {
-            writeString += `${ESC.cursorTo(this.x, this.y + i)}║${(lines.next().value || "").padEnd(this.width)}║`;
-        }
+            // get the next line
+            const {text, esc} = lines.next().value ?? {text:"", esc:[]};
+            
+            console.log({text, esc})
 
+            // add it to the write string
+            writeString += `${ESC.cursorTo(this.x, this.y + i)}║${
+                // sort escape sequences by position
+                esc.sort((a, b) => a.pos - b.pos)
+                // reduce from highest position to lowest
+                .reduceRight(
+                    // insert the escape sequence into the string
+                    (acc, {pos, seq}) => acc.splice(pos, 0, seq)
+                    , (text || "").padEnd(this.width)
+                )
+            }║`;
+        }
+        console.log({writeString})
         // restore cursor
         this.terminal.write(writeString + ESC.cursorRestorePosition);
     }

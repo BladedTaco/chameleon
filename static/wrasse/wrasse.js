@@ -106,7 +106,8 @@ let wrasse_setup = () => {
     // wrasse.terminal.resize(wrasse.terminal.cols, 1000);
 
     // write starter text
-    wrasse.window.write('Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ', scrollToTop)
+    // wrasse.window.write('Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ', scrollToTop)
+    wrasse.window.write(`Hello from ${ESC.colouredText(ESC.Colour.Red, ESC.Colour.Blue, "xterm.js")}m \n$ `, scrollToTop)
 
     // setup mouse followers
     const onMouseMove = (e) =>{
@@ -228,8 +229,8 @@ const set_hover_content = (text) => {
     // update text and show element
     html.hover.content.innerText = text
     html.hover.shell.classList.remove("hidden")
-    perm.windows[0].content = (text || "").split('\n');
-    perm.windows[0].requestDraw();
+    perm.windows[0].reset()
+      .writeln(text || "");
   }
 }
 
@@ -280,12 +281,12 @@ let interactive_terminal = (tree) => {
     // write tree string
     if (write) {
       if (node.children.length == 0) {
-        wrasse.window.writeln(prefix + "- " + node_string);
+        wrasse.window.writeln(prefix + ESC.colouredText(ESC.Colour.Blue, ESC.Colour.Red, "- ") + node_string);
       } else {
         if (node.active) {
           wrasse.window.writeln(prefix + "▼ " + node_string);
         } else {
-          wrasse.window.writeln(prefix + "► " + node_string);
+          wrasse.window.writeln(prefix + ESC.colouredText(ESC.Colour.Blue, ESC.Colour.Red, "► ") + node_string);
         }
       }
     }

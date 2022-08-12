@@ -32991,12 +32991,12 @@ For more info, visit https://reactjs.org/link/mock-scheduler`);
         }
         var promise = function() {
           return __async(this, null, function() {
-            var _a, _b, finalAction, conditionResult, err_1, skipDispatch;
+            var _a2, _b, finalAction, conditionResult, err_1, skipDispatch;
             return __generator(this, function(_c) {
               switch (_c.label) {
                 case 0:
                   _c.trys.push([0, 4, , 5]);
-                  conditionResult = (_a = options == null ? void 0 : options.condition) == null ? void 0 : _a.call(options, arg, { getState, extra });
+                  conditionResult = (_a2 = options == null ? void 0 : options.condition) == null ? void 0 : _a2.call(options, arg, { getState, extra });
                   if (!isThenable(conditionResult))
                     return [3, 2];
                   return [4, conditionResult];
@@ -33298,8 +33298,8 @@ problem_1 = sum (check [1..999])
             return fn2(a3, _b);
           });
         default:
-          return _isPlaceholder(a3) && _isPlaceholder(b3) ? f22 : _isPlaceholder(a3) ? _curry1(function(_a) {
-            return fn2(_a, b3);
+          return _isPlaceholder(a3) && _isPlaceholder(b3) ? f22 : _isPlaceholder(a3) ? _curry1(function(_a2) {
+            return fn2(_a2, b3);
           }) : _isPlaceholder(b3) ? _curry1(function(_b) {
             return fn2(a3, _b);
           }) : fn2(a3, b3);
@@ -33404,22 +33404,22 @@ problem_1 = sum (check [1..999])
             return fn2(a3, _b, _c);
           });
         case 2:
-          return _isPlaceholder(a3) && _isPlaceholder(b3) ? f3 : _isPlaceholder(a3) ? _curry2(function(_a, _c) {
-            return fn2(_a, b3, _c);
+          return _isPlaceholder(a3) && _isPlaceholder(b3) ? f3 : _isPlaceholder(a3) ? _curry2(function(_a2, _c) {
+            return fn2(_a2, b3, _c);
           }) : _isPlaceholder(b3) ? _curry2(function(_b, _c) {
             return fn2(a3, _b, _c);
           }) : _curry1(function(_c) {
             return fn2(a3, b3, _c);
           });
         default:
-          return _isPlaceholder(a3) && _isPlaceholder(b3) && _isPlaceholder(c3) ? f3 : _isPlaceholder(a3) && _isPlaceholder(b3) ? _curry2(function(_a, _b) {
-            return fn2(_a, _b, c3);
-          }) : _isPlaceholder(a3) && _isPlaceholder(c3) ? _curry2(function(_a, _c) {
-            return fn2(_a, b3, _c);
+          return _isPlaceholder(a3) && _isPlaceholder(b3) && _isPlaceholder(c3) ? f3 : _isPlaceholder(a3) && _isPlaceholder(b3) ? _curry2(function(_a2, _b) {
+            return fn2(_a2, _b, c3);
+          }) : _isPlaceholder(a3) && _isPlaceholder(c3) ? _curry2(function(_a2, _c) {
+            return fn2(_a2, b3, _c);
           }) : _isPlaceholder(b3) && _isPlaceholder(c3) ? _curry2(function(_b, _c) {
             return fn2(a3, _b, _c);
-          }) : _isPlaceholder(a3) ? _curry1(function(_a) {
-            return fn2(_a, b3, c3);
+          }) : _isPlaceholder(a3) ? _curry1(function(_a2) {
+            return fn2(_a2, b3, c3);
           }) : _isPlaceholder(b3) ? _curry1(function(_b) {
             return fn2(a3, _b, c3);
           }) : _isPlaceholder(c3) ? _curry1(function(_c) {
@@ -33958,8 +33958,8 @@ problem_1 = sum (check [1..999])
   function _uniqContentEquals(aIterator, bIterator, stackA, stackB) {
     var a3 = _arrayFromIterator(aIterator);
     var b3 = _arrayFromIterator(bIterator);
-    function eq(_a, _b) {
-      return _equals(_a, _b, stackA.slice(), stackB.slice());
+    function eq(_a2, _b) {
+      return _equals(_a2, _b, stackA.slice(), stackB.slice());
     }
     return !_includesWith(function(b4, aItem) {
       return !_includesWith(eq, aItem, b4);
@@ -34774,8 +34774,16 @@ problem_1 = sum (check [1..999])
   ansiEscapes.colouredText = (fg_col, bg_col, text) => {
     let fg = { r: 0, g: 0, b: 0, ...fg_col };
     let bg = { r: 0, g: 0, b: 0, ...bg_col };
-    return ESC + "38;2" + fg.r + SEP + fg.g + SEP + fg.b + "m" + ESC + "48;2" + bg.r + SEP + bg.g + SEP + bg.b + "m" + text + ESC + "39m" + ESC + "49m";
+    return ESC + "38;2" + SEP + fg.r + SEP + fg.g + SEP + fg.b + "m" + ESC + "48;2" + SEP + bg.r + SEP + bg.g + SEP + bg.b + "m" + text + ESC + "39m" + ESC + "49m";
   };
+  var _a;
+  ansiEscapes.Colour = (_a = class {
+    constructor({ r: r3, g: g3, b: b3 }) {
+      this.r = r3 ?? 0;
+      this.g = g3 ?? 0;
+      this.b = b3 ?? 0;
+    }
+  }, __publicField(_a, "Red", new _a({ r: 255 })), __publicField(_a, "Blue", new _a({ b: 255 })), __publicField(_a, "Green", new _a({ g: 255 })), _a);
   var ansiEscapes_default = ansiEscapes;
 
   // wrasse/wrasseGHC.js
@@ -34808,6 +34816,8 @@ problem_1 = sum (check [1..999])
   };
   var clamp3 = (min, num, max) => Math.max(min, Math.min(num, max));
   var within2 = (min, num, max) => min <= num && num <= max;
+  var null_func = () => {
+  };
   function* group_n(arr, n3) {
     let out = [];
     for (const el of arr) {
@@ -34832,6 +34842,23 @@ problem_1 = sum (check [1..999])
     }
     return this.slice(0, index) + (add || "") + this.slice(index + count);
   };
+  var Link = class {
+    constructor(window2, range, funcs, colour) {
+      this.window = window2;
+      this.range = {
+        start: { x: 0, y: 0, ...range.start },
+        end: { x: 0, y: 0, ...range.end }
+      };
+      this.funcs = {
+        enter: null_func,
+        leave: null_func,
+        click: null_func,
+        ...funcs
+      };
+      this.colour = colour ?? ansiEscapes_default.Colour.Red;
+      this.active = false;
+    }
+  };
   var _Window = class {
     constructor(terminal, x2, y3, width, height, options) {
       this.terminal = terminal;
@@ -34840,44 +34867,23 @@ problem_1 = sum (check [1..999])
       this.width = Math.floor(width);
       this.height = Math.floor(height);
       this.line = 0;
-      this.content = [""];
+      this.content = [{ text: "", esc: [] }];
       this.cursor = { x: 0, y: 0, saved: { x: 0, y: 0 } };
       options = { movable: false, scrollable: true, resizable: false, ...options };
       this.movable = options.movable;
       this.scrollable = options.scrollable;
       this.resizable = options.resizable;
+      this.links = [];
+      this.active = false;
       _Window.setup();
-    }
-    onWheel(event) {
-      if (!this.scrollable)
-        return false;
-      if (!this.mouseWithin(event.offsetX, event.offsetY))
-        return false;
-      const dir = Math.sign(event.deltaY);
-      if (event.shiftKey) {
-        this.move(dir, 0, true);
-      } else if (event.altKey) {
-        this.move(0, dir, true);
-      } else {
-        this.line = clamp3(0, this.line + dir, this.content.length - this.height);
-      }
-      this.requestDraw();
-      return true;
     }
     static setup() {
       if (_Window.drawReq.setup)
         return;
       _Window.drawReq.setup = true;
-      wrasse_default.html.terminal.addEventListener("wheel", (event) => {
-        for (let i3 = wrasse_default.perm.windows.length - 1; i3 >= 0; i3--) {
-          if (wrasse_default.perm.windows[i3].onWheel(event))
-            return;
-        }
-        wrasse_default.window.onWheel(event);
-      }, {
-        capture: true,
-        passive: false
-      });
+      _Window.setupEvent("wheel", "onWheel");
+      _Window.setupEvent("mousemove", "onMouseMove");
+      _Window.setupEvent("click", "onClick");
       (async () => {
         while (true) {
           if (_Window.drawReq.request) {
@@ -34891,20 +34897,67 @@ problem_1 = sum (check [1..999])
         }
       })();
     }
+    static setupEvent(eventType, eventFunc) {
+      wrasse_default.html.terminal.addEventListener(eventType, (event) => {
+        for (let i3 = wrasse_default.perm.windows.length - 1; i3 >= 0; i3--) {
+          if (wrasse_default.perm.windows[i3][eventFunc](event))
+            return;
+        }
+        wrasse_default.window[eventFunc](event);
+      }, {
+        capture: true,
+        passive: false
+      });
+    }
+    onWheel(event) {
+      if (!this.scrollable || !this.active)
+        return false;
+      const dir = Math.sign(event.deltaY);
+      if (event.shiftKey) {
+        this.move(dir, 0, true);
+      } else if (event.altKey) {
+        this.move(0, dir, true);
+      } else {
+        this.line = clamp3(0, this.line + dir, this.content.length - this.height);
+      }
+      this.onMouseMove();
+      this.requestDraw();
+      return true;
+    }
+    onMouseMove(event) {
+      this.active = this.mouseWithin(event.offsetX, event.offsetY);
+      if (!this.active)
+        return false;
+      const { x: x2, y: y3 } = this.mouseToCell(event.offsetX, event.offsetY);
+      this.links.filter((curr) => (within2(curr.range.start.x, x2, curr.range.end.x) && within2(curr.range.start.y, y3, curr.range.end.y)) != curr.active).forEach((x3) => {
+        x3.active ? x3.funcs.leave() : x3.funcs.enter();
+        x3.active = !x3.active;
+      });
+      return true;
+    }
+    onClick(event) {
+      if (!this.active)
+        return false;
+      this.links.filter((x2) => x2.active).forEach((x2) => x2.funcs.click());
+      return true;
+    }
+    addLink(range, funcs, colour) {
+      this.links.push(new Link(window, range, funcs, colour));
+    }
     reset() {
       this.clean();
-      this.content = [""];
+      this.content = [{ text: "", esc: [] }];
       this.cursor = { x: 0, y: 0, saved: { x: 0, y: 0 } };
       this.line = 0;
+      return this;
     }
-    write(content, callback) {
-      const handleEscape = (content2) => {
+    write(text, callback) {
+      const handleEscape = (text2) => {
         const regex = /\u001B\[(?:(?<nums>(?:[0-9]+;)*)(?<num>(?:[0-9]+)))?(?<char>[a-zA-Z])/gi;
         let cutString = [];
         let anyMatches = false;
-        for (const [prefix2, _nums, num, char] of group_n(content2.split(regex), 4)) {
-          let cut = { prefix: prefix2, esc: () => {
-          } };
+        for (const [prefix2, _nums, num, char] of group_n(text2.split(regex), 4)) {
+          let cut = { prefix: prefix2, esc: null_func };
           if ((_nums || num || char) === void 0) {
             cutString.push(cut);
             break;
@@ -34935,7 +34988,7 @@ problem_1 = sum (check [1..999])
               break;
             case "L":
               cut.esc = () => {
-                this.content.splice(this.cursor.y + 1, 0, ...Array(+nums[0]).fill(""));
+                this.content.splice(this.cursor.y + 1, 0, ...Array(+nums[0]).fill({ text: "", esc: [] }));
               };
               break;
             case "M":
@@ -34943,49 +34996,62 @@ problem_1 = sum (check [1..999])
                 this.content.splice(this.cursor.y, +num);
               };
               break;
+            case "m":
+              cut.esc = () => `\x1B[${nums.join(";") + char}`;
+              break;
             default:
-              console.log(nums);
               console.log(`UNMATCHED ESCAPE SEQUENCE: ESC[${nums.join(";") + char}`);
+              cut.esc = () => `\x1B[${nums.join(";") + char}`;
               break;
           }
           cutString.push(cut);
         }
         if (anyMatches == false)
-          return [{ prefix: content2, esc: () => {
-          } }];
+          return [{ prefix: text2, esc: null_func }];
         return cutString;
       };
-      console.log({ content });
-      for (const { prefix: prefix2, esc } of handleEscape(content)) {
+      console.log({ text });
+      for (const { prefix: prefix2, esc } of handleEscape(text)) {
         console.log({ prefix: prefix2 });
         let oldCursor = { ...this.cursor };
-        for (const line of prefix2.split("\n")) {
+        for (const line of (prefix2 ?? "").split("\n")) {
           console.log({ line });
           while (this.cursor.y >= this.content.length) {
-            this.content.push("");
+            this.content.push({ text: "", esc: [] });
           }
-          this.content[this.cursor.y] = this.content[this.cursor.y].padEnd(this.cursor.x).splice(this.cursor.x, line.length, line);
+          this.content[this.cursor.y].text = this.content[this.cursor.y].text.padEnd(this.cursor.x).splice(this.cursor.x, line.length, line);
           this.cursor.x += line.length;
           oldCursor = { ...this.cursor };
           this.cursor.y += 1;
           this.cursor.x = 0;
         }
         this.cursor = oldCursor;
-        esc();
+        let add = esc();
+        console.log({ add });
+        if (add) {
+          this.content[this.cursor.y].esc.push({ pos: this.cursor.x, seq: add });
+        }
         while (this.cursor.y >= this.content.length) {
-          this.content.push("");
+          this.content.push({ text: "", esc: [] });
         }
       }
       this.requestDraw(callback);
       console.log(JSON.parse(JSON.stringify({ content: this.content, cursor: this.cursor })));
     }
-    writeln(content, callback) {
-      return this.write(content + "\n", callback);
+    writeln(text, callback) {
+      return this.write(text + "\n", callback);
     }
     mouseWithin(relX, relY) {
+      const { x: x2, y: y3 } = this.mouseToCell(relX, relY);
+      return within2(this.x - 0.5, x2, this.x + this.width + 0.5) && within2(this.y - 0.5, y3, this.y + this.height + 0.5);
+    }
+    mouseToCell(relX, relY) {
       const cellHeight = wrasse_default.html.terminal.offsetHeight / wrasse_default.terminal.rows;
       const cellWidth = wrasse_default.html.terminal.offsetWidth / wrasse_default.terminal.cols;
-      return within2(this.x - 0.5, relX / cellWidth - 1, this.x + this.width + 0.5) && within2(this.y - 0.5, relY / cellHeight - 1, this.y + this.height + 0.5);
+      return {
+        x: relX / cellWidth - 1,
+        y: relY / cellHeight - 1
+      };
     }
     resize(width, height, relative) {
       if (!this.resizable)
@@ -35019,15 +35085,22 @@ problem_1 = sum (check [1..999])
     }
     *lines() {
       for (const line of this.content.slice(this.line, this.line + this.height)) {
-        yield line.slice(0, this.width);
+        console.log({ line });
+        yield {
+          text: line.text.slice(0, this.width),
+          esc: line.esc.filter(({ pos }) => within2(0, pos, this.width))
+        };
       }
     }
     draw() {
       let writeString = ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(this.x, this.y) + `\u2554${"\u2550".repeat(this.width)}\u2557` + ansiEscapes_default.cursorTo(this.x, this.y + this.height + 1) + `\u255A${"\u2550".repeat(this.width)}\u255D`;
       let lines = this.lines();
       for (let i3 = 1; i3 <= this.height; i3++) {
-        writeString += `${ansiEscapes_default.cursorTo(this.x, this.y + i3)}\u2551${(lines.next().value || "").padEnd(this.width)}\u2551`;
+        const { text, esc } = lines.next().value ?? { text: "", esc: [] };
+        console.log({ text, esc });
+        writeString += `${ansiEscapes_default.cursorTo(this.x, this.y + i3)}\u2551${esc.sort((a3, b3) => a3.pos - b3.pos).reduceRight((acc, { pos, seq }) => acc.splice(pos, 0, seq), (text || "").padEnd(this.width))}\u2551`;
       }
+      console.log({ writeString });
       this.terminal.write(writeString + ansiEscapes_default.cursorRestorePosition);
     }
     requestDraw(callback) {
@@ -35130,7 +35203,8 @@ problem_1 = sum (check [1..999])
       wrasse.interactive_terminal(wrasse.tree);
     });
     fitTerminal();
-    wrasse.window.write("Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ", scrollToTop);
+    wrasse.window.write(`Hello from ${ansiEscapes_default.colouredText(ansiEscapes_default.Colour.Red, ansiEscapes_default.Colour.Blue, "xterm.js")}m 
+$ `, scrollToTop);
     const onMouseMove = (e3) => {
       html.hover.shell.style.left = e3.pageX + "px";
       html.hover.shell.style.top = e3.pageY + "px";
@@ -35213,8 +35287,7 @@ problem_1 = sum (check [1..999])
     } else {
       html.hover.content.innerText = text;
       html.hover.shell.classList.remove("hidden");
-      perm.windows[0].content = (text || "").split("\n");
-      perm.windows[0].requestDraw();
+      perm.windows[0].reset().writeln(text || "");
     }
   };
   var block_mouse = (bool) => {
@@ -35235,12 +35308,12 @@ problem_1 = sum (check [1..999])
       let node_string = node.content;
       if (write) {
         if (node.children.length == 0) {
-          wrasse.window.writeln(prefix2 + "- " + node_string);
+          wrasse.window.writeln(prefix2 + ansiEscapes_default.colouredText(ansiEscapes_default.Colour.Blue, ansiEscapes_default.Colour.Red, "- ") + node_string);
         } else {
           if (node.active) {
             wrasse.window.writeln(prefix2 + "\u25BC " + node_string);
           } else {
-            wrasse.window.writeln(prefix2 + "\u25BA " + node_string);
+            wrasse.window.writeln(prefix2 + ansiEscapes_default.colouredText(ansiEscapes_default.Colour.Blue, ansiEscapes_default.Colour.Red, "\u25BA ") + node_string);
           }
         }
       }
