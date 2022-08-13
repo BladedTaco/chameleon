@@ -37,6 +37,7 @@ dependencies:
 - hlint
 - ghc
 - split
+- exceptions
 
 library:
   source-dirs: src

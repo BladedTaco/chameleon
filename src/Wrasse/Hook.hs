@@ -4,13 +4,16 @@
 
 module Wrasse.Hook (hook) where
 
-import Exception
+import Control.Exception hiding (try)
 import GHC
 
-import GhcMonad
+import GHC.Driver.Session
+import GHC.Utils.Error
+
+import GHC.Driver.Monad
 
 import GHC.Paths
-import HscTypes
+import GHC.Driver.Types
 import System.Environment
 
 import System.Directory (createDirectoryIfMissing, getTemporaryDirectory, removeFile)
@@ -22,32 +25,32 @@ import GHC.IO.Handle
 import System.IO
 
 import GHC.Generics
-import Text.Parsec
-import Bag ( bagToList )
-import Outputable ( SDoc(runSDoc), initSDocContext, Outputable (ppr), showSDocUnsafe )
+import Text.Parsec hiding (try)
+import GHC.Data.Bag ( bagToList )
+import GHC.Utils.Outputable ( SDoc(runSDoc), initSDocContext, Outputable (ppr), showSDocUnsafe, PprStyle(..), CodeStyle(CStyle))
 
-import DynFlags
-import ErrUtils
+import Control.Monad.Catch (try)
 
+import GHC.Driver.Flags
 
 import GHC.IORef (newIORef, IORef)
 import Data.IORef
-import HieAst (mkHieFile)
+import GHC.Iface.Ext.Ast (mkHieFile)
 
 import Language.Haskell.Exts.Lexer
 
-import Language.Haskell.HLint
+import Language.Haskell.HLint hiding (Severity)
 
 import Wrasse.Types
 import Data.Tree (Tree(..), drawTree)
 import Data.List (intercalate)
 
 import Wrasse.Tree (multiLevel)
-import Util (uncurry3, OverridingBool (Always))
+import GHC.Utils.Misc (uncurry3, OverridingBool (Always))
 import Control.Lens (traverseOf, Each (each))
 import Control.Arrow
 import Agda.Utils.Tuple (uncurry4)
-import DriverPipeline (preprocess)
+import GHC.Driver.Pipeline (preprocess)
 
 -- main :: IO ()
 -- main = do
@@ -98,9 +101,17 @@ toolHook modName file = do
 ghcHook :: String -> FilePath -> IO GHCResult
 ghcHook modName file = do
   ref <- liftIO $ newIORef "" -- make an output IO stream
-  result <- runGhc (Just libdir) (processGHC ref modName file)
+  let ghcDir = Just libdir
+  -- let ghcDir = Just "/home/lethe/haskell/ghc/_build/bindist/ghc-9.5.20220715-x86_64-unknown-linux/lib"
+  -- let ghcDir = Just "/home/lethe/haskell/ghc-builds/lib/ghc-8.10.7"
+  -- let ghcDir = Just "/home/lethe/haskell/ghc-builds/lib/ghc-9.5.20220715/lib"
+  -- let ghcDir = Just "/home/lethe/haskell/ghc-builds/ghc9/lib/ghc-9.5.20220715/lib"
+  -- let ghcDir = Just "/home/lethe/.ghcup/"
+  -- let ghcDir = Just haskell\ghc-9\ghc\_build\stage1\lib
+  -- result <- runGhc (Just libdir) (processGHC ref modName file)
   -- result <- runGhc (Just "/home/lethe/haskell/ghc/_build/stage1/lib") (processGHC ref modName file)
   -- result <- runGhc (Just "/home/lethe/haskell/ghc/_install/lib/ghc-9.5.20220715/lib") (processGHC ref modName file)
+  result <- runGhc ghcDir (processGHC ref modName file)
   
   ref_out <- readIORef ref -- read the output IO stream
   -- return $ GHCResult (("ghc console: " ++) <$> lines ref_out) (fmap ("ghc result: " ++) result)
@@ -137,14 +148,16 @@ getModuleName s = case parse moduleParser "" s of
     Left err -> ""
     Right xs -> xs
 
--- LogAction == DynFlags -> Severity -> SrcSpan -> PprStyle -> MsgDoc -> IO ()
+
+
+-- LogAction == DynFlags -> Severity -> SrcSpan -> MsgDoc -> IO ()
 logHandler :: IORef String -> LogAction
-logHandler ref dflags warn severity srcSpan style msg =
+logHandler ref dflags warn severity srcSpan msg =
   case severity of
      SevError ->  modifyIORef' ref (++ printDoc)
      SevFatal ->  modifyIORef' ref (++ printDoc)
      _        ->  return () -- ignore the rest
-  where cntx = initSDocContext dflags style
+  where cntx = initSDocContext dflags (PprCode CStyle)
         locMsg = mkLocMessage severity srcSpan msg
         printDoc = show (runSDoc locMsg cntx)
 
@@ -206,19 +219,19 @@ processGHC ref moduleName path = do
           )
 
 
-  eitherl <- gtry (load LoadAllTargets) :: Ghc (Either SourceError SuccessFlag)
+  eitherl <- try (load LoadAllTargets) :: Ghc (Either SourceError SuccessFlag)
   case eitherl of
     Left se -> do
       removeTarget hsTarketId
       return ("Failed at stage: loading", show se, "")
     Right sf -> do
       modSum <- getModSummary mn
-      eitherp <- gtry (parseModule modSum) :: Ghc (Either SourceError ParsedModule)
+      eitherp <- try (parseModule modSum) :: Ghc (Either SourceError ParsedModule)
       case eitherp of
         Left se -> do
           return ("Failed at stage: parsing", show se, "")
         Right p -> do
-          t <- gtry (typecheckModule p) :: Ghc (Either SourceError TypecheckedModule)
+          t <- try (typecheckModule p) :: Ghc (Either SourceError TypecheckedModule)
           let ParsedModule _ ps imprts anns = p
           case t of
             Left se -> do

@@ -35383,7 +35383,6 @@ $ `, scrollToTop);
             wrasse.set_hover_content();
           }
         });
-        perm.disposables.push(disp);
       }
       if (node.active) {
         node.children.forEach((x2) => register_links(x2, level + 1));

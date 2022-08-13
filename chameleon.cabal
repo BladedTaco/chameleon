@@ -55,6 +55,7 @@ library
     , bytestring
     , containers
     , directory
+    , exceptions
     , filepath
     , ghc
     , ghc-paths
@@ -86,6 +87,7 @@ executable chameleon
     , chameleon
     , containers
     , directory
+    , exceptions
     , filepath
     , ghc
     , ghc-paths

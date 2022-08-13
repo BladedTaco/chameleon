@@ -4,7 +4,7 @@ import Wrasse.Types (ToolInfo)
 import Data.Tree (Tree(Node))
 
 import Data.List.Split (splitWhen)
-import Util (count, singleton)
+import Data.List (singleton)
 import Wrasse.Util
 import Control.Arrow
 import Data.Maybe (fromMaybe)
