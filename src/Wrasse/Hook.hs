@@ -106,7 +106,8 @@ ghcHook modName file = do
   -- let ghcDir = Just "/home/lethe/haskell/ghc-builds/lib/ghc-8.10.7"
   -- let ghcDir = Just "/home/lethe/haskell/ghc-builds/lib/ghc-9.5.20220715/lib"
   -- let ghcDir = Just "/home/lethe/haskell/ghc-builds/ghc9/lib/ghc-9.5.20220715/lib"
-  -- let ghcDir = Just "/home/lethe/.ghcup/"
+  let x = 1 + "foo"
+  -- let ghcDir = Just "/home/lethe/.ghcup/ghc/9.5.2/lib/ghc-9.5.20220715/lib"
   -- let ghcDir = Just haskell\ghc-9\ghc\_build\stage1\lib
   -- result <- runGhc (Just libdir) (processGHC ref modName file)
   -- result <- runGhc (Just "/home/lethe/haskell/ghc/_build/stage1/lib") (processGHC ref modName file)

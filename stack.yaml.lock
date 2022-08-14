@@ -3,10 +3,31 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages: []
+packages:
+- completed:
+    hackage: directory-1.3.7.1@sha256:1125a0a4be3aafc8da208940f219d4e4df8a0db87d892cc42bb369071855c590,2841
+    pantry-tree:
+      size: 3503
+      sha256: 36e5625cbb1632a6eca540db79f63dbe7db287f8dde6e3eac6763bed73b6a1f6
+  original:
+    hackage: directory-1.3.7.1
+- completed:
+    hackage: process-1.6.15.0@sha256:04df32d9497add5f0b90a27a3eceffa4bad5c2f41d038bd12ed6efc454db3faf,2845
+    pantry-tree:
+      size: 1545
+      sha256: 291f5800ffb87af7ed910582ae0ec00ef9ffab0643ed62c36fcfe58c52e90a24
+  original:
+    hackage: process-1.6.15.0
+- completed:
+    hackage: Cabal-3.6.3.0@sha256:ff97c442b0c679c1c9876acd15f73ac4f602b973c45bde42b43ec28265ee48f4,12459
+    pantry-tree:
+      size: 19757
+      sha256: b250a53bdb56844f047a2927833bb565b936a289abfa85dfc2a63148d776368a
+  original:
+    hackage: Cabal-3.6.3.0
 snapshots:
 - completed:
-    size: 619164
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/19/18.yaml
-    sha256: 65b9809265860e085b4f61d4eb00d5d73e41190693620385a69cc9d9df7a901d
-  original: lts-19.18
+    size: 628888
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2022/8/4.yaml
+    sha256: 656fa7a1ff5ddd147cce5a0aabd6fd70255f2ac60fd1294a1228b00a19b1731f
+  original: nightly-2022-08-04

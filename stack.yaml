@@ -19,7 +19,10 @@
 # resolver: https://example.com/snapshots/2018-01-01.yaml
 
 # resolver: ghc-9.5.20220715
-resolver: lts-19.18
+compiler: ghc-9.5.20220715
+# resolver: lts-19.18
+resolver: nightly-2022-08-04
+# compiler: /home/lethe/.ghcup/ghc/9.5.2/lib/ghc-9.5.20220715/lib
 # compiler: /home/lethe/haskell/ghc/_build/bindist/ghc-9.5.20220715-x86_64-unknown-linux/lib
 # resolver: /home/lethe/haskell/ghc/hadrian
 
@@ -32,6 +35,7 @@ resolver: lts-19.18
 #   subdirs:
 #   - auto-update
 #   - wai
+
 packages:
 - .
 # Dependency packages to be pulled from upstream that are not in the resolver.
@@ -43,7 +47,120 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
+allow-newer: true
+# drop-packages:
+# - Cabal
+
 extra-deps: 
+- directory-1.3.7.1
+- process-1.6.15.0
+- Cabal-3.6.3.0
+# - packages/th-compat-0.1.4
+- packages/filepath-1.4.100.0
+- packages/ghc-lib-parser-9.4.1.20220807
+- packages/primitive-0.7.4.0
+- packages/Agda-2.6.2.2                          
+- packages/drinkery-0.4                  
+- packages/libBF-0.6.3
+- packages/ansi-pretty-0.1.2.2       
+- packages/EdisonAPI-1.3.1               
+- packages/lockfree-queue-0.2.3.1
+- packages/arith-encode-1.0.2            
+- packages/EdisonCore-1.3.2.1            
+- packages/memory-0.17.0
+- packages/arithmoi-0.12.0.1             
+- packages/endo-0.3.0.1                  
+- packages/monadplus-1.4.2
+- packages/async-pool-0.9.1              
+- packages/entropy-0.4.1.7               
+- packages/packman-0.5.0
+- packages/basement-0.0.14               
+- packages/enumeration-0.2.0             
+- packages/parameterized-utils-2.1.5.0
+- packages/box-tuples-0.2.0.4            
+- packages/fgl-5.7.0.3                   
+- packages/partial-isomorphisms-0.2.3.0
+- packages/bv-sized-1.0.4                
+- packages/foundation-0.0.28             
+- packages/posix-api-0.3.5.0
+- packages/bytesmith-0.3.8.0             
+- packages/FPretty-1.1                   
+- packages/primitive-unaligned-0.1.1.1
+# - packages/Cabal-2.4.1.0                 
+- packages/free-algebras-0.1.0.1         
+- packages/proto3-wire-1.4.0
+# - packages/Cabal-3.0.2.0                 
+- packages/free-functors-1.2.1           
+- packages/row-types-1.0.1.2
+# - packages/Cabal-3.2.1.0                 
+- packages/futhark-0.21.13               
+- packages/salak-0.3.6
+- packages/cabal-doctest-1.0.9           
+- packages/generic-data-0.9.2.1          
+- packages/servant-0.19
+- packages/cborg-0.2.7.0                 
+- packages/geniplate-mirror-0.7.8        
+- packages/siphash-1.0.3
+- packages/cereal-0.5.8.2                
+- packages/ghc-check-0.5.0.6             
+- packages/Spock-core-0.14.0.0
+- packages/charsetdetect-1.1.0.2         
+- packages/ghc-debug-common-0.2.1.0      
+- packages/text-format-0.3.2
+- packages/charsetdetect-ae-1.1.0.4      
+- packages/haskeline-0.7.5.0             
+- packages/threads-0.5.1.6
+- packages/chaselev-deque-0.5.0.5        
+- packages/haxl-2.4.0.0                  
+- packages/true-name-0.1.0.3
+- packages/critbit-0.2.0.0               
+- packages/heterocephalus-1.0.5.6        
+- packages/vector-algorithms-0.8.0.4
+- packages/cryptol-2.13.0                
+- packages/hgeometry-0.14                
+- packages/vector-th-unbox-0.2.2
+- packages/data-bword-0.1.0.1            
+- packages/hgeometry-combinatorial-0.14  
+- packages/what4-1.3
+- packages/data-default-instances-new-base-0.0.2 
+- packages/hgeometry-ipe-0.13             
+- packages/wide-word-0.1.1.2
+- packages/data-r-tree-0.6.0                     
+- packages/inj-base-0.2.0.0                
+- packages/word-compat-0.0.4
+- packages/datetime-0.3.1                        
+- packages/inline-c-cpp-0.5.0.0           
+- packages/yesod-1.6.2
+- packages/doctest-0.20.0                        
+- packages/io-choice-0.0.7
+- packages/double-conversion-2.0.4.1             
+- packages/language-haskell-extract-0.2.4
+
+# package-indices:
+#   # - name: head.hackage
+#   # http: http://head.hackage.haskell.org/01-index.tar.gz
+#   - download-prefix: https://ghc.gitlab.haskell.org/head.hackage/
+#     hackage-security:
+#       keyids:
+#         - f76d08be13e9a61a377a85e2fb63f4c5435d40f8feb3e12eb05905edb8cdea89
+#         - 7541f32a4ccca4f97aea3b22f5e593ba2c0267546016b992dfadcd2fe944e55d
+#         - 26021a13b401500c8eb2761ca95c61f2d625bfef951b939a8124ed12ecf07329
+#       key-threshold: 3
+#   # - name: Hackage
+#   #   download-prefix: https://hackage.haskell.org/package/
+#   #   http: https://hackage.haskell.org/01-index.tar.gz 
+#   #   hackage-security:
+#   #     keyids:
+#   #       - 0a5c7ea47cd1b15f01f5f51a33adda7e655bc0f0b0615baa8e271f4c3351e21d
+#   #       - 1ea9ba32c526d1cc91ab5e5bd364ec5e9e8cb67179a471872f6e26f0ae773d42
+#   #       - 280b10153a522681163658cb49f632cde3f38d768b736ddbc901d99a1a772833
+#   #       - 2a96b1889dc221c17296fcc2bb34b908ca9734376f0f361660200935916ef201
+#   #       - 2c6c3627bd6c982990239487f1abd02e08a02e6cf16edb105a8012d444d870c3
+#   #       - 51f0161b906011b52c6613376b1ae937670da69322113a246a09f807c62f6921
+#   #       - 772e9f4c7db33d251d5c6e357199c819e569d130857dc225549b40845ff0890d
+#   #       - aa315286e6ad281ad61182235533c41e806e5a787e0b6d1e7eef3f09d137d2e9
+#   #       - fe331502606802feac15e514d9b9ea83fee8b6ffef71335479a2e68d84adc6b0
+#   #     key-threshold: 3 # number of keys required
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
