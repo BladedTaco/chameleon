@@ -13,8 +13,13 @@ repository head.hackage.ghc.haskell.org
    key-threshold: 3
 
 -- end of generated content
+optional-packages: packages/hlint-3.4.1
+optional-packages: packages/template-haskell-2.19.0.0
+optional-packages: packages/ghc-lib-parser-9.4.1.20220807
+optional-packages: packages/th-compat-0.1.4
+optional-packages: packages/directory-1.3.7.1
+optional-packages: packages/filepath-1.4.2.1
 optional-packages: packages/basement-0.0.14
-optional-packages: packages/Agda-2.6.2.2
 optional-packages: packages/Agda-2.6.2.2
 optional-packages: packages/ansi-pretty-0.1.2.2
 optional-packages: packages/arith-encode-1.0.2

@@ -16,6 +16,7 @@ copyright:           "2021 Tony Fu"
 description:         Please see the README on GitHub
 
 dependencies:
+- base >= 4.14 && < 4.17
 - aeson
 - array
 - base
@@ -23,6 +24,7 @@ dependencies:
 - containers
 - ghc
 - ghc-paths
+- ghc-lib-parser
 - haskell-src-exts
 - transformers
 - Agda

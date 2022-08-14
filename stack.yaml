@@ -52,11 +52,29 @@ allow-newer: true
 # - Cabal
 
 extra-deps: 
-- directory-1.3.7.1
+- packages/hlint-3.4.1
+- binary-0.8.9.1
+- bytestring-0.11.3.1
+- exceptions-0.10.5
+- parsec-3.1.15.1
+- text-2.0.1
+- unix-2.7.3
+- packages/template-haskell-2.19.0.0
+- packages/directory-1.3.7.1
+- packages/filepath-1.4.2.1
 - process-1.6.15.0
-- Cabal-3.6.3.0
-# - packages/th-compat-0.1.4
-- packages/filepath-1.4.100.0
+# - packages/Cabal-2.4.1.0                 
+# - packages/Cabal-3.0.2.0                 
+- packages/Cabal-3.2.1.0                 
+# - Cabal-3.6.3.0
+- packages/th-compat-0.1.4
+# - packages/base-4.17.0.0
+- hpc-0.6.0.3 
+# - directory-1.3.7.1
+# - packages/filepath-1.4.100.0
+# - packages/ghc-lib-parser-9.0.1.20210324
+# - packages/ghc-lib-parser-9.0.2.20211226
+# - packages/ghc-lib-parser-9.2.3.20220527
 - packages/ghc-lib-parser-9.4.1.20220807
 - packages/primitive-0.7.4.0
 - packages/Agda-2.6.2.2                          
@@ -86,13 +104,10 @@ extra-deps:
 - packages/bytesmith-0.3.8.0             
 - packages/FPretty-1.1                   
 - packages/primitive-unaligned-0.1.1.1
-# - packages/Cabal-2.4.1.0                 
 - packages/free-algebras-0.1.0.1         
 - packages/proto3-wire-1.4.0
-# - packages/Cabal-3.0.2.0                 
 - packages/free-functors-1.2.1           
 - packages/row-types-1.0.1.2
-# - packages/Cabal-3.2.1.0                 
 - packages/futhark-0.21.13               
 - packages/salak-0.3.6
 - packages/cabal-doctest-1.0.9           
@@ -186,4 +201,4 @@ system-ghc: true
 # extra-lib-dirs: [/path/to/dir]
 #
 # Allow a newer minor version of GHC than the snapshot specifies
-# compiler-check: newer-minor
+compiler-check: newer-minor

@@ -58,6 +58,7 @@ library
     , exceptions
     , filepath
     , ghc
+    , ghc-lib-parser
     , ghc-paths
     , haskell-src-exts
     , hlint
@@ -90,6 +91,7 @@ executable chameleon
     , exceptions
     , filepath
     , ghc
+    , ghc-lib-parser
     , ghc-paths
     , haskell-src-exts
     , hlint
