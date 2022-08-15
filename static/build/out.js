@@ -1803,10 +1803,10 @@
           function pop(heap) {
             var first = heap[0];
             if (first !== void 0) {
-              var last = heap.pop();
-              if (last !== first) {
-                heap[0] = last;
-                siftDown(heap, last, 0);
+              var last2 = heap.pop();
+              if (last2 !== first) {
+                heap[0] = last2;
+                siftDown(heap, last2, 0);
               }
               return first;
             } else {
@@ -11568,9 +11568,9 @@
               if (!shouldTrackSideEffects) {
                 return;
               }
-              var last = returnFiber.lastEffect;
-              if (last !== null) {
-                last.nextEffect = childToDelete;
+              var last2 = returnFiber.lastEffect;
+              if (last2 !== null) {
+                last2.nextEffect = childToDelete;
                 returnFiber.lastEffect = childToDelete;
               } else {
                 returnFiber.firstEffect = returnFiber.lastEffect = childToDelete;
@@ -15488,9 +15488,9 @@
                 }
                 prevSibling.sibling = newWorkInProgress;
               }
-              var last = returnFiber.lastEffect;
-              if (last !== null) {
-                last.nextEffect = current2;
+              var last2 = returnFiber.lastEffect;
+              if (last2 !== null) {
+                last2.nextEffect = current2;
                 returnFiber.lastEffect = current2;
               } else {
                 returnFiber.firstEffect = returnFiber.lastEffect = current2;
@@ -30936,11 +30936,11 @@ For more info, visit https://reactjs.org/link/mock-scheduler`);
   function createListenerCollection() {
     var batch2 = getBatch();
     var first = null;
-    var last = null;
+    var last2 = null;
     return {
       clear: function clear() {
         first = null;
-        last = null;
+        last2 = null;
       },
       notify: function notify2() {
         batch2(function() {
@@ -30962,10 +30962,10 @@ For more info, visit https://reactjs.org/link/mock-scheduler`);
       },
       subscribe: function subscribe(callback) {
         var isSubscribed = true;
-        var listener2 = last = {
+        var listener2 = last2 = {
           callback,
           next: null,
-          prev: last
+          prev: last2
         };
         if (listener2.prev) {
           listener2.prev.next = listener2;
@@ -30979,7 +30979,7 @@ For more info, visit https://reactjs.org/link/mock-scheduler`);
           if (listener2.next) {
             listener2.next.prev = listener2.prev;
           } else {
-            last = listener2.prev;
+            last2 = listener2.prev;
           }
           if (listener2.prev) {
             listener2.prev.next = listener2.next;
@@ -34665,6 +34665,40 @@ problem_1 = Task1.sum (check [1..999])
   var import_xterm = __toESM(require_xterm());
   var import_xterm_addon_fit = __toESM(require_xterm_addon_fit());
 
+  // wrasse/util.js
+  var sleep = async (time) => {
+    await new Promise((r3) => setTimeout(r3, time));
+  };
+  var clamp3 = (min, num, max) => Math.max(min, Math.min(num, max));
+  var within2 = (min, num, max) => min <= num && num <= max;
+  var deep_copy = (x2) => JSON.parse(JSON.stringify(x2));
+  var null_func = () => {
+  };
+  function* group_n(arr, n3) {
+    let out = [];
+    for (const el of arr) {
+      out.push(el);
+      if (out.length == n3) {
+        yield out;
+        out = [];
+      }
+    }
+    if (out != []) {
+      yield out;
+    }
+  }
+  var start_pattern_gen = function* () {
+    while (true) {
+      const frames = ["\u2598 ", "\u2580 ", "\u259D ", " \u2598", " \u258C", " \u2596", "\u2597 ", "\u2584 ", "\u2596 ", "\u258C "];
+      for (const item of frames) {
+        yield item;
+      }
+    }
+  };
+  function last(array) {
+    return array[array.length - 1];
+  }
+
   // wrasse/ansiEscapes.js
   var ESC = "\x1B[";
   var OSC = "\x1B]";
@@ -34776,6 +34810,11 @@ problem_1 = Task1.sum (check [1..999])
     let bg = { r: 0, g: 0, b: 0, ...bg_col };
     return ESC + "38;2" + SEP + fg.r + SEP + fg.g + SEP + fg.b + "m" + ESC + "48;2" + SEP + bg.r + SEP + bg.g + SEP + bg.b + "m" + text + ESC + "39m" + ESC + "49m";
   };
+  ansiEscapes.colourSeq = (fg_col, bg_col) => {
+    let fg = { r: 0, g: 0, b: 0, ...fg_col };
+    let bg = { r: 0, g: 0, b: 0, ...bg_col };
+    return ESC + "38;2" + SEP + fg.r + SEP + fg.g + SEP + fg.b + "m" + ESC + "48;2" + SEP + bg.r + SEP + bg.g + SEP + bg.b + "m";
+  };
   var _a;
   ansiEscapes.Colour = (_a = class {
     constructor({ r: r3, g: g3, b: b3 }) {
@@ -34783,7 +34822,14 @@ problem_1 = Task1.sum (check [1..999])
       this.g = g3 ?? 0;
       this.b = b3 ?? 0;
     }
-  }, __publicField(_a, "Red", new _a({ r: 255 })), __publicField(_a, "Blue", new _a({ b: 255 })), __publicField(_a, "Green", new _a({ g: 255 })), __publicField(_a, "Grey", new _a({ r: 128, g: 128, b: 128 })), __publicField(_a, "LightGrey", new _a({ r: 190, g: 190, b: 190 })), _a);
+    mul(multiplier) {
+      return {
+        r: Math.round(clamp3(0, this.r * multiplier, 255)),
+        g: Math.round(clamp3(0, this.g * multiplier, 255)),
+        b: Math.round(clamp3(0, this.b * multiplier, 255))
+      };
+    }
+  }, __publicField(_a, "Red", new _a({ r: 255 })), __publicField(_a, "Blue", new _a({ b: 255 })), __publicField(_a, "Green", new _a({ g: 255 })), __publicField(_a, "Grey", new _a({ r: 128, g: 128, b: 128 })), __publicField(_a, "LightGrey", new _a({ r: 190, g: 190, b: 190 })), __publicField(_a, "White", new _a({ r: 255, g: 255, b: 255 })), _a);
   var ansiEscapes_default = ansiEscapes;
 
   // wrasse/wrasseGHC.js
@@ -34810,36 +34856,6 @@ problem_1 = Task1.sum (check [1..999])
   };
   var wrasseGHC_default = wrasseGHC;
 
-  // wrasse/util.js
-  var sleep = async (time) => {
-    await new Promise((r3) => setTimeout(r3, time));
-  };
-  var clamp3 = (min, num, max) => Math.max(min, Math.min(num, max));
-  var within2 = (min, num, max) => min <= num && num <= max;
-  var null_func = () => {
-  };
-  function* group_n(arr, n3) {
-    let out = [];
-    for (const el of arr) {
-      out.push(el);
-      if (out.length == n3) {
-        yield out;
-        out = [];
-      }
-    }
-    if (out != []) {
-      yield out;
-    }
-  }
-  var start_pattern_gen = function* () {
-    while (true) {
-      const frames = ["\u2598 ", "\u2580 ", "\u259D ", " \u2598", " \u258C", " \u2596", "\u2597 ", "\u2584 ", "\u2596 ", "\u258C "];
-      for (const item of frames) {
-        yield item;
-      }
-    }
-  };
-
   // wrasse/terminalWindows.js
   String.prototype.splice = function(index, count, add) {
     if (index < 0) {
@@ -34850,28 +34866,56 @@ problem_1 = Task1.sum (check [1..999])
     }
     return this.slice(0, index) + (add || "") + this.slice(index + count);
   };
-  var Link = class {
+  var _Link = class {
     constructor(window2, range, funcs, colour) {
       this.window = window2;
       this.range = {
         start: { x: 0, y: 0, ...range.start },
         end: { x: 0, y: 0, ...range.end }
       };
-      this.colour = { r: 0, g: 0, b: 0, ...colour ?? ansiEscapes_default.Colour.Red };
+      this.colour = new ansiEscapes_default.Colour({ r: 0, g: 0, b: 0, ...colour ?? ansiEscapes_default.Colour.Red });
       this.funcs = {
         enter: (link) => {
-          link.window.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(link.range.start.x, link.range.start.y) + ansiEscapes_default.colouredText({}, link.colour, "|").split("|").join(ansiEscapes_default.cursorTo(link.range.end.x, link.range.end.y)) + ansiEscapes_default.cursorRestorePosition);
+          this.setHighlight(_Link.albedo.hover);
           funcs?.enter?.(link);
         },
         leave: (link) => {
-          link.window.content[link.range.start.y].esc = [];
+          this.setHighlight(_Link.albedo.unlit);
           funcs?.leave?.(link);
         },
-        click: (link) => funcs?.click?.(link)
+        click: (link) => {
+          this.setHighlight(_Link.albedo.click);
+          funcs?.click?.(link);
+        }
       };
       this.active = false;
+      this.highlight = { fg: {}, bg: {}, resetFG: {}, resetBG: {} };
+      this.setupHighlight();
+    }
+    setupHighlight() {
+      const [fg, bg, resetFG, resetBG] = this.window.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(this.range.start.x, this.range.start.y) + ansiEscapes_default.colouredText(ansiEscapes_default.Colour.White, this.colour.mul(_Link.albedo.unlit), "|").split("|").join(ansiEscapes_default.cursorTo(this.range.end.x, this.range.end.y)) + ansiEscapes_default.cursorRestorePosition);
+      console.log(fg, bg, resetFG, resetBG);
+      this.highlight = { fg, bg, resetFG, resetBG };
+    }
+    setHighlight(multiplier) {
+      this.highlight.bg.seq = ansiEscapes_default.colourSeq(ansiEscapes_default.Colour.White, this.colour.mul(multiplier));
+      this.window.links.sort((a3, b3) => a3.range.start.x - b3.range.start.x).reduce((acc, curr) => {
+        acc = acc.filter((x2) => x2.range.end.x > this.range.start.x);
+        console.log(deep_copy({ hl: curr.highlight }));
+        curr.highlight.resetFG = last(acc)?.highlight.fg ?? "\x1B[39m";
+        curr.highlight.resetBG = last(acc)?.highlight.bg ?? "\x1B[49m";
+        acc.push(curr);
+        return acc;
+      }, []);
+      this.window.requestDraw();
     }
   };
+  var Link = _Link;
+  __publicField(Link, "albedo", {
+    click: 1,
+    hover: 0.6,
+    unlit: 0.3
+  });
   var _Window = class {
     constructor(terminal, x2, y3, width, height, options) {
       this.terminal = terminal;
@@ -34896,7 +34940,9 @@ problem_1 = Task1.sum (check [1..999])
       _Window.drawReq.setup = true;
       _Window.setupEvent("wheel", "onWheel");
       _Window.setupEvent("mousemove", "onMouseMove");
-      _Window.setupEvent("click", "onClick");
+      _Window.setupEvent("mouseout", "onMouseMove");
+      _Window.setupEvent("mousedown", "onClick");
+      _Window.setupEvent("mouseup", "onMouseMove");
       (async () => {
         while (true) {
           if (_Window.drawReq.request) {
@@ -34925,7 +34971,7 @@ problem_1 = Task1.sum (check [1..999])
     onWheel(event) {
       if (!this.scrollable || !this.active)
         return false;
-      const dir = Math.sign(event.deltaY);
+      const dir = Math.sign(event.deltaY) * clamp3(1, Math.round(this.content.length / this.height), Math.floor(this.height * 0.7));
       if (event.shiftKey) {
         this.move(dir, 0, true);
       } else if (event.altKey) {
@@ -35030,6 +35076,7 @@ problem_1 = Task1.sum (check [1..999])
           return [{ prefix: text2, esc: null_func }];
         return cutString;
       };
+      let escAdds = [];
       for (const { prefix: prefix2, esc } of handleEscape(text)) {
         let oldCursor = { ...this.cursor };
         for (const line of (prefix2 ?? "").split("\n")) {
@@ -35046,13 +35093,16 @@ problem_1 = Task1.sum (check [1..999])
         this.cursor = oldCursor;
         let add = esc();
         if (add) {
-          this.content[this.cursor.y].esc.push({ pos: this.cursor.x, seq: add });
+          let addObj = { pos: this.cursor.x, seq: add };
+          escAdds.push(addObj);
+          this.content[this.cursor.y].esc.push(addObj);
         }
         while (this.cursor.y >= this.content.length) {
           this.content.push({ text: "", esc: [] });
         }
       }
       this.requestDraw(callback);
+      return escAdds;
     }
     writeln(text, callback) {
       return this.write(text + "\n", callback);
@@ -35110,9 +35160,19 @@ problem_1 = Task1.sum (check [1..999])
     draw() {
       let writeString = ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(this.x, this.y) + `\u2554${"\u2550".repeat(this.width)}\u2557` + ansiEscapes_default.cursorTo(this.x, this.y + this.height + 1) + `\u255A${"\u2550".repeat(this.width)}\u255D`;
       let lines = this.lines();
+      const scrollbar = {
+        low: Math.max(-0.01, this.line / this.content.length) * this.height,
+        hi: Math.min(1, (this.line + this.height) / this.content.length) * this.height
+      };
+      scrollbar.hi = Math.max(Math.ceil(scrollbar.low) + 0.5, scrollbar.hi);
+      let scrollbarChar = "\u2588";
+      if (scrollbar.low <= 0 && scrollbar.hi >= this.height) {
+        scrollbarChar = "\u2551";
+      }
       for (let i3 = 1; i3 <= this.height; i3++) {
         const { text, esc } = lines.next().value ?? { text: "", esc: [] };
-        writeString += `${ansiEscapes_default.cursorTo(this.x, this.y + i3)}\u2551${esc.sort((a3, b3) => a3.pos - b3.pos).reduceRight((acc, { pos, seq }) => acc.splice(pos, 0, seq), (text || "").padEnd(this.width))}\u2551`;
+        const sideChr = within2(scrollbar.low, i3, scrollbar.hi) ? scrollbarChar : "\u2551";
+        writeString += `${ansiEscapes_default.cursorTo(this.x, this.y + i3)}${sideChr}${esc.sort((a3, b3) => a3.pos - b3.pos).reduceRight((acc, { pos, seq }) => acc.splice(pos, 0, seq), (text || "").padEnd(this.width))}${sideChr}`;
       }
       this.terminal.write(writeString + ansiEscapes_default.cursorRestorePosition);
     }

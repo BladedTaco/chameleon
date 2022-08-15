@@ -1,6 +1,6 @@
 import ESC from "./ansiEscapes";
 import wrasse from "./wrasse";
-import {sleep, clamp, within, group_n, null_func, deep_copy} from './util';
+import {sleep, clamp, within, group_n, null_func, deep_copy, last} from './util';
 
 String.prototype.splice = function (index, count, add) {
     // We cannot pass negative indexes directly to the 2nd slicing operation.
@@ -15,33 +15,73 @@ String.prototype.splice = function (index, count, add) {
 }
 
 class Link {
+    static albedo = {
+        click : 1,
+        hover : 0.6,
+        unlit : 0.3
+    }
+
     constructor(window, range, funcs, colour) {
         this.window = window;
         this.range = {
             start : {x : 0, y : 0, ...range.start},
             end : {x : 0, y : 0, ...range.end},
         }
-        this.colour = {r:0, g:0, b:0, ...(colour ?? ESC.Colour.Red)}
+        this.colour = new ESC.Colour({r:0, g:0, b:0, ...(colour ?? ESC.Colour.Red)})
         this.funcs = {
             enter : (link) => {
-                link.window.write(
-                    ESC.cursorSavePosition +
-                    ESC.cursorTo(link.range.start.x, link.range.start.y) + 
-                    ESC.colouredText({}, link.colour, "|")
-                        .split("|")
-                        .join(ESC.cursorTo(link.range.end.x, link.range.end.y)) +
-                    ESC.cursorRestorePosition
-                )
+                this.setHighlight(Link.albedo.hover)
                 funcs?.enter?.(link);
             },
             leave : (link) => {
-                link.window.content[link.range.start.y].esc = []
+                this.setHighlight(Link.albedo.unlit)
                 funcs?.leave?.(link);
             },
-            click : (link) => funcs?.click?.(link)
+            click : (link) => {
+                this.setHighlight(Link.albedo.click)
+                funcs?.click?.(link)
+            }
         }
 
         this.active = false;
+        this.highlight = {fg:{}, bg:{}, resetFG:{}, resetBG:{}};
+
+        this.setupHighlight();
+    }
+
+    setupHighlight() {
+        const [fg, bg, resetFG, resetBG] = this.window.write(
+            ESC.cursorSavePosition +
+            ESC.cursorTo(this.range.start.x, this.range.start.y) + 
+            ESC.colouredText(ESC.Colour.White, this.colour.mul(Link.albedo.unlit), "|")
+                .split("|")
+                .join(ESC.cursorTo(this.range.end.x, this.range.end.y)) +
+            ESC.cursorRestorePosition
+        );
+        console.log(fg, bg, resetFG, resetBG)
+        this.highlight = {fg, bg, resetFG, resetBG}
+    }
+
+    setHighlight(multiplier) {
+        this.highlight.bg.seq = ESC.colourSeq(ESC.Colour.White, this.colour.mul(multiplier));
+        this.window.links  
+            .sort((a, b) => a.range.start.x - b.range.start.x)
+            .reduce((acc, curr) => {
+
+                acc = acc.filter(x => x.range.end.x > this.range.start.x);
+                // console.log(deep_copy(
+                //     {acc: acc.map(x => {x.highlight, x.range, x.colour})}
+                // ));
+
+                console.log(deep_copy({hl: curr.highlight}))
+
+                curr.highlight.resetFG = last(acc)?.highlight.fg ?? "\u001b[39m"
+                curr.highlight.resetBG = last(acc)?.highlight.bg ?? "\u001b[49m"
+
+                acc.push(curr)
+                return acc;
+            }, [])
+        this.window.requestDraw();
     }
 }
 
@@ -79,7 +119,9 @@ class Window {
         // setup events
         Window.setupEvent('wheel', 'onWheel');
         Window.setupEvent('mousemove', 'onMouseMove');
-        Window.setupEvent('click', 'onClick');
+        Window.setupEvent('mouseout', 'onMouseMove');
+        Window.setupEvent('mousedown', 'onClick');
+        Window.setupEvent('mouseup', 'onMouseMove');
 
         // setup draw requests
         (async () => {
@@ -112,7 +154,11 @@ class Window {
     onWheel(event) {
         if (!this.scrollable || !this.active) return false;
 
-        const dir = Math.sign(event.deltaY);
+        const dir = Math.sign(event.deltaY) * clamp(
+            1, 
+            Math.round(this.content.length / this.height), 
+            Math.floor(this.height * 0.7)
+        );
         if (event.shiftKey) {
             this.move(dir, 0, true);
         } else if (event.altKey) {
@@ -152,7 +198,6 @@ class Window {
                 this.requestDraw();
             });
 
-        // this.requestDraw();
         return true;
     }
 
@@ -278,6 +323,8 @@ class Window {
             return cutString;
         };
 
+        let escAdds = []
+
         // write the string to the window
         for (const {prefix, esc} of handleEscape(text)) {
             let oldCursor = {...this.cursor};
@@ -304,7 +351,9 @@ class Window {
             // handle escape characters
             let add = esc();
             if (add) {
-                this.content[this.cursor.y].esc.push({pos : this.cursor.x, seq : add})
+                let addObj = {pos : this.cursor.x, seq : add}
+                escAdds.push(addObj)
+                this.content[this.cursor.y].esc.push(addObj)
             }
             // ensure cursor isn't off content bounds
             while (this.cursor.y >= this.content.length) {
@@ -313,6 +362,8 @@ class Window {
         }
 
         this.requestDraw(callback);
+
+        return escAdds
     }
 
     writeln(text, callback) {
@@ -399,12 +450,27 @@ class Window {
         
         // draw content
         let lines = this.lines();
+        const scrollbar = {
+            low: Math.max(-0.01, this.line / this.content.length) * this.height,
+            hi: Math.min(1, (this.line + this.height) / this.content.length) * this.height,
+        }
+        scrollbar.hi = Math.max(Math.ceil(scrollbar.low)+0.5, scrollbar.hi)
+
+        let scrollbarChar = '█';
+        if (scrollbar.low <= 0 && scrollbar.hi >= this.height) {
+            scrollbarChar = '║'
+        }
+
         for (let i = 1; i <= this.height; i++) {
             // get the next line
             const {text, esc} = lines.next().value ?? {text:"", esc:[]};
         
+            const sideChr = within(scrollbar.low, i, scrollbar.hi) 
+                ? scrollbarChar 
+                : '║';
+
             // add it to the write string
-            writeString += `${ESC.cursorTo(this.x, this.y + i)}║${
+            writeString += `${ESC.cursorTo(this.x, this.y + i)}${sideChr}${
                 // sort escape sequences by position
                 esc.sort((a, b) => a.pos - b.pos)
                 // reduce from highest position to lowest
@@ -413,8 +479,11 @@ class Window {
                     (acc, {pos, seq}) => acc.splice(pos, 0, seq)
                     , (text || "").padEnd(this.width)
                 )
-            }║`;
+            }${sideChr}`;
         }
+
+        // colour scrollbar
+
         // restore cursor
         this.terminal.write(writeString + ESC.cursorRestorePosition);
     }

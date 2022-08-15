@@ -1,3 +1,6 @@
+
+import {clamp} from './util';
+
 const ESC = '\u001B[';
 const OSC = '\u001B]';
 const BEL = '\u0007';
@@ -143,6 +146,15 @@ ansiEscapes.colouredText = (fg_col, bg_col, text) => {
 		 + ESC + "39m" + ESC + "49m"
 }
 
+ansiEscapes.colourSeq = (fg_col, bg_col) => {
+	// get colours with 0 in defaults
+	let fg = {r:0, g:0, b:0, ...fg_col}
+	let bg = {r:0, g:0, b:0, ...bg_col}
+	// return text string
+	return ESC + "38;2" + SEP + fg.r + SEP + fg.g + SEP + fg.b + "m"
+		 + ESC + "48;2" + SEP + bg.r + SEP + bg.g + SEP + bg.b + "m"
+}
+
 
 ansiEscapes.Colour = class Colour {
 	static Red = new Colour({r: 255});
@@ -150,11 +162,20 @@ ansiEscapes.Colour = class Colour {
 	static Green = new Colour({g : 255});
 	static Grey = new Colour({r:128, g:128, b:128});
 	static LightGrey = new Colour({r:190, g:190, b:190});
+	static White = new Colour({r:255, g:255, b:255});
 
 	constructor({r, g, b}) {
 		this.r = r ?? 0;
 		this.g = g ?? 0;
 		this.b = b ?? 0;
+	}
+
+	mul(multiplier) {
+		return {
+			r: Math.round(clamp(0, this.r * multiplier, 255)),
+			g: Math.round(clamp(0, this.g * multiplier, 255)), 
+			b: Math.round(clamp(0, this.b * multiplier, 255)) 
+		}
 	}
 }
 
