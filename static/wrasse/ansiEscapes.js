@@ -148,6 +148,8 @@ ansiEscapes.Colour = class Colour {
 	static Red = new Colour({r: 255});
 	static Blue = new Colour({b : 255});
 	static Green = new Colour({g : 255});
+	static Grey = new Colour({r:128, g:128, b:128});
+	static LightGrey = new Colour({r:190, g:190, b:190});
 
 	constructor({r, g, b}) {
 		this.r = r ?? 0;

@@ -36,7 +36,7 @@ instance Default GHCMessage where
     def = GHCMessage def def def def def def def def def
 
 instance Default GHCResult where
-    def = GHCResult def def def def
+    def = GHCResult def def
 
 instance Default WrasseResult where
     def = WrasseResult def def def def def def

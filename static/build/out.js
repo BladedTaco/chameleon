@@ -33250,13 +33250,13 @@ printXML (Text text) = text
 
 sum [] = 0
 sum [x] = x
-sum (x:xs) = x + sum xs
+sum (x:xs) = x + Task1.sum xs
 
 check (x:xs)
   | x \`mod\` 3 == 0 || x \`mod\` 5 == 0 = x + check xs
   | otherwise = check xs
 
-problem_1 = sum (check [1..999])
+problem_1 = Task1.sum (check [1..999])
 `;
   var examples = [
     euler1,
@@ -34783,7 +34783,7 @@ problem_1 = sum (check [1..999])
       this.g = g3 ?? 0;
       this.b = b3 ?? 0;
     }
-  }, __publicField(_a, "Red", new _a({ r: 255 })), __publicField(_a, "Blue", new _a({ b: 255 })), __publicField(_a, "Green", new _a({ g: 255 })), _a);
+  }, __publicField(_a, "Red", new _a({ r: 255 })), __publicField(_a, "Blue", new _a({ b: 255 })), __publicField(_a, "Green", new _a({ g: 255 })), __publicField(_a, "Grey", new _a({ r: 128, g: 128, b: 128 })), __publicField(_a, "LightGrey", new _a({ r: 190, g: 190, b: 190 })), _a);
   var ansiEscapes_default = ansiEscapes;
 
   // wrasse/wrasseGHC.js
@@ -34831,6 +34831,14 @@ problem_1 = sum (check [1..999])
       yield out;
     }
   }
+  var start_pattern_gen = function* () {
+    while (true) {
+      const frames = ["\u2598 ", "\u2580 ", "\u259D ", " \u2598", " \u258C", " \u2596", "\u2597 ", "\u2584 ", "\u2596 ", "\u258C "];
+      for (const item of frames) {
+        yield item;
+      }
+    }
+  };
 
   // wrasse/terminalWindows.js
   String.prototype.splice = function(index, count, add) {
@@ -34925,7 +34933,7 @@ problem_1 = sum (check [1..999])
       } else {
         this.line = clamp3(0, this.line + dir, this.content.length - this.height);
       }
-      this.onMouseMove();
+      this.onMouseMove(event);
       this.requestDraw();
       return true;
     }
@@ -34950,7 +34958,11 @@ problem_1 = sum (check [1..999])
     }
     addLink(range, funcs, colour) {
       const window2 = this;
-      this.links.push(new Link(window2, range, funcs, colour));
+      const link = new Link(window2, range, funcs, colour);
+      this.links.push(link);
+      if (colour != ansiEscapes_default.Colour.Blue) {
+        console.log({ link });
+      }
     }
     reset() {
       this.clean();
@@ -35041,7 +35053,6 @@ problem_1 = sum (check [1..999])
         }
       }
       this.requestDraw(callback);
-      console.log(JSON.parse(JSON.stringify({ content: this.content, cursor: this.cursor })));
     }
     writeln(text, callback) {
       return this.write(text + "\n", callback);
@@ -35309,7 +35320,6 @@ $ `, scrollToTop);
       let prefix2 = "  ".repeat(level);
       let node_string = node.content;
       if (write) {
-        console.log({ node });
         if (node.children.length == 0) {
           wrasse.window.writeln(prefix2 + ansiEscapes_default.colouredText(ansiEscapes_default.Colour.Blue, ansiEscapes_default.Colour.Red, "- ") + node_string);
         } else {
@@ -35351,12 +35361,16 @@ $ `, scrollToTop);
       }
     };
     const register_links = (node, level, ignoreLine) => {
-      if (node.children.length > 0 && node.line != ignoreLine) {
-        let hovered = false;
-        wrasse.window.addLink({
+      node.link = {
+        text: node.content,
+        range: {
           start: { x: level * 2 + 1, y: node.line },
           end: { x: level * 2 + 2 + node.content.length, y: node.line }
-        }, {
+        }
+      };
+      if (node.children.length > 0 && node.line != ignoreLine) {
+        let hovered = false;
+        wrasse.window.addLink(node.link.range, {
           click(link) {
             link.window.links = [link];
             clean_lines(node, level);
@@ -35367,8 +35381,7 @@ $ `, scrollToTop);
             perm.keywords.forEach((x2) => x2.dispose());
             perm.keywords = [];
             register_keywords(tree);
-            console.log(perm.keywords.length);
-            wrasse.window.write(ansiEscapes_default.cursorTo(0, node.line - 1));
+            wrasse.window.write(ansiEscapes_default.cursorTo(0, node.line));
           },
           enter(link) {
             hovered = true;
@@ -35382,7 +35395,7 @@ $ `, scrollToTop);
             hovered = false;
             wrasse.set_hover_content();
           }
-        });
+        }, ansiEscapes_default.Colour.Blue);
       }
       if (node.active) {
         node.children.forEach((x2) => register_links(x2, level + 1));
@@ -35392,152 +35405,114 @@ $ `, scrollToTop);
       if (node?.link) {
         const { text, range } = node.link;
         for (const match of text.matchAll(wrasseGHC_default.regex.ambiguous)) {
-          perm.keywords.push(wrasse.terminal.registerLinkProvider({
-            provideLinks(bufferLineNumber, callback) {
-              const { namespace, symbol } = match.groups;
-              callback([{
-                text: match[0],
-                range: {
-                  start: { x: range.start.x + match.index + 3, y: node.line + 2 },
-                  end: { x: range.start.x + match.index + match[0].length, y: node.line + 2 }
-                },
-                activate() {
-                  if (node.active) {
-                    node.children = node.children.pop();
+          const { namespace, symbol } = match.groups;
+          wrasse.window.addLink({
+            start: { x: range.start.x + match.index + 3, y: node.line },
+            end: { x: range.start.x + match.index + match[0].length, y: node.line }
+          }, {
+            click(link) {
+              if (node.active) {
+                node.children = node.children.pop();
+                return;
+              }
+              let starGen = start_pattern_gen();
+              let finished = false;
+              let recurse = () => {
+                sleep(10).then(() => {
+                  if (finished)
                     return;
+                  wrasse.window.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(range.start.x - 1, node.line) + starGen.next().value + ansiEscapes_default.cursorRestorePosition, recurse);
+                });
+              };
+              recurse();
+              (async () => {
+                console.log(wrasse);
+                let code = wrasse.data_0?.ghc.code.map((x2) => {
+                  let arr = x2.split("=");
+                  if (arr.length <= 1) {
+                    return x2;
                   }
-                  let starGen = function* () {
-                    while (true) {
-                      const frames = ["\u2598 ", "\u2580 ", "\u259D ", " \u2598", " \u258C", " \u2596", "\u2597 ", "\u2584 ", "\u2596 ", "\u258C "];
-                      for (const item of frames) {
-                        yield item;
-                      }
-                    }
-                  }();
-                  let finished = false;
-                  let recurse = async () => {
-                    await sleep(10);
-                    if (finished)
-                      return;
-                    wrasse.window.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(range.start.x - 1, node.line - 1) + starGen.next().value + ansiEscapes_default.cursorRestorePosition, recurse);
-                  };
-                  recurse();
-                  (async () => {
-                    console.log(wrasse);
-                    let code = wrasse.data_0?.ghc.code.map((x2) => {
-                      let arr = x2.split("=");
-                      if (arr.length <= 1) {
-                        return x2;
-                      }
-                      let new_x = arr.slice(1).join("=");
-                      return arr[0] + "=" + new_x.replace(symbol, `${namespace}${symbol}`);
-                    }).reduce((acc, curr) => {
-                      return acc + "\n" + curr;
-                    });
-                    await sleep(1e3);
-                    console.log(code);
-                    let response = await fetch("/ghc", {
-                      method: "POST",
-                      body: code
-                    });
-                    let data = await response.json();
-                    console.log(data);
-                    node.children.push(parse_tree(data.full));
-                    finished = true;
-                    wrasse.interactive_terminal(wrasse.tree);
-                  })();
-                },
-                hover() {
-                  wrasse.set_hover_content(`See what happens if you use '${symbol}'`);
-                },
-                leave() {
-                  wrasse.set_hover_content();
-                }
-              }]);
-              return;
-              callback(void 0);
+                  let new_x = arr.slice(1).join("=");
+                  return arr[0] + "=" + new_x.replace(symbol, `${namespace}${symbol}`);
+                }).reduce((acc, curr) => {
+                  return acc + "\n" + curr;
+                });
+                await sleep(1e3);
+                console.log(code);
+                let response = await fetch("/ghc", {
+                  method: "POST",
+                  body: code
+                });
+                let data = await response.json();
+                console.log(data);
+                node.children.push(parse_tree(data.full));
+                finished = true;
+                wrasse.interactive_terminal(wrasse.tree);
+              })();
+            },
+            enter(link) {
+              wrasse.set_hover_content(`See what happens if you use '${symbol}'`);
+            },
+            leave(link) {
+              wrasse.set_hover_content();
             }
-          }));
+          }, ansiEscapes_default.Colour.Green);
         }
         for (const match of text.matchAll(wrasseGHC_default.regex.keyword)) {
-          perm.keywords.push(wrasse.terminal.registerLinkProvider({
-            provideLinks(bufferLineNumber, callback) {
-              callback([{
-                text: match[0],
-                range: {
-                  start: { x: range.start.x + match.index + 2, y: node.line + 2 },
-                  end: { x: range.start.x + match.index + match[0].length + 1, y: node.line + 2 }
-                },
-                activate() {
-                },
-                hover() {
-                  wrasse.set_hover_content(wrasseGHC_default.map[match[0]]);
-                },
-                leave() {
-                  wrasse.set_hover_content();
-                }
-              }]);
-              return;
-              callback(void 0);
+          wrasse.window.addLink({
+            start: { x: range.start.x + match.index + 2, y: node.line },
+            end: { x: range.start.x + match.index + match[0].length + 1, y: node.line }
+          }, {
+            click(link) {
+            },
+            enter(link) {
+              wrasse.set_hover_content(wrasseGHC_default.map[match[0]]);
+            },
+            leave(link) {
+              wrasse.set_hover_content();
             }
-          }));
+          }, ansiEscapes_default.Colour.Grey);
         }
         for (const match of text.matchAll(wrasseGHC_default.regex.symbol)) {
-          perm.keywords.push(wrasse.terminal.registerLinkProvider({
-            provideLinks(bufferLineNumber, callback) {
-              callback([{
-                text: match[0],
-                range: {
-                  start: { x: range.start.x + match.index + 3, y: node.line + 2 },
-                  end: { x: range.start.x + match.index + match[0].length, y: node.line + 2 }
-                },
-                activate() {
-                },
-                hover() {
-                  const { symbol } = match.groups;
-                  wrasse.set_hover_content(`${symbol}
+          wrasse.window.addLink({
+            start: { x: range.start.x + match.index + 2, y: node.line },
+            end: { x: range.start.x + match.index + match[0].length, y: node.line }
+          }, {
+            click(link) {
+            },
+            enter(link) {
+              const { symbol } = match.groups;
+              wrasse.set_hover_content(`${symbol}
                 
                 type: TODO
                 defined at: TODO
                 etc.: TODO`);
-                },
-                leave() {
-                  wrasse.set_hover_content();
-                }
-              }]);
-              return;
-              callback(void 0);
+            },
+            leave(link) {
+              wrasse.set_hover_content();
             }
-          }));
+          }, ansiEscapes_default.Colour.LightGrey);
         }
         for (const match of text.matchAll(wrasseGHC_default.regex.location)) {
-          perm.keywords.push(wrasse.terminal.registerLinkProvider({
-            provideLinks(bufferLineNumber, callback) {
-              callback([{
-                text: match[0],
-                range: {
-                  start: { x: range.start.x + match.index + 2, y: node.line + 2 },
-                  end: { x: range.start.x + match.index + match[0].length + 1, y: node.line + 2 }
-                },
-                activate() {
-                },
-                hover() {
-                  const { line, colStart, colEnd } = match.groups;
-                  let x2 = "";
-                  if (wrasse?.data_0?.ghc?.code) {
-                    x2 = wrasse?.data_0?.ghc?.code[line - 1];
-                  }
-                  wrasse.set_hover_content(`not implemented, look at line ${line}, column ${colStart} to ${colEnd}
-                ${x2}`);
-                },
-                leave() {
-                  wrasse.set_hover_content();
-                }
-              }]);
-              return;
-              callback(void 0);
+          wrasse.window.addLink({
+            start: { x: range.start.x + match.index + 2, y: node.line },
+            end: { x: range.start.x + match.index + match[0].length + 1, y: node.line }
+          }, {
+            click(link) {
+            },
+            enter(link) {
+              const { line, colStart, colEnd } = match.groups;
+              let x2 = "";
+              if (wrasse?.data_0?.ghc?.code) {
+                x2 = wrasse?.data_0?.ghc?.code[line - 1];
+              }
+              wrasse.set_hover_content(`not implemented, look at line ${line}, column ${colStart} to ${colEnd}
+              ${x2}`);
+            },
+            leave(link) {
+              wrasse.set_hover_content();
             }
-          }));
+          });
         }
       }
       node?.children.forEach(register_keywords);

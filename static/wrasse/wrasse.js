@@ -4,7 +4,7 @@ import ESC from './ansiEscapes';
 import wrasseGHC from './wrasseGHC';
 import messages from './messages';
 import tWin from './terminalWindows' ;
-import {sleep, clamp, within} from './util';
+import {sleep, clamp, within, start_pattern_gen} from './util';
 
 let initialized = false;
 const WrasseTerminal = new xTerminal({
@@ -280,7 +280,6 @@ let interactive_terminal = (tree) => {
 
     // write tree string
     if (write) {
-      console.log({node})
       if (node.children.length == 0) {
         wrasse.window.writeln(prefix + ESC.colouredText(ESC.Colour.Blue, ESC.Colour.Red, "- ") + node_string);
       } else {
@@ -364,13 +363,17 @@ let interactive_terminal = (tree) => {
 
   const register_links = (node, level, ignoreLine) => {
     // register link provider
+    node.link = {
+      text: node.content,
+      range : { 
+        start: { x: level*2+ 1,                        y: node.line },
+        end:   { x: level*2 + 2 + node.content.length, y: node.line } 
+      },
+    }
     if (node.children.length > 0 && node.line != ignoreLine) {
       let hovered = false;
       wrasse.window.addLink(
-        { 
-          start: { x: level*2+ 1,                        y: node.line },
-          end:   { x: level*2 + 2 + node.content.length, y: node.line } 
-        },
+        node.link.range,
         {
           click(link) {
             // remove all link providers except this one
@@ -390,9 +393,8 @@ let interactive_terminal = (tree) => {
             perm.keywords.forEach(x => x.dispose())
             perm.keywords = [];
             register_keywords(tree)
-            console.log(perm.keywords.length)
 
-            wrasse.window.write(ESC.cursorTo(0, node.line-1));
+            wrasse.window.write(ESC.cursorTo(0, node.line));
           },
           enter(link) {
             hovered = true;
@@ -408,7 +410,8 @@ let interactive_terminal = (tree) => {
             hovered = false;
             wrasse.set_hover_content()
           }
-        } 
+        },
+        ESC.Colour.Blue
       );
     }
 
@@ -416,141 +419,119 @@ let interactive_terminal = (tree) => {
       node.children.forEach(x => register_links(x, level+1))
     }
   }
-
+  
   const register_keywords = (node) => {
     if (node?.link) {
       const {text, range} = node.link;
-
-      // expandables
+      // ambiguous
       for (const match of text.matchAll(wrasseGHC.regex.ambiguous)) {
-        perm.keywords.push(wrasse.terminal.registerLinkProvider({
-          provideLinks(bufferLineNumber, callback) {
-            const {namespace, symbol} = match.groups;
-            callback([{
-              text: match[0],
-              range: { 
-                start: { x: range.start.x + match.index + 3,                y: node.line + 2 },
-                end:   { x: range.start.x + match.index + match[0].length,  y: node.line + 2 } 
-              },
-              activate() {
+        const {namespace, symbol} = match.groups;
+        wrasse.window.addLink(
+          { 
+            start: { x: range.start.x + match.index + 3,                y: node.line },
+            end:   { x: range.start.x + match.index + match[0].length,  y: node.line } 
+          },
+          {
+            click(link) {
+              if (node.active) {
+                node.children = node.children.pop();
+                return;
+              }
 
-                if (node.active) {
-                  node.children = node.children.pop();
-                  return;
-                }
+              // star drawing
+              let starGen = start_pattern_gen();
+              let finished = false;
 
-                            
-                // star drawing
-                let starGen = (function *() {
-                  while (true) {
-                    const frames = ["▘ ", "▀ ", "▝ ", " ▘", " ▌", " ▖", "▗ ", "▄ ", "▖ ", "▌ "] 
-                    for (const item of frames) {
-                      yield item;
-                  }
-                  }
-                })();
-                
-                let finished = false;
-
-                let recurse = async () => {
-                  await sleep(10);
+              let recurse = () => {
+                sleep(10).then(() => {
                   if (finished) return;
 
                   wrasse.window.write(ESC.cursorSavePosition 
-                    + ESC.cursorTo(range.start.x - 1, node.line - 1) + starGen.next().value
+                    + ESC.cursorTo(range.start.x - 1, node.line) + starGen.next().value
                     + ESC.cursorRestorePosition
                     , recurse)
-                }
-                recurse();
-
-                (async () => {
-                  console.log(wrasse)
-
-                  let code = wrasse.data_0?.ghc.code
-                  .map((x) => {
-                    let arr = x.split('=');
-                    if (arr.length <= 1) {
-                      return x;
-                    }
-                    let new_x = arr.slice(1).join("=");
-                    return arr[0] + "=" + new_x.replace(symbol, `${namespace}${symbol}`);
-                  })
-                  .reduce((acc, curr) => {
-                    return acc + '\n' + curr;
-                  })
-
-                  await sleep(1000)
-
-                  console.log(code)
-
-                  let response = await fetch('/ghc', {
-                    method: 'POST',
-                    body: code,
-                  });
-                  let data = await response.json();
-
-
-                  console.log(data)
-                  node.children.push(parse_tree(data.full));
-
-                  finished = true;
-
-                  wrasse.interactive_terminal(wrasse.tree);
-                })();
-              },
-              hover() {
-                wrasse.set_hover_content(`See what happens if you use '${symbol}'`)
-              },
-              leave() {
-                wrasse.set_hover_content()
+                })
               }
-            }]);
-            return;
-            // fallthrough failure state
-            callback(undefined);
-          }
-        }));
+              recurse();
+
+              (async () => {
+                console.log(wrasse)
+
+                let code = wrasse.data_0?.ghc.code
+                .map((x) => {
+                  let arr = x.split('=');
+                  if (arr.length <= 1) {
+                    return x;
+                  }
+                  let new_x = arr.slice(1).join("=");
+                  return arr[0] + "=" + new_x.replace(symbol, `${namespace}${symbol}`);
+                })
+                .reduce((acc, curr) => {
+                  return acc + '\n' + curr;
+                })
+
+                await sleep(1000)
+
+                console.log(code)
+
+                let response = await fetch('/ghc', {
+                  method: 'POST',
+                  body: code,
+                });
+                let data = await response.json();
+
+
+                console.log(data)
+                node.children.push(parse_tree(data.full));
+
+                finished = true;
+
+                wrasse.interactive_terminal(wrasse.tree);
+              })();
+            },
+            enter(link) {
+              wrasse.set_hover_content(`See what happens if you use '${symbol}'`)
+            },
+            leave(link) {
+              wrasse.set_hover_content()
+            }
+          },
+          ESC.Colour.Green
+        );
       }
 
       // keywords
       for (const match of text.matchAll(wrasseGHC.regex.keyword)) {
-        perm.keywords.push(wrasse.terminal.registerLinkProvider({
-          provideLinks(bufferLineNumber, callback) {
-            callback([{
-              text: match[0],
-              range: { 
-                start: { x: range.start.x + match.index + 2,                    y: node.line + 2 },
-                end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line + 2 } 
+        wrasse.window.addLink(
+            { 
+              start: { x: range.start.x + match.index + 2,                    y: node.line },
+              end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line } 
+            },
+            {
+              click(link) {
               },
-              activate() {
-              },
-              hover() {
+              enter(link) {
                 wrasse.set_hover_content(wrasseGHC.map[match[0]])
               },
-              leave() {
+              leave(link) {
                 wrasse.set_hover_content()
               }
-            }]);
-            return;
-            // fallthrough failure state
-            callback(undefined);
-          }
-        }));
+            },
+            ESC.Colour.Grey
+          );
       }
 
-      // symbols (variables, constants, modules, etc.)
+      // symbols
       for (const match of text.matchAll(wrasseGHC.regex.symbol)) {
-        perm.keywords.push(wrasse.terminal.registerLinkProvider({
-          provideLinks(bufferLineNumber, callback) {
-            callback([{
-              text: match[0],
-              range: { 
-                start: { x: range.start.x + match.index + 3,                y: node.line + 2 },
-                end:   { x: range.start.x + match.index + match[0].length,  y: node.line + 2 } 
+        wrasse.window.addLink(
+            { 
+              start: { x: range.start.x + match.index + 2,                y: node.line },
+              end:   { x: range.start.x + match.index + match[0].length,  y: node.line } 
+            },
+            {
+              click(link) {
               },
-              activate() {
-              },
-              hover() {
+              enter(link) {
                 const {symbol} = match.groups;
                 
 
@@ -560,50 +541,42 @@ let interactive_terminal = (tree) => {
                 defined at: TODO
                 etc.: TODO`)
               },
-              leave() {
+              leave(link) {
                 wrasse.set_hover_content()
               }
-            }]);
-            return;
-            // fallthrough failure state
-            callback(undefined);
-          }
-        }));
+            },
+            ESC.Colour.LightGrey
+          );
       }
 
       // code locations
       for (const match of text.matchAll(wrasseGHC.regex.location)) {
-        perm.keywords.push(wrasse.terminal.registerLinkProvider({
-          provideLinks(bufferLineNumber, callback) {
-            callback([{
-              text: match[0],
-              range: { 
-                start: { x: range.start.x + match.index + 2,                    y: node.line + 2 },
-                end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line + 2 } 
-              },
-              activate() {
-              },
-              hover() {
-                const {line, colStart, colEnd} = match.groups;
-                
-                let x = ""
-                if (wrasse?.data_0?.ghc?.code) {
-                  x = wrasse?.data_0?.ghc?.code[line-1];
-                }
-
-                wrasse.set_hover_content(`not implemented, look at line ${line}, column ${colStart} to ${colEnd}
-                ${x}`)
-              },
-              leave() {
-                wrasse.set_hover_content()
+        wrasse.window.addLink(
+          { 
+            start: { x: range.start.x + match.index + 2,                    y: node.line },
+            end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line }
+          },
+          {
+            click(link) {
+            },
+            enter(link) {
+              const {line, colStart, colEnd} = match.groups;
+              
+              let x = ""
+              if (wrasse?.data_0?.ghc?.code) {
+                x = wrasse?.data_0?.ghc?.code[line-1];
               }
-            }]);
-            return;
-            // fallthrough failure state
-            callback(undefined);
-          }
-        }));
+
+              wrasse.set_hover_content(`not implemented, look at line ${line}, column ${colStart} to ${colEnd}
+              ${x}`)
+            },
+            leave(link) {
+              wrasse.set_hover_content()
+            }
+          } 
+        );
       }
+
     }
     node?.children.forEach(register_keywords)
   }

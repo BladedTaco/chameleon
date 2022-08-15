@@ -49,6 +49,10 @@ import Control.Arrow
 import Agda.Utils.Tuple (uncurry4)
 import DriverPipeline (preprocess)
 
+import Wrasse.Util
+
+import System.Process 
+
 -- main :: IO ()
 -- main = do
 --   args <- getArgs :: IO [String]
@@ -79,14 +83,12 @@ hook f = do
 --
 toolHook :: String -> FilePath -> IO [(String, [(String, [String])])]
 toolHook modName file = do
-  (GHCResult g1 g2 g3 g4) <- ghcHook modName file
+  (GHCResult g1 g2) <- ghcHook modName file
   (h1, h2) <- hlintHook file
   return [
     ("GHC", [ 
-      ("console", g1),
-      ("failStage", g2),
-      ("output", g3),
-      ("code", g4)
+      ("output", g1),
+      ("code", g2)
     ]),
     ("HLint", [
       ("console", h1),
@@ -97,27 +99,21 @@ toolHook modName file = do
 -- runs GHC
 ghcHook :: String -> FilePath -> IO GHCResult
 ghcHook modName file = do
-  ref <- liftIO $ newIORef "" -- make an output IO stream
-  let ghcDir = Just libdir
-  -- let ghcDir = Just "/home/lethe/haskell/ghc/_build/bindist/ghc-9.5.20220715-x86_64-unknown-linux/lib"
-  -- let ghcDir = Just "/home/lethe/haskell/ghc-builds/lib/ghc-8.10.7"
-  -- let ghcDir = Just "/home/lethe/haskell/ghc-builds/lib/ghc-9.5.20220715/lib"
-  -- let ghcDir = Just "/home/lethe/haskell/ghc-builds/ghc9/lib/ghc-9.5.20220715/lib"
-  -- let x = 1 + "foo"
-  -- let ghcDir = Just "/home/lethe/.ghcup/ghc/9.5.2/lib/ghc-9.5.20220715/lib"
-  -- let ghcDir = Just haskell\ghc-9\ghc\_build\stage1\lib
-  -- result <- runGhc (Just libdir) (processGHC ref modName file)
-  -- result <- runGhc (Just "/home/lethe/haskell/ghc/_build/stage1/lib") (processGHC ref modName file)
-  -- result <- runGhc (Just "/home/lethe/haskell/ghc/_install/lib/ghc-9.5.20220715/lib") (processGHC ref modName file)
-  result <- runGhc ghcDir (processGHC ref modName file)
-  
-  ref_out <- readIORef ref -- read the output IO stream
-  -- return $ GHCResult (("ghc console: " ++) <$> lines ref_out) (fmap ("ghc result: " ++) result)
-  -- return (lines ref_out, intercalate ["", "~", ""] $ lines <$> result)
-  return $ uncurry3 (GHCResult $ lines ref_out) $ mapTup3 lines result
+  let flags = [
+          "-fprint-potential-instances"
+        , "-ferror-spans"
+        , "-Wall"
+        ]
 
-mapTup3 :: (t -> c) -> (t, t, t) -> (c, c, c)
-mapTup3 f (a, b, c) = (f a, f b, f c)
+  let cmd = "ghc " ++ unwords flags ++ " generated/Infile.hs"
+  let sIn = ""
+
+  (_, sOut, sErr) <- readCreateProcessWithExitCode ((shell cmd) {new_session = True, create_group = True}) sIn
+
+  fileContents <- readFile file
+
+  return $ uncurry GHCResult $ mapTup2 lines (sOut ++ "\n" ++ sErr, fileContents)
+
 
 -- runs HLint
 hlintHook ::  FilePath -> IO  ([String], [String])
@@ -159,92 +155,6 @@ logHandler ref dflags warn severity srcSpan style msg =
         locMsg = mkLocMessage severity srcSpan msg
         printDoc = show (runSDoc locMsg cntx)
 
-
-
--- the boilerplate GHC
-processGHC :: IORef String -> String -> FilePath -> Ghc (String, String, String)
-processGHC ref moduleName path = do
-  dflags <- getSessionDynFlags
-  -- ref <- liftIO $ newIORef ""
-  let dflags' = dflags {
-      hscTarget = HscNothing
-    , ghcLink = NoLink
-    , log_action = logHandler ref
-    , maxValidHoleFits = Nothing
-    , refLevelHoleFits = Nothing
-    , maxRefHoleFits = Nothing
-    , maxRelevantBinds = Nothing
-    , useColor = Always
-    , maxErrors = Just 10
-    }
-  -- general flags
-  let gflags = [ 
-          Opt_KeepGoing
-        , Opt_DiagnosticsShowCaret
-        , Opt_PrintPotentialInstances
-        , Opt_PrintTypecheckerElaboration
-        , Opt_HelpfulErrors
-        , Opt_ErrorSpans
-        , Opt_Haddock
-        ]
-  -- dump flags
-  let dpflags = [
-          Opt_D_dump_json
-        ]
-
-  let dflags'' = foldl dopt_set dflags' dpflags
-  let dflags''' = foldl gopt_set dflags'' gflags
-
-  setSessionDynFlags dflags'''
-  let mn = mkModuleName moduleName
-  let hsTarketId = TargetFile path Nothing
-  addTarget
-    Target
-      { targetId = hsTarketId,
-        targetAllowObjCode = False,
-        targetContents = Nothing
-      }
-
-  
-  -- ref <- liftIO $ newIORef "" -- make an output IO stream
-  -- result <- runGhc (Just libdir) (processGHC ref modName file)
-  -- ref_out <- readIORef ref -- read the output IO stream
-
-  session <- getSession
-  a <- liftIO $ preprocess session path Nothing Nothing
-  let b = (
-          case a of
-            Left bag -> show $ bagToList bag
-            Right x0 -> ("succ " ++) $ show $ snd x0
-          )
-
-
-  eitherl <- gtry (load LoadAllTargets) :: Ghc (Either SourceError SuccessFlag)
-  case eitherl of
-    Left se -> do
-      removeTarget hsTarketId
-      return ("Failed at stage: loading", show se, "")
-    Right sf -> do
-      modSum <- getModSummary mn
-      eitherp <- gtry (parseModule modSum) :: Ghc (Either SourceError ParsedModule)
-      case eitherp of
-        Left se -> do
-          return ("Failed at stage: parsing", show se, "")
-        Right p -> do
-          t <- gtry (typecheckModule p) :: Ghc (Either SourceError TypecheckedModule)
-          let ParsedModule _ ps imprts anns = p
-          case t of
-            Left se -> do
-            
-              -- return ("Failed at stage: type checking", show $ bagToList $ srcErrorMessages se, showSDocUnsafe $ ppr ps)
-              -- return ("Failed at stage: type checking", show se, showSDocUnsafe $ ppr ps)
-              return (b, show se, showSDocUnsafe $ ppr ps)
-              -- return ("Failed at stage: type checking", show se, codeFile)
-            Right tc -> do
-              let TypecheckedModule _ (Just rs) ts modInfo (typeGlobalEnv, moduleDeets) = tc
-              let hieFile = mkHieFile modSum typeGlobalEnv rs
-              
-              return ("Program looks good", "", showSDocUnsafe $ ppr ps)
 
 
 -- the boilerplate GHC

@@ -17,6 +17,12 @@ multiple 0 = const id
 multiple n = (.) =<< multiple (n - 1)
 -- multiple n f = multiple (n-1) f . f
 
+mapTup2 :: (t -> c) -> (t, t) -> (c, c)
+mapTup2 = join (***)
+
+mapTup3 :: (t -> c) -> (t, t, t) -> (c, c, c)
+mapTup3 f (a, b, c) = (f a, f b, f c)
+
 
 -- | Nested map
 --

@@ -31,8 +31,6 @@ data GHCResult
   = GHCResult
       {
         console :: [String],
-        failStage :: [String],
-        output :: [String],
         code :: [String]
       }       
       deriving (Show, Generic)

@@ -5,6 +5,8 @@ const sleep = async (time) => {
 const clamp = (min, num, max) => Math.max( min, Math.min(num, max));
 const within = (min, num, max) => min <= num && num <= max;
 
+const deep_copy = (x) => JSON.parse(JSON.stringify(x))
+
 const null_func = () => {};
 
 function* group_n(arr, n) {
@@ -21,4 +23,13 @@ function* group_n(arr, n) {
     }
 }
 
-export {sleep, clamp, within, group_n, null_func};
+const start_pattern_gen = (function *() {
+    while (true) {
+      const frames = ["▘ ", "▀ ", "▝ ", " ▘", " ▌", " ▖", "▗ ", "▄ ", "▖ ", "▌ "] 
+      for (const item of frames) {
+        yield item;
+    }
+    }
+  })
+
+export {sleep, clamp, within, group_n, null_func, deep_copy, start_pattern_gen};

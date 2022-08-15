@@ -1,6 +1,6 @@
 import ESC from "./ansiEscapes";
 import wrasse from "./wrasse";
-import {sleep, clamp, within, group_n, null_func} from './util';
+import {sleep, clamp, within, group_n, null_func, deep_copy} from './util';
 
 String.prototype.splice = function (index, count, add) {
     // We cannot pass negative indexes directly to the 2nd slicing operation.
@@ -123,7 +123,7 @@ class Window {
                 this.content.length - this.height
             );
         }
-        this.onMouseMove();
+        this.onMouseMove(event);
         this.requestDraw();
         return true;
     }
@@ -179,9 +179,13 @@ class Window {
 
     addLink(range, funcs, colour) {
         const window = this;
-        this.links.push(new Link(
+        const link = new Link(
             window, range, funcs, colour
-        ));
+        )
+        this.links.push(link);
+        if (colour != ESC.Colour.Blue) {
+            console.log({link})
+        }
     }
 
     reset() {
@@ -309,7 +313,6 @@ class Window {
         }
 
         this.requestDraw(callback);
-        console.log(JSON.parse(JSON.stringify({content:this.content, cursor:this.cursor})));
     }
 
     writeln(text, callback) {
