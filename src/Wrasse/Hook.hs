@@ -1,19 +1,16 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, PackageImports  #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TupleSections #-}
 
 module Wrasse.Hook (hook) where
 
-import Control.Exception hiding (try)
+import "ghc" Exception
 import GHC
 
-import GHC.Driver.Session
-import GHC.Utils.Error
-
-import GHC.Driver.Monad
+import "ghc" GhcMonad
 
 import GHC.Paths
-import GHC.Driver.Types
+import "ghc" HscTypes
 import System.Environment
 
 import System.Directory (createDirectoryIfMissing, getTemporaryDirectory, removeFile)
@@ -25,32 +22,32 @@ import GHC.IO.Handle
 import System.IO
 
 import GHC.Generics
-import Text.Parsec hiding (try)
-import GHC.Data.Bag ( bagToList )
-import GHC.Utils.Outputable ( SDoc(runSDoc), initSDocContext, Outputable (ppr), showSDocUnsafe, PprStyle(..), CodeStyle(CStyle))
+import Text.Parsec
+import "ghc" Bag ( bagToList )
+import "ghc" Outputable ( SDoc(runSDoc), initSDocContext, Outputable (ppr), showSDocUnsafe )
 
-import Control.Monad.Catch (try)
+import "ghc" DynFlags
+import "ghc" ErrUtils
 
-import GHC.Driver.Flags
 
 import GHC.IORef (newIORef, IORef)
 import Data.IORef
-import GHC.Iface.Ext.Ast (mkHieFile)
+import HieAst (mkHieFile)
 
 import Language.Haskell.Exts.Lexer
 
-import Language.Haskell.HLint hiding (Severity)
+import Language.Haskell.HLint
 
 import Wrasse.Types
 import Data.Tree (Tree(..), drawTree)
 import Data.List (intercalate)
 
 import Wrasse.Tree (multiLevel)
-import GHC.Utils.Misc (uncurry3, OverridingBool (Always))
+import "ghc" Util (uncurry3, OverridingBool (Always))
 import Control.Lens (traverseOf, Each (each))
 import Control.Arrow
 import Agda.Utils.Tuple (uncurry4)
-import GHC.Driver.Pipeline (preprocess)
+import DriverPipeline (preprocess)
 
 -- main :: IO ()
 -- main = do
@@ -106,7 +103,7 @@ ghcHook modName file = do
   -- let ghcDir = Just "/home/lethe/haskell/ghc-builds/lib/ghc-8.10.7"
   -- let ghcDir = Just "/home/lethe/haskell/ghc-builds/lib/ghc-9.5.20220715/lib"
   -- let ghcDir = Just "/home/lethe/haskell/ghc-builds/ghc9/lib/ghc-9.5.20220715/lib"
-  let x = 1 + "foo"
+  -- let x = 1 + "foo"
   -- let ghcDir = Just "/home/lethe/.ghcup/ghc/9.5.2/lib/ghc-9.5.20220715/lib"
   -- let ghcDir = Just haskell\ghc-9\ghc\_build\stage1\lib
   -- result <- runGhc (Just libdir) (processGHC ref modName file)
@@ -151,16 +148,18 @@ getModuleName s = case parse moduleParser "" s of
 
 
 
--- LogAction == DynFlags -> Severity -> SrcSpan -> MsgDoc -> IO ()
+-- LogAction == DynFlags -> Severity -> SrcSpan -> PprStyle -> MsgDoc -> IO ()
 logHandler :: IORef String -> LogAction
-logHandler ref dflags warn severity srcSpan msg =
+logHandler ref dflags warn severity srcSpan style msg =
   case severity of
      SevError ->  modifyIORef' ref (++ printDoc)
      SevFatal ->  modifyIORef' ref (++ printDoc)
      _        ->  return () -- ignore the rest
-  where cntx = initSDocContext dflags (PprCode CStyle)
+  where cntx = initSDocContext dflags style
         locMsg = mkLocMessage severity srcSpan msg
         printDoc = show (runSDoc locMsg cntx)
+
+
 
 -- the boilerplate GHC
 processGHC :: IORef String -> String -> FilePath -> Ghc (String, String, String)
@@ -220,19 +219,19 @@ processGHC ref moduleName path = do
           )
 
 
-  eitherl <- try (load LoadAllTargets) :: Ghc (Either SourceError SuccessFlag)
+  eitherl <- gtry (load LoadAllTargets) :: Ghc (Either SourceError SuccessFlag)
   case eitherl of
     Left se -> do
       removeTarget hsTarketId
       return ("Failed at stage: loading", show se, "")
     Right sf -> do
       modSum <- getModSummary mn
-      eitherp <- try (parseModule modSum) :: Ghc (Either SourceError ParsedModule)
+      eitherp <- gtry (parseModule modSum) :: Ghc (Either SourceError ParsedModule)
       case eitherp of
         Left se -> do
           return ("Failed at stage: parsing", show se, "")
         Right p -> do
-          t <- try (typecheckModule p) :: Ghc (Either SourceError TypecheckedModule)
+          t <- gtry (typecheckModule p) :: Ghc (Either SourceError TypecheckedModule)
           let ParsedModule _ ps imprts anns = p
           case t of
             Left se -> do
@@ -251,7 +250,6 @@ processGHC ref moduleName path = do
 -- the boilerplate GHC
 processHLint :: Either Language.Haskell.HLint.ParseError ModuleEx -> [String]
 processHLint e = do
-
   case e of
     Left pe -> ["Failed compiling"]
     Right me -> ["COMPILED SUCCESSFULLY"]

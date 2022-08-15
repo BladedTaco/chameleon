@@ -363,26 +363,26 @@ data EpaComment =
     }
     deriving (Eq, Data, Show)
 
--- data EpaCommentTok =
---   -- Documentation annotations
---     EpaDocComment      HsDocString -- ^ a docstring that can be pretty printed using pprHsDocString
---   | EpaDocOptions      String     -- ^ doc options (prune, ignore-exports, etc)
---   | EpaLineComment     String     -- ^ comment starting by "--"
---   | EpaBlockComment    String     -- ^ comment in {- -}
---   | EpaEofComment                 -- ^ empty comment, capturing
---                                   -- location of EOF
-                                  
 data EpaCommentTok =
   -- Documentation annotations
-    EpaDocCommentNext  String     -- ^ something beginning '-- |'
-  | EpaDocCommentPrev  String     -- ^ something beginning '-- ^'
-  | EpaDocCommentNamed String     -- ^ something beginning '-- $'
-  | EpaDocSection      Int String -- ^ a section heading
+    EpaDocComment      HsDocString -- ^ a docstring that can be pretty printed using pprHsDocString
   | EpaDocOptions      String     -- ^ doc options (prune, ignore-exports, etc)
   | EpaLineComment     String     -- ^ comment starting by "--"
   | EpaBlockComment    String     -- ^ comment in {- -}
   | EpaEofComment                 -- ^ empty comment, capturing
                                   -- location of EOF
+                                  
+-- data EpaCommentTok =
+--   -- Documentation annotations
+--     EpaDocCommentNext  String     -- ^ something beginning '-- |'
+--   | EpaDocCommentPrev  String     -- ^ something beginning '-- ^'
+--   | EpaDocCommentNamed String     -- ^ something beginning '-- $'
+--   | EpaDocSection      Int String -- ^ a section heading
+--   | EpaDocOptions      String     -- ^ doc options (prune, ignore-exports, etc)
+--   | EpaLineComment     String     -- ^ comment starting by "--"
+--   | EpaBlockComment    String     -- ^ comment in {- -}
+--   | EpaEofComment                 -- ^ empty comment, capturing
+--                                   -- location of EOF
 
   -- See #19697 for a discussion of EpaEofComment's use and how it
   -- should be removed in favour of capturing it in the location for

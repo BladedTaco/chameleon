@@ -120,9 +120,13 @@
     - hint: {lhs: flip (g `on` h), rhs: flip g `on` h, name: Move flip}
     - hint: {lhs: (f `on` g) `on` h, rhs: f `on` (g . h), name: Fuse on/on}
     - warn: {lhs: if a >= b then a else b, rhs: max a b}
+    - warn: {lhs: if a >= b then b else a, rhs: min a b}
     - warn: {lhs: if a > b then a else b, rhs: max a b}
+    - warn: {lhs: if a > b then b else a, rhs: min a b}
     - warn: {lhs: if a <= b then a else b, rhs: min a b}
+    - warn: {lhs: if a <= b then b else a, rhs: max a b}
     - warn: {lhs: if a < b then a else b, rhs: min a b}
+    - warn: {lhs: if a < b then b else a, rhs: max a b}
     - warn: {lhs: "maximum [a, b]", rhs: max a b}
     - warn: {lhs: "minimum [a, b]", rhs: min a b}
 
@@ -149,6 +153,7 @@
     - warn: {lhs: map f (repeat x), rhs: repeat (f x)}
     - warn: {lhs: "cycle [x]", rhs: repeat x}
     - warn: {lhs: head (reverse x), rhs: last x}
+    - warn: {lhs: last (reverse x), rhs: head x, note: IncreasesLaziness}
     - warn: {lhs: head (drop n x), rhs: x !! n, side: isNat n}
     - warn: {lhs: head (drop n x), rhs: x !! max 0 n, side: not (isNat n) && not (isNeg n)}
     - warn: {lhs: reverse (init x), rhs: tail (reverse x)}
@@ -498,8 +503,6 @@
     - warn: {lhs: unless (not x), rhs: when x}
     - warn: {lhs: x >>= id, rhs: Control.Monad.join x}
     - warn: {lhs: id =<< x, rhs: Control.Monad.join x}
-    - warn: {lhs: id =<< x, rhs: Control.Monad.join x}
-    - warn: {lhs: id =<< x, rhs: Control.Monad.join x}
     - hint: {lhs: join (f <$> x), rhs: f =<< x}
     - hint: {lhs: join (fmap f x), rhs: f =<< x}
     - hint: {lhs: a >> pure (), rhs: Control.Monad.void a, side: isAtom a || isApp a}
@@ -679,8 +682,8 @@
 
     # EITHER
 
-    - warn: {lhs: "[a | Left a <- a]", rhs: lefts a}
-    - warn: {lhs: "[a | Right a <- a]", rhs: rights a}
+    - warn: {lhs: "[a | Left a <- b]", rhs: lefts b}
+    - warn: {lhs: "[a | Right a <- b]", rhs: rights b}
     - warn: {lhs: either Left (Right . f), rhs: fmap f}
     - warn: {lhs: either f g (fmap h x), rhs: either f (g . h) x, name: Redundant fmap}
     - warn: {lhs: isLeft (fmap f x), rhs: isLeft x}
@@ -838,6 +841,10 @@
     - warn: {lhs: "all f []", rhs: "True", name: Evaluate}
     - warn: {lhs: "any f [a]", rhs: f a, name: Evaluate}
     - warn: {lhs: "any f []", rhs: "False", name: Evaluate}
+    - warn: {lhs: "maximum [a]", rhs: a, name: Evaluate}
+    - warn: {lhs: "minimum [a]", rhs: a, name: Evaluate}
+    - warn: {lhs: "map f []", rhs: "[]", name: Evaluate}
+    - warn: {lhs: "map f [a]", rhs: "[f a]", name: Evaluate}
 
     # FOLDABLE + TUPLES
 
@@ -1069,6 +1076,10 @@
     - warn: {lhs: "last $ x : y", rhs: "lastDef x y"}
     - warn: {lhs: "drop 1", rhs: "drop1"}
     - warn: {lhs: "dropEnd 1", rhs: "dropEnd1"}
+    - warn: {lhs: notNull (concat x), rhs: any notNull x}
+    - warn: {lhs: notNull (filter f x), rhs: any f x}
+    - warn: {lhs: "notNull [x]", rhs: "True", name: Evaluate}
+    - warn: {lhs: "notNull []", rhs: "False", name: Evaluate}
 
 # hints that will be enabled in future
 - group:

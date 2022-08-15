@@ -1,0 +1,89 @@
+:set -Wincomplete-patterns
+:set -Wunused-binds -Wunused-imports -Worphans
+:set -isrc
+:load src/Main.hs src/Paths.hs src/Language/Haskell/HLint.hs
+
+:def test const $ return ":main --test"
+
+:{
+let _ghci_make dir flags = ":!" ++
+        "(if not exist .hpc mkdir .hpc) && " ++
+        "(if not exist .hpc/" ++ dir ++ " mkdir .hpc/" ++ dir ++ ") && " ++
+        "ghc -threaded -rtsopts --make -isrc -i. src/Paths.hs src/Main.hs -hide-package=ghc-boot-th -package=ghc-lib-parser -w -odir .hpc/"++dir++" -hidir .hpc/"++dir++" -o .hpc/"++dir++"/hlint "++flags
+:}
+let _ghci_number def val = show $ case val of "" -> def; x -> read x
+let _ghci_make_profile x = let level = _ghci_number 1 x in _ghci_make ("prof" ++ level) ("-O" ++ level ++ " -DPROFILE -prof -auto-all -caf-all")
+let _ghci_run_profile x args = ":!.hpc\\prof" ++ _ghci_number 1 x ++ "\\hlint " ++ args
+
+
+:{
+:def self \x -> return $ unlines
+        [":main src --report --find=src/Util.hs " ++ x]
+:}
+
+:{
+:def hpc const $ return $ unlines
+        [_ghci_make "hpc" "-fhpc"
+        ,":!del hlint.tix"
+        ,":!.hpc\\hpc\\hlint --test"
+        ,":!.hpc/hpc\\hlint src --report=.hpc/hlint-report.html +RTS -N2"
+        ,":!.hpc\\hpc\\hlint data --report=.hpc/hlint-report.html +RTS -N2"
+        ,":!hpc markup hlint.tix --destdir=.hpc"
+        ,":!hpc report hlint.tix"
+        ,":!del hlint.tix"
+        ,":!start .hpc/hpc_index_fun.html"]
+:}
+
+:{
+:def time \x -> return $ unlines
+        [_ghci_make_profile "1"
+        ,_ghci_run_profile "1" $ x ++ " +RTS -p"
+        ,":!start hlint.prof"]
+:}
+
+:{
+:def memory \x -> return $ unlines
+        [_ghci_make_profile x
+        ,_ghci_run_profile x "src src src src src src +RTS -hm"
+        ,":!hp2ps hlint"
+        ,":!start /b hlint.ps"]
+:}
+
+:{
+:def bench \x -> return $ unlines
+        [_ghci_make "bench" "-O"
+        ,":!ptime .hpc\\bench\\hlint " ++ x
+        ,":!echo."]
+:}
+
+:{
+:def scope \x -> return $ unlines
+        [_ghci_make "scope" "-O -eventlog"
+        ,":!.hpc\\scope\\hlint src +RTS -ls -RTS " ++ x
+        ,":!start /b threadscope hlint.eventlog"]
+:}
+
+:{
+:def docs_ const $ return $ unlines
+        [":!cabal configure"
+        ,":!cabal haddock"]
+:}
+
+:{
+:def docs const $ return $ unlines
+        [":docs_"
+        ,":!start dist/doc/html/hlint/Language-Haskell-HLint.html"]
+:}
+
+:{
+:def extra const $
+        let msg = [":test       - run the test suit"
+                  ,":self       - run HLint on itself"
+                  ,":hpc        - run and produce a program coverage report"
+                  ,":prof <N>   - produce a time profile (N=-O level [1])"
+                  ,":memory <N> - produce a memory profile (N=-O level [1])"
+                  ,":bench <N>  - run the benchmark (should take about 1 second) (N=threads [1])"
+                  ,":scope <N>  - run with threadscope (N=threads [2])"
+                  ,":docs       - generate documentation"]
+        in putStr (unlines msg) >> return []
+:}

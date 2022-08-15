@@ -1,13 +1,16 @@
+
+{-# LANGUAGE PackageImports #-}
+
 module Wrasse.Tree where
 
 import Wrasse.Types (ToolInfo)
 import Data.Tree (Tree(Node))
 
 import Data.List.Split (splitWhen)
-import Data.List (singleton)
 import Wrasse.Util
 import Control.Arrow
 import Data.Maybe (fromMaybe)
+import "ghc" Util (count, singleton)
 
 multiLevel :: [ToolInfo] -> Tree String
 multiLevel = Node "Root" . fmap recurse
