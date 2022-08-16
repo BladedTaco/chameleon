@@ -198,19 +198,34 @@ class Window {
         // get cell x and y
         let {x, y} = this.mouseToCell(event.offsetX, event.offsetY);
         y += this.line 
+
+        // get active link
+        let activeLink = this.links
+            .filter (curr => 
+                within(curr.range.start.x, x, curr.range.end.x)
+                && within(curr.range.start.y, y, curr.range.end.y)
+            )
+            .sort((a, b) => b.range.start.x - a.range.start.x)
+            [0]
+        
+
+        // make link active if not already
+        if (activeLink?.active == false) {
+            activeLink.funcs.enter(activeLink)
+            activeLink.active = true;
+            this.requestDraw();
+        }
+
         this.links
             // get links changing state
-            .filter(curr => (
-                    within(curr.range.start.x, x, curr.range.end.x)
-                    && within(curr.range.start.y, y, curr.range.end.y)
-                ) != curr.active
+            .filter(curr => 
+                 curr.active
             )
-            // perform enter/exit functions and flip state
+            .filter(x => x != activeLink)
+            // perform exit functions and flip state
             .forEach(x => {
-                x.active 
-                    ? x.funcs.leave(x)
-                    : x.funcs.enter(x);
-                x.active = !x.active;
+                x.funcs.leave(x)
+                x.active = false;
                 this.requestDraw();
             });
 

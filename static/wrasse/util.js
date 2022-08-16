@@ -3,7 +3,7 @@ const sleep = async (time) => {
 }
 
 const clamp = (min, num, max) => Math.max( min, Math.min(num, max));
-const within = (min, num, max) => min <= num && num <= max;
+const within = (min, num, max) => (min <= num) && (num <= max);
 
 const deep_copy = (x) => JSON.parse(JSON.stringify(x))
 

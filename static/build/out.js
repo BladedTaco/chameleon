@@ -34993,9 +34993,15 @@ problem_1 = Task1.sum (check [1..999])
         return false;
       let { x: x2, y: y3 } = this.mouseToCell(event.offsetX, event.offsetY);
       y3 += this.line;
-      this.links.filter((curr) => (within2(curr.range.start.x, x2, curr.range.end.x) && within2(curr.range.start.y, y3, curr.range.end.y)) != curr.active).forEach((x3) => {
-        x3.active ? x3.funcs.leave(x3) : x3.funcs.enter(x3);
-        x3.active = !x3.active;
+      let activeLink = this.links.filter((curr) => within2(curr.range.start.x, x2, curr.range.end.x) && within2(curr.range.start.y, y3, curr.range.end.y)).sort((a3, b3) => b3.range.start.x - a3.range.start.x)[0];
+      if (activeLink?.active == false) {
+        activeLink.funcs.enter(activeLink);
+        activeLink.active = true;
+        this.requestDraw();
+      }
+      this.links.filter((curr) => curr.active).filter((x3) => x3 != activeLink).forEach((x3) => {
+        x3.funcs.leave(x3);
+        x3.active = false;
         this.requestDraw();
       });
       return true;
@@ -35372,7 +35378,7 @@ $ `, scrollToTop);
   };
   var interactive_terminal = (tree) => {
     switch_terminal();
-    let hoverWin = new terminalWindows_default.Window(wrasse.terminal, wrasse.terminal.cols / 2, 0, wrasse.terminal.cols / 2 - 2, wrasse.terminal.rows / 2, {});
+    let hoverWin = new terminalWindows_default.Window(wrasse.terminal, wrasse.terminal.cols / 2, 0, wrasse.terminal.cols / 2 - 2, wrasse.terminal.rows / 2, { movable: true });
     perm.windows.push(hoverWin);
     let curr_line = 0;
     const write_text = (node, level, write = false) => {
