@@ -265,7 +265,7 @@ let interactive_terminal = (tree) => {
     0,
     wrasse.terminal.cols / 2 - 2,
     wrasse.terminal.rows / 2,
-    {}
+    {movable : true}
   );
   perm.windows.push(hoverWin);
 
