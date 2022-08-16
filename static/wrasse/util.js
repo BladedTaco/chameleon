@@ -33,7 +33,9 @@ const start_pattern_gen = (function *() {
   })
 
 function last(array) {
-    return array[array.length - 1];
+    return array.length == 0 
+        ? undefined
+        : array[array.length - 1];
 }
 
 export {sleep, clamp, within, group_n, null_func, deep_copy, start_pattern_gen, last};

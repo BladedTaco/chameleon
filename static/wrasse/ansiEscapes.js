@@ -146,13 +146,12 @@ ansiEscapes.colouredText = (fg_col, bg_col, text) => {
 		 + ESC + "39m" + ESC + "49m"
 }
 
-ansiEscapes.colourSeq = (fg_col, bg_col) => {
+ansiEscapes.colourSeq = (col, isFG) => {
 	// get colours with 0 in defaults
-	let fg = {r:0, g:0, b:0, ...fg_col}
-	let bg = {r:0, g:0, b:0, ...bg_col}
+	isFG ??= false;
+	let c = {r:0, g:0, b:0, ...col}
 	// return text string
-	return ESC + "38;2" + SEP + fg.r + SEP + fg.g + SEP + fg.b + "m"
-		 + ESC + "48;2" + SEP + bg.r + SEP + bg.g + SEP + bg.b + "m"
+	return ESC + `${isFG ? '38' : '48'};2` + SEP + c.r + SEP + c.g + SEP + c.b + "m"
 }
 
 

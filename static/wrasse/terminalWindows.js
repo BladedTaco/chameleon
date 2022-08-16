@@ -27,18 +27,18 @@ class Link {
             start : {x : 0, y : 0, ...range.start},
             end : {x : 0, y : 0, ...range.end},
         }
-        this.colour = new ESC.Colour({r:0, g:0, b:0, ...(colour ?? ESC.Colour.Red)})
+        this.colour = colour ?? ESC.Colour.Red
         this.funcs = {
             enter : (link) => {
-                this.setHighlight(Link.albedo.hover)
+                link.setHighlight(Link.albedo.hover)
                 funcs?.enter?.(link);
             },
             leave : (link) => {
-                this.setHighlight(Link.albedo.unlit)
+                link.setHighlight(Link.albedo.unlit)
                 funcs?.leave?.(link);
             },
             click : (link) => {
-                this.setHighlight(Link.albedo.click)
+                link.setHighlight(Link.albedo.click)
                 funcs?.click?.(link)
             }
         }
@@ -63,24 +63,40 @@ class Link {
     }
 
     setHighlight(multiplier) {
-        this.highlight.bg.seq = ESC.colourSeq(ESC.Colour.White, this.colour.mul(multiplier));
-        this.window.links  
-            .sort((a, b) => a.range.start.x - b.range.start.x)
+        this.highlight.bg.seq = ESC.colourSeq(this.colour.mul(multiplier), false);
+        console.log("START")
+        this.window.links
+            // sort by x
+            .sort((a, b) =>
+                a.range.start.x - b.range.start.x
+            )
+            // sort by y
+            .sort((a, b) => 
+                a.range.start.y - b.range.start.y
+            )
             .reduce((acc, curr) => {
 
-                acc = acc.filter(x => x.range.end.x > this.range.start.x);
-                // console.log(deep_copy(
-                //     {acc: acc.map(x => {x.highlight, x.range, x.colour})}
-                // ));
+                console.log(curr.range.start, curr.range.end)
 
-                console.log(deep_copy({hl: curr.highlight}))
+                // console.log(acc, curr)
+                acc = acc.filter(el => 
+                    (el.range.end.y >= curr.range.end.y)
+                    && (el.range.end.x > curr.range.end.x)
+                );
+                // console.log(acc)
 
-                curr.highlight.resetFG = last(acc)?.highlight.fg ?? "\u001b[39m"
-                curr.highlight.resetBG = last(acc)?.highlight.bg ?? "\u001b[49m"
 
-                acc.push(curr)
-                return acc;
-            }, [])
+                curr.highlight.resetFG.seq = (last(acc)?.highlight.fg.seq) ?? "\u001b[39m";
+                curr.highlight.resetBG.seq = (last(acc)?.highlight.bg.seq) ?? "\u001b[49m";
+
+                if (curr.colour == ESC.Colour.LightGrey) {
+                    console.log("dsfds")
+                    console.log(curr.highlight.resetBG)
+                    console.log(...(acc.map(x => x.highlight.bg)))
+                }
+
+                return [...acc, curr];
+            }, []);
         this.window.requestDraw();
     }
 }
@@ -223,19 +239,15 @@ class Window {
     */
 
     addLink(range, funcs, colour) {
-        const window = this;
-        const link = new Link(
-            window, range, funcs, colour
-        )
-        this.links.push(link);
-        if (colour != ESC.Colour.Blue) {
-            console.log({link})
-        }
+        this.links.push(new Link(
+            this, range, funcs, colour
+        ));
     }
 
     reset() {
         this.clean();
         this.content = [{text:"", esc:[]}];
+        this.links = []
         this.cursor = {x:0, y:0, saved: {x:0, y:0}};
         this.line = 0;
 

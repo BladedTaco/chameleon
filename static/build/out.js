@@ -34671,7 +34671,6 @@ problem_1 = Task1.sum (check [1..999])
   };
   var clamp3 = (min, num, max) => Math.max(min, Math.min(num, max));
   var within2 = (min, num, max) => min <= num && num <= max;
-  var deep_copy = (x2) => JSON.parse(JSON.stringify(x2));
   var null_func = () => {
   };
   function* group_n(arr, n3) {
@@ -34696,7 +34695,7 @@ problem_1 = Task1.sum (check [1..999])
     }
   };
   function last(array) {
-    return array[array.length - 1];
+    return array.length == 0 ? void 0 : array[array.length - 1];
   }
 
   // wrasse/ansiEscapes.js
@@ -34810,10 +34809,10 @@ problem_1 = Task1.sum (check [1..999])
     let bg = { r: 0, g: 0, b: 0, ...bg_col };
     return ESC + "38;2" + SEP + fg.r + SEP + fg.g + SEP + fg.b + "m" + ESC + "48;2" + SEP + bg.r + SEP + bg.g + SEP + bg.b + "m" + text + ESC + "39m" + ESC + "49m";
   };
-  ansiEscapes.colourSeq = (fg_col, bg_col) => {
-    let fg = { r: 0, g: 0, b: 0, ...fg_col };
-    let bg = { r: 0, g: 0, b: 0, ...bg_col };
-    return ESC + "38;2" + SEP + fg.r + SEP + fg.g + SEP + fg.b + "m" + ESC + "48;2" + SEP + bg.r + SEP + bg.g + SEP + bg.b + "m";
+  ansiEscapes.colourSeq = (col, isFG) => {
+    isFG ??= false;
+    let c3 = { r: 0, g: 0, b: 0, ...col };
+    return ESC + `${isFG ? "38" : "48"};2` + SEP + c3.r + SEP + c3.g + SEP + c3.b + "m";
   };
   var _a;
   ansiEscapes.Colour = (_a = class {
@@ -34873,18 +34872,18 @@ problem_1 = Task1.sum (check [1..999])
         start: { x: 0, y: 0, ...range.start },
         end: { x: 0, y: 0, ...range.end }
       };
-      this.colour = new ansiEscapes_default.Colour({ r: 0, g: 0, b: 0, ...colour ?? ansiEscapes_default.Colour.Red });
+      this.colour = colour ?? ansiEscapes_default.Colour.Red;
       this.funcs = {
         enter: (link) => {
-          this.setHighlight(_Link.albedo.hover);
+          link.setHighlight(_Link.albedo.hover);
           funcs?.enter?.(link);
         },
         leave: (link) => {
-          this.setHighlight(_Link.albedo.unlit);
+          link.setHighlight(_Link.albedo.unlit);
           funcs?.leave?.(link);
         },
         click: (link) => {
-          this.setHighlight(_Link.albedo.click);
+          link.setHighlight(_Link.albedo.click);
           funcs?.click?.(link);
         }
       };
@@ -34898,14 +34897,19 @@ problem_1 = Task1.sum (check [1..999])
       this.highlight = { fg, bg, resetFG, resetBG };
     }
     setHighlight(multiplier) {
-      this.highlight.bg.seq = ansiEscapes_default.colourSeq(ansiEscapes_default.Colour.White, this.colour.mul(multiplier));
-      this.window.links.sort((a3, b3) => a3.range.start.x - b3.range.start.x).reduce((acc, curr) => {
-        acc = acc.filter((x2) => x2.range.end.x > this.range.start.x);
-        console.log(deep_copy({ hl: curr.highlight }));
-        curr.highlight.resetFG = last(acc)?.highlight.fg ?? "\x1B[39m";
-        curr.highlight.resetBG = last(acc)?.highlight.bg ?? "\x1B[49m";
-        acc.push(curr);
-        return acc;
+      this.highlight.bg.seq = ansiEscapes_default.colourSeq(this.colour.mul(multiplier), false);
+      console.log("START");
+      this.window.links.sort((a3, b3) => a3.range.start.x - b3.range.start.x).sort((a3, b3) => a3.range.start.y - b3.range.start.y).reduce((acc, curr) => {
+        console.log(curr.range.start, curr.range.end);
+        acc = acc.filter((el) => el.range.end.y >= curr.range.end.y && el.range.end.x > curr.range.end.x);
+        curr.highlight.resetFG.seq = last(acc)?.highlight.fg.seq ?? "\x1B[39m";
+        curr.highlight.resetBG.seq = last(acc)?.highlight.bg.seq ?? "\x1B[49m";
+        if (curr.colour == ansiEscapes_default.Colour.LightGrey) {
+          console.log("dsfds");
+          console.log(curr.highlight.resetBG);
+          console.log(...acc.map((x2) => x2.highlight.bg));
+        }
+        return [...acc, curr];
       }, []);
       this.window.requestDraw();
     }
@@ -35003,16 +35007,12 @@ problem_1 = Task1.sum (check [1..999])
       return true;
     }
     addLink(range, funcs, colour) {
-      const window2 = this;
-      const link = new Link(window2, range, funcs, colour);
-      this.links.push(link);
-      if (colour != ansiEscapes_default.Colour.Blue) {
-        console.log({ link });
-      }
+      this.links.push(new Link(this, range, funcs, colour));
     }
     reset() {
       this.clean();
       this.content = [{ text: "", esc: [] }];
+      this.links = [];
       this.cursor = { x: 0, y: 0, saved: { x: 0, y: 0 } };
       this.line = 0;
       return this;
@@ -35381,12 +35381,12 @@ $ `, scrollToTop);
       let node_string = node.content;
       if (write) {
         if (node.children.length == 0) {
-          wrasse.window.writeln(prefix2 + ansiEscapes_default.colouredText(ansiEscapes_default.Colour.Blue, ansiEscapes_default.Colour.Red, "- ") + node_string);
+          wrasse.window.writeln(prefix2 + "- " + node_string);
         } else {
           if (node.active) {
             wrasse.window.writeln(prefix2 + "\u25BC " + node_string);
           } else {
-            wrasse.window.writeln(prefix2 + ansiEscapes_default.colouredText(ansiEscapes_default.Colour.Blue, ansiEscapes_default.Colour.Red, "\u25BA ") + node_string);
+            wrasse.window.writeln(prefix2 + "\u25BA " + node_string);
           }
         }
       }

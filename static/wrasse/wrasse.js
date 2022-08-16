@@ -281,12 +281,12 @@ let interactive_terminal = (tree) => {
     // write tree string
     if (write) {
       if (node.children.length == 0) {
-        wrasse.window.writeln(prefix + ESC.colouredText(ESC.Colour.Blue, ESC.Colour.Red, "- ") + node_string);
+        wrasse.window.writeln(prefix + "- " + node_string);
       } else {
         if (node.active) {
           wrasse.window.writeln(prefix + "▼ " + node_string);
         } else {
-          wrasse.window.writeln(prefix + ESC.colouredText(ESC.Colour.Blue, ESC.Colour.Red, "► ") + node_string);
+          wrasse.window.writeln(prefix + "► " + node_string);
         }
       }
     }
