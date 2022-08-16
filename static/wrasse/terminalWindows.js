@@ -58,13 +58,11 @@ class Link {
                 .join(ESC.cursorTo(this.range.end.x, this.range.end.y)) +
             ESC.cursorRestorePosition
         );
-        console.log(fg, bg, resetFG, resetBG)
         this.highlight = {fg, bg, resetFG, resetBG}
     }
 
     setHighlight(multiplier) {
         this.highlight.bg.seq = ESC.colourSeq(this.colour.mul(multiplier), false);
-        console.log("START")
         this.window.links
             // sort by x
             .sort((a, b) =>
@@ -76,25 +74,17 @@ class Link {
             )
             .reduce((acc, curr) => {
 
-                console.log(curr.range.start, curr.range.end)
-
-                // console.log(acc, curr)
+                // filter out previous links which dont run past the end of this one
                 acc = acc.filter(el => 
                     (el.range.end.y >= curr.range.end.y)
                     && (el.range.end.x > curr.range.end.x)
                 );
-                // console.log(acc)
 
-
+                // match colour from last link at end of current link
                 curr.highlight.resetFG.seq = (last(acc)?.highlight.fg.seq) ?? "\u001b[39m";
                 curr.highlight.resetBG.seq = (last(acc)?.highlight.bg.seq) ?? "\u001b[49m";
 
-                if (curr.colour == ESC.Colour.LightGrey) {
-                    console.log("dsfds")
-                    console.log(curr.highlight.resetBG)
-                    console.log(...(acc.map(x => x.highlight.bg)))
-                }
-
+                // add curr to accumulator
                 return [...acc, curr];
             }, []);
         this.window.requestDraw();
@@ -109,6 +99,7 @@ class Window {
         this.width = Math.floor(width);
         this.height = Math.floor(height);
         this.line = 0;
+        this.scroll = 0;
         this.content = [{text:"", esc:[]}];
         this.cursor = {x:0, y:0, saved: {x:0, y:0}};
         options = {movable : false, scrollable : true, resizable : false, ...options};
@@ -170,18 +161,33 @@ class Window {
     onWheel(event) {
         if (!this.scrollable || !this.active) return false;
 
-        const dir = Math.sign(event.deltaY) * clamp(
-            1, 
-            Math.round(this.content.length / this.height), 
-            Math.floor(this.height * 0.7)
-        );
+        const dir = Math.sign(event.deltaY)
         if (event.shiftKey) {
             this.move(dir, 0, true);
         } else if (event.altKey) {
             this.move(0, dir, true);
+        } else if (event.ctrlKey) {
+            const textWidth = this.content.reduce(
+                (acc, curr) => Math.max(acc, curr.text.length)
+            , 0);
+            const dirX = dir * clamp(
+                1, 
+                Math.round(Math.pow(textWidth / this.width, 1.3)), 
+                Math.floor(this.width * 0.7)
+            );
+            this.scroll = clamp(
+                0, 
+                this.scroll + dirX,
+                textWidth - this.width
+            );
         } else {
+            const dirY = dir * clamp(
+                1, 
+                Math.round(this.content.length / this.height), 
+                Math.floor(this.height * 0.7)
+            );
             this.line = clamp(0, 
-                this.line + dir,
+                this.line + dirY,
                 this.content.length - this.height
             );
         }
@@ -459,21 +465,43 @@ class Window {
     *lines() {
         for (const line of this.content.slice(this.line, this.line + this.height)) {
             yield {
-                text: line.text.slice(0, this.width),
-                esc: line.esc.filter(({pos}) => within(0, pos, this.width))
+                text: line.text.slice(this.scroll, this.width + this.scroll),
+                esc: line.esc.filter(({pos}) => within(this.scroll, pos, this.width + this.scroll))
             }
         }
     }
 
     
     draw() {
+
+        
+        const textWidth = this.content.reduce(
+            (acc, curr) => Math.max(acc, curr.text.length)
+        , 0);
+        const scrollbarX = {
+            low: Math.max(-0.01, this.scroll / textWidth) * this.width,
+            hi: Math.min(1, (this.scroll + this.width) / textWidth) * this.width,
+        }
+        scrollbarX.hi = Math.max(Math.ceil(scrollbarX.low)+0.5, scrollbarX.hi)
+
+        let scrollbarXChar = '▅';
+        if (scrollbarX.low <= 0 && scrollbarX.hi >= this.height) {
+            scrollbarXChar = '═'
+        }
+
+        const top = Array.from(Array(this.width).keys())
+            .map(x => within(scrollbarX.low, x, scrollbarX.hi) 
+            ? scrollbarXChar 
+            : '═')
+            .join('')
+
         // draw top and bottom border
         let writeString =
             ESC.cursorSavePosition 
           + ESC.cursorTo(this.x, this.y) 
-          + `╔${"═".repeat(this.width)}╗`
+          + `╔${top}╗`
           + ESC.cursorTo(this.x, this.y + this.height + 1) 
-          + `╚${"═".repeat(this.width)}╝`;
+          + `╚${top}╝`;
         
         // draw content
         let lines = this.lines();

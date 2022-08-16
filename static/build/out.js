@@ -34849,7 +34849,8 @@ problem_1 = Task1.sum (check [1..999])
       keyword: new RegExp(Object.keys(termMap).map((x2) => `(${x2})`).join("|"), "gi"),
       symbol: /‘(?<symbol>[a-zA-Z.0-9]+)’/g,
       location: /generated\/Infile.hs:(?<line>[0-9]+):(?<colStart>[0-9]+)(?:\-(?<colEnd>[0-9]+))?/g,
-      ambiguous: /‘(?<namespace>([a-zA-Z.0-9]+\.)+)(?<symbol>[a-zA-Z.0-9]+)’/g
+      ambiguous: /‘(?<namespace>([a-zA-Z.0-9]+\.)+)(?<symbol>[a-zA-Z.0-9]+)’/g,
+      error: /\[(?<code>GHC-[0-9]+)\]/g
     },
     map: termMap
   };
@@ -34893,22 +34894,14 @@ problem_1 = Task1.sum (check [1..999])
     }
     setupHighlight() {
       const [fg, bg, resetFG, resetBG] = this.window.write(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(this.range.start.x, this.range.start.y) + ansiEscapes_default.colouredText(ansiEscapes_default.Colour.White, this.colour.mul(_Link.albedo.unlit), "|").split("|").join(ansiEscapes_default.cursorTo(this.range.end.x, this.range.end.y)) + ansiEscapes_default.cursorRestorePosition);
-      console.log(fg, bg, resetFG, resetBG);
       this.highlight = { fg, bg, resetFG, resetBG };
     }
     setHighlight(multiplier) {
       this.highlight.bg.seq = ansiEscapes_default.colourSeq(this.colour.mul(multiplier), false);
-      console.log("START");
       this.window.links.sort((a3, b3) => a3.range.start.x - b3.range.start.x).sort((a3, b3) => a3.range.start.y - b3.range.start.y).reduce((acc, curr) => {
-        console.log(curr.range.start, curr.range.end);
         acc = acc.filter((el) => el.range.end.y >= curr.range.end.y && el.range.end.x > curr.range.end.x);
         curr.highlight.resetFG.seq = last(acc)?.highlight.fg.seq ?? "\x1B[39m";
         curr.highlight.resetBG.seq = last(acc)?.highlight.bg.seq ?? "\x1B[49m";
-        if (curr.colour == ansiEscapes_default.Colour.LightGrey) {
-          console.log("dsfds");
-          console.log(curr.highlight.resetBG);
-          console.log(...acc.map((x2) => x2.highlight.bg));
-        }
         return [...acc, curr];
       }, []);
       this.window.requestDraw();
@@ -34928,6 +34921,7 @@ problem_1 = Task1.sum (check [1..999])
       this.width = Math.floor(width);
       this.height = Math.floor(height);
       this.line = 0;
+      this.scroll = 0;
       this.content = [{ text: "", esc: [] }];
       this.cursor = { x: 0, y: 0, saved: { x: 0, y: 0 } };
       options = { movable: false, scrollable: true, resizable: false, ...options };
@@ -34975,13 +34969,18 @@ problem_1 = Task1.sum (check [1..999])
     onWheel(event) {
       if (!this.scrollable || !this.active)
         return false;
-      const dir = Math.sign(event.deltaY) * clamp3(1, Math.round(this.content.length / this.height), Math.floor(this.height * 0.7));
+      const dir = Math.sign(event.deltaY);
       if (event.shiftKey) {
         this.move(dir, 0, true);
       } else if (event.altKey) {
         this.move(0, dir, true);
+      } else if (event.ctrlKey) {
+        const textWidth = this.content.reduce((acc, curr) => Math.max(acc, curr.text.length), 0);
+        const dirX = dir * clamp3(1, Math.round(Math.pow(textWidth / this.width, 1.3)), Math.floor(this.width * 0.7));
+        this.scroll = clamp3(0, this.scroll + dirX, textWidth - this.width);
       } else {
-        this.line = clamp3(0, this.line + dir, this.content.length - this.height);
+        const dirY = dir * clamp3(1, Math.round(this.content.length / this.height), Math.floor(this.height * 0.7));
+        this.line = clamp3(0, this.line + dirY, this.content.length - this.height);
       }
       this.onMouseMove(event);
       this.requestDraw();
@@ -35158,13 +35157,24 @@ problem_1 = Task1.sum (check [1..999])
     *lines() {
       for (const line of this.content.slice(this.line, this.line + this.height)) {
         yield {
-          text: line.text.slice(0, this.width),
-          esc: line.esc.filter(({ pos }) => within2(0, pos, this.width))
+          text: line.text.slice(this.scroll, this.width + this.scroll),
+          esc: line.esc.filter(({ pos }) => within2(this.scroll, pos, this.width + this.scroll))
         };
       }
     }
     draw() {
-      let writeString = ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(this.x, this.y) + `\u2554${"\u2550".repeat(this.width)}\u2557` + ansiEscapes_default.cursorTo(this.x, this.y + this.height + 1) + `\u255A${"\u2550".repeat(this.width)}\u255D`;
+      const textWidth = this.content.reduce((acc, curr) => Math.max(acc, curr.text.length), 0);
+      const scrollbarX = {
+        low: Math.max(-0.01, this.scroll / textWidth) * this.width,
+        hi: Math.min(1, (this.scroll + this.width) / textWidth) * this.width
+      };
+      scrollbarX.hi = Math.max(Math.ceil(scrollbarX.low) + 0.5, scrollbarX.hi);
+      let scrollbarXChar = "\u2585";
+      if (scrollbarX.low <= 0 && scrollbarX.hi >= this.height) {
+        scrollbarXChar = "\u2550";
+      }
+      const top = Array.from(Array(this.width).keys()).map((x2) => within2(scrollbarX.low, x2, scrollbarX.hi) ? scrollbarXChar : "\u2550").join("");
+      let writeString = ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(this.x, this.y) + `\u2554${top}\u2557` + ansiEscapes_default.cursorTo(this.x, this.y + this.height + 1) + `\u255A${top}\u255D`;
       let lines = this.lines();
       const scrollbar = {
         low: Math.max(-0.01, this.line / this.content.length) * this.height,
@@ -35302,6 +35312,7 @@ $ `, scrollToTop);
       });
       let data = response.json();
       console.log(data);
+      wrasse.messages = await data;
     })();
   };
   var hook = async ({ code, response }) => {
@@ -35362,10 +35373,7 @@ $ `, scrollToTop);
   };
   var set_hover_content = (text) => {
     if (typeof text === "undefined" || text === "") {
-      html.hover.shell.classList.add("hidden");
     } else {
-      html.hover.content.innerText = text;
-      html.hover.shell.classList.remove("hidden");
       perm.windows[0].reset().writeln(text || "");
     }
   };
@@ -35450,12 +35458,7 @@ $ `, scrollToTop);
             wrasse.window.write(ansiEscapes_default.cursorTo(0, node.line));
           },
           enter(link) {
-            hovered = true;
-            sleep(500).then(() => {
-              if (hovered) {
-                wrasse.set_hover_content(node.active ? "click to collapse" : "click to expand");
-              }
-            });
+            wrasse.set_hover_content(node.active ? "click to collapse" : "click to expand");
           },
           leave(link) {
             hovered = false;
@@ -35561,7 +35564,7 @@ $ `, scrollToTop);
         }
         for (const match of text.matchAll(wrasseGHC_default.regex.location)) {
           wrasse.window.addLink({
-            start: { x: range.start.x + match.index + 2, y: node.line },
+            start: { x: range.start.x + match.index + 1, y: node.line },
             end: { x: range.start.x + match.index + match[0].length + 1, y: node.line }
           }, {
             click(link) {
@@ -35574,6 +35577,27 @@ $ `, scrollToTop);
               }
               wrasse.set_hover_content(`not implemented, look at line ${line}, column ${colStart} to ${colEnd}
               ${x2}`);
+            },
+            leave(link) {
+              wrasse.set_hover_content();
+            }
+          });
+        }
+        for (const match of text.matchAll(wrasseGHC_default.regex.error)) {
+          wrasse.window.addLink({
+            start: { x: range.start.x + match.index + 2, y: node.line },
+            end: { x: range.start.x + match.index + match[0].length, y: node.line }
+          }, {
+            click(link) {
+            },
+            enter(link) {
+              const { code } = match.groups;
+              let msg = wrasse.messages.find((x2) => x2.errCode == code);
+              if (msg) {
+                wrasse.set_hover_content(JSON.stringify(msg, null, 2));
+              } else {
+                wrasse.set_hover_content(`No file found for error code ${code}`);
+              }
             },
             leave(link) {
               wrasse.set_hover_content();
@@ -35616,7 +35640,8 @@ $ `, scrollToTop);
     "switch_terminal": switch_terminal,
     "interactive_terminal": interactive_terminal,
     "set_hover_content": set_hover_content,
-    "block_mouse": block_mouse
+    "block_mouse": block_mouse,
+    "messages": []
   };
   var wrasse_default = wrasse;
 

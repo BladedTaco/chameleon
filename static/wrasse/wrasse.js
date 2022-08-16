@@ -125,6 +125,7 @@ let wrasse_setup = () => {
 
     document.addEventListener('mousemove', onMouseMove);
 
+    // load messages
     (async () => {
       let response = await fetch('/messages', {
         method: 'POST',
@@ -133,6 +134,8 @@ let wrasse_setup = () => {
       let data = response.json();
 
       console.log(data)
+
+      wrasse.messages = await data;
     })();
 }
 
@@ -224,11 +227,11 @@ const set_hover_content = (text) => {
   // hide/show based on if text is provided
   if (typeof text === 'undefined' || text === "") {
     // hide element
-    html.hover.shell.classList.add("hidden")
+    // html.hover.shell.classList.add("hidden")
   } else { 
     // update text and show element
-    html.hover.content.innerText = text
-    html.hover.shell.classList.remove("hidden")
+    // html.hover.content.innerText = text
+    // html.hover.shell.classList.remove("hidden")
     perm.windows[0].reset()
       .writeln(text || "");
   }
@@ -397,14 +400,9 @@ let interactive_terminal = (tree) => {
             wrasse.window.write(ESC.cursorTo(0, node.line));
           },
           enter(link) {
-            hovered = true;
-            sleep(500).then(() => {
-              if (hovered) {
-                wrasse.set_hover_content(node.active
-                  ? "click to collapse"
-                  : "click to expand")
-              }
-            })
+            wrasse.set_hover_content(node.active
+              ? "click to collapse"
+              : "click to expand")
           },
           leave(link) {
             hovered = false;
@@ -553,7 +551,7 @@ let interactive_terminal = (tree) => {
       for (const match of text.matchAll(wrasseGHC.regex.location)) {
         wrasse.window.addLink(
           { 
-            start: { x: range.start.x + match.index + 2,                    y: node.line },
+            start: { x: range.start.x + match.index + 1,                    y: node.line },
             end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line }
           },
           {
@@ -569,6 +567,33 @@ let interactive_terminal = (tree) => {
 
               wrasse.set_hover_content(`not implemented, look at line ${line}, column ${colStart} to ${colEnd}
               ${x}`)
+            },
+            leave(link) {
+              wrasse.set_hover_content()
+            }
+          } 
+        );
+      }
+
+      // Error code
+      for (const match of text.matchAll(wrasseGHC.regex.error)) {
+        wrasse.window.addLink(
+          { 
+            start: { x: range.start.x + match.index + 2,                    y: node.line },
+            end:   { x: range.start.x + match.index + match[0].length,  y: node.line }
+          },
+          {
+            click(link) {
+            },
+            enter(link) {
+              const {code} = match.groups;
+              let msg = wrasse.messages.find((x) => x.errCode == code);
+
+              if (msg) {
+                wrasse.set_hover_content(JSON.stringify(msg, null, 2))
+              } else {
+                wrasse.set_hover_content(`No file found for error code ${code}`)
+              }
             },
             leave(link) {
               wrasse.set_hover_content()
@@ -624,6 +649,7 @@ const wrasse = {
     "interactive_terminal" : interactive_terminal,
     "set_hover_content" : set_hover_content,
     "block_mouse" : block_mouse,
+    "messages" : []
 };
 
 /*

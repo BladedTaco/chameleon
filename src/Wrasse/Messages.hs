@@ -11,6 +11,7 @@ import System.IO
 import Wrasse.Types (GHCMessage (GHCMessage), def)
 import Wrasse.Instance
 import Data.List (isPrefixOf, isSuffixOf)
+import Data.List.Split (splitOn)
 import Control.Exception (try)
 
 import Wrasse.Util
@@ -41,7 +42,9 @@ readMessage f = do
         -- let (_:ttl:smry:svry:intr:ext:_:xs) = lines contents
         -- return $ GHCMessage ttl smry svry intr ext xs
         let c = lines contents
+        let [_, e, _] = splitOn "/" f
         return $ GHCMessage
+            e
             (get "title: " c)
             (get "summary: " c)
             (get "severity: " c)

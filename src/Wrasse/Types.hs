@@ -49,7 +49,8 @@ data GHCExample
 data GHCMessage
   = GHCMessage
       {
-        title :: String
+        errCode :: String
+      , title :: String
       , summary :: String
       , severity :: String
       , introduced :: String

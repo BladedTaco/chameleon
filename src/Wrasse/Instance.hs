@@ -33,7 +33,7 @@ instance (Default a) =>  Default (Tree a) where
     def = Node def []
 
 instance Default GHCMessage where
-    def = GHCMessage def def def def def def def def def
+    def = GHCMessage def def def def def def def def def def
 
 instance Default GHCResult where
     def = GHCResult def def
