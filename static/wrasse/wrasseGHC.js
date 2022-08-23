@@ -25,6 +25,7 @@ const wrasseGHC = {
         location : /generated\/Infile.hs:(?<line>[0-9]+):(?<colStart>[0-9]+)(?:\-(?<colEnd>[0-9]+))?/g,
         ambiguous : /‘(?<namespace>([a-zA-Z.0-9]+\.)+)(?<symbol>[a-zA-Z.0-9]+)’/g,
         error : /\[(?<code>GHC-[0-9]+)\]/g,
+        codeCommit : /\[\[commit\]\]/g,
     },
     map : termMap,
     

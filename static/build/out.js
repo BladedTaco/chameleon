@@ -34850,7 +34850,8 @@ problem_1 = Task1.sum (check [1..999])
       symbol: /‘(?<symbol>[a-zA-Z.0-9]+)’/g,
       location: /generated\/Infile.hs:(?<line>[0-9]+):(?<colStart>[0-9]+)(?:\-(?<colEnd>[0-9]+))?/g,
       ambiguous: /‘(?<namespace>([a-zA-Z.0-9]+\.)+)(?<symbol>[a-zA-Z.0-9]+)’/g,
-      error: /\[(?<code>GHC-[0-9]+)\]/g
+      error: /\[(?<code>GHC-[0-9]+)\]/g,
+      codeCommit: /\[\[commit\]\]/g
     },
     map: termMap
   };
@@ -35258,6 +35259,7 @@ problem_1 = Task1.sum (check [1..999])
   };
   var wrasse_setup = () => {
     console.log("wrasse init");
+    console.log(wrasse.editor);
     wrasse.terminal.open(html.terminal);
     wrasse.window = new terminalWindows_default.Window(WrasseTerminal, 2, 2, 10, 10);
     initialized = true;
@@ -35315,8 +35317,9 @@ $ `, scrollToTop);
       wrasse.messages = await data;
     })();
   };
-  var hook = async ({ code, response }) => {
+  var hook = async ({ code, response, editor }) => {
     let data = await response;
+    wrasse.editor = editor;
     console.log("back-end call");
     if (!initialized) {
       wrasse.setup();
@@ -35329,7 +35332,7 @@ $ `, scrollToTop);
     wrasse.data_1 = data;
     wrasse.data_2 = { ghc: ghc_data, chameleon: data };
     console.log(wrasse.tree);
-    switch_terminal(wrasse.data_0);
+    interactive_terminal(wrasse.tree);
   };
   var parse_tree = (tree) => {
     return {
@@ -35506,7 +35509,6 @@ $ `, scrollToTop);
                 }).reduce((acc, curr) => {
                   return acc + "\n" + curr;
                 });
-                await sleep(1e3);
                 console.log(code);
                 let response = await fetch("/ghc", {
                   method: "POST",
@@ -35514,9 +35516,16 @@ $ `, scrollToTop);
                 });
                 let data = await response.json();
                 console.log(data);
-                node.children.push(parse_tree(data.full));
+                const add = parse_tree(data.full);
+                const cd = add.children.find((x2) => x2.content === "GHC")?.children.find((x2) => x2.content === "code") ?? {};
+                cd.content = "code [[commit]]";
+                cd.code = code;
+                node.children.push(add);
                 finished = true;
+                const [l3, s3] = [wrasse.window.line, wrasse.window.scroll];
                 wrasse.interactive_terminal(wrasse.tree);
+                wrasse.window.line = l3;
+                wrasse.window.scroll = s3;
               })();
             },
             enter(link) {
@@ -35536,6 +35545,22 @@ $ `, scrollToTop);
             },
             enter(link) {
               wrasse.set_hover_content(wrasseGHC_default.map[match[0]]);
+            },
+            leave(link) {
+              wrasse.set_hover_content();
+            }
+          }, ansiEscapes_default.Colour.Grey);
+        }
+        for (const match of text.matchAll(wrasseGHC_default.regex.codeCommit)) {
+          wrasse.window.addLink({
+            start: { x: range.start.x + match.index + 2, y: node.line },
+            end: { x: range.start.x + match.index + match[0].length + 1, y: node.line }
+          }, {
+            click(link) {
+              wrasse.editor(node?.code);
+            },
+            enter(link) {
+              wrasse.set_hover_content("Commit code to main window");
             },
             leave(link) {
               wrasse.set_hover_content();
@@ -35641,7 +35666,8 @@ $ `, scrollToTop);
     "interactive_terminal": interactive_terminal,
     "set_hover_content": set_hover_content,
     "block_mouse": block_mouse,
-    "messages": []
+    "messages": [],
+    "editor": null_func
   };
   var wrasse_default = wrasse;
 
@@ -35678,7 +35704,12 @@ $ `, scrollToTop);
       body: text
     });
     let data = response.json();
-    wrasse_default.hook({ code: text, response: data });
+    const editor = (newCode) => {
+      const ret = dispatch(setEditorContent(newCode));
+      dispatch(typeCheckThunk(newCode));
+      return ret;
+    };
+    wrasse_default.hook({ code: text, response: data, editor });
     return data;
   });
   var toggleMultileExpThunk = createAsyncThunk("multipleExpThunk", async (_3, { dispatch, getState }) => {
@@ -35725,6 +35756,12 @@ $ `, scrollToTop);
     name: "editor",
     initialState,
     reducers: {
+      setEditorContent(state, action) {
+        if (action.payload < 0 || action.payload > code_default.length)
+          return state;
+        state.text = action.payload;
+        state.longestLine = pipe(split_default("\n"), map_default(split_default("")), map_default(length_default), sort_default(subtract_default), reverse_default, head_default)(action.payload);
+      },
       toEditMode: assoc_default("mode", editorModes.edit),
       toNormalMode: assoc_default("mode", editorModes.normal),
       toggleDebuggerStpes: modify_default("debuggingSteps", not_default),
@@ -35911,6 +35948,7 @@ $ `, scrollToTop);
     }
   });
   var {
+    setEditorContent,
     setStep,
     prevStep,
     nextStep,

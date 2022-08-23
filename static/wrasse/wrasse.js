@@ -4,7 +4,7 @@ import ESC from './ansiEscapes';
 import wrasseGHC from './wrasseGHC';
 import messages from './messages';
 import tWin from './terminalWindows' ;
-import {sleep, clamp, within, start_pattern_gen} from './util';
+import {sleep, clamp, within, start_pattern_gen, null_func} from './util';
 
 let initialized = false;
 const WrasseTerminal = new xTerminal({
@@ -56,6 +56,8 @@ const fitTerminal = () => {
 
 let wrasse_setup = () => {
     console.log('wrasse init')
+
+    console.log(wrasse.editor)
 
     wrasse.terminal.open(html.terminal);
 
@@ -139,9 +141,10 @@ let wrasse_setup = () => {
     })();
 }
 
-let hook = async ({code, response}) => {
+let hook = async ({code, response, editor}) => {
     let data = await response;
 
+    wrasse.editor = editor;
     console.log('back-end call')
     if (!initialized) {
         wrasse.setup()
@@ -160,7 +163,9 @@ let hook = async ({code, response}) => {
 
 
     console.log(wrasse.tree)
-    switch_terminal(wrasse.data_0)
+    // switch_terminal(wrasse.data_0)
+
+    interactive_terminal(wrasse.tree)
 }
 
 let parse_tree = (tree) => {
@@ -468,8 +473,6 @@ let interactive_terminal = (tree) => {
                   return acc + '\n' + curr;
                 })
 
-                await sleep(1000)
-
                 console.log(code)
 
                 let response = await fetch('/ghc', {
@@ -480,11 +483,23 @@ let interactive_terminal = (tree) => {
 
 
                 console.log(data)
-                node.children.push(parse_tree(data.full));
+                const add = parse_tree(data.full);
+                const cd = add.children
+                  .find(x => x.content === "GHC")
+                  ?.children.find(x => x.content === "code") 
+                  ?? {};
+                cd.content = "code [[commit]]"
+                cd.code = code
+                node.children.push(add);
 
                 finished = true;
 
+                const [l, s] = [wrasse.window.line, wrasse.window.scroll];
+
                 wrasse.interactive_terminal(wrasse.tree);
+
+                wrasse.window.line = l;
+                wrasse.window.scroll = s;
               })();
             },
             enter(link) {
@@ -510,6 +525,28 @@ let interactive_terminal = (tree) => {
               },
               enter(link) {
                 wrasse.set_hover_content(wrasseGHC.map[match[0]])
+              },
+              leave(link) {
+                wrasse.set_hover_content()
+              }
+            },
+            ESC.Colour.Grey
+          );
+      }
+
+      // code commit
+      for (const match of text.matchAll(wrasseGHC.regex.codeCommit)) {
+        wrasse.window.addLink(
+            { 
+              start: { x: range.start.x + match.index + 2,                    y: node.line },
+              end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line } 
+            },
+            {
+              click(link) {
+                wrasse.editor(node?.code)
+              },
+              enter(link) {
+                wrasse.set_hover_content("Commit code to main window")
               },
               leave(link) {
                 wrasse.set_hover_content()
@@ -649,7 +686,8 @@ const wrasse = {
     "interactive_terminal" : interactive_terminal,
     "set_hover_content" : set_hover_content,
     "block_mouse" : block_mouse,
-    "messages" : []
+    "messages" : [],
+    "editor" : null_func,
 };
 
 /*

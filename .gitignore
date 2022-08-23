@@ -1,7 +1,6 @@
 .DS_Store
 .stack-work
 node_modules
-generated/*
-generated/inFile.hs
+generated/
 .env
 .envrc

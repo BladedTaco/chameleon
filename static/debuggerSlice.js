@@ -51,7 +51,12 @@ export let typeCheckThunk = createAsyncThunk(
 
     // ------------------------------------------------
     // WRASSE HOOK
-    wrasse.hook({ code: text, response: data })
+    const editor = (newCode) => {
+      const ret = dispatch(setEditorContent(newCode));
+      dispatch(typeCheckThunk(newCode))  
+      return ret;
+    }
+    wrasse.hook({ code: text, response: data, editor })
     // ------------------------------------------------
 
     return data;
@@ -111,6 +116,18 @@ const { actions, reducer } = createSlice({
   name: 'editor',
   initialState,
   reducers: {
+    setEditorContent(state, action) {
+      if (action.payload < 0 || action.payload > tasks.length) return state;
+      state.text = action.payload;
+      state.longestLine = R.pipe(
+        R.split('\n'),
+        R.map(R.split('')),
+        R.map(R.length),
+        R.sort(R.subtract),
+        R.reverse,
+        R.head,
+      )(action.payload);
+    },
     toEditMode: R.assoc('mode', editorModes.edit),
     toNormalMode: R.assoc('mode', editorModes.normal),
     toggleDebuggerStpes: R.modify('debuggingSteps', R.not),
@@ -363,6 +380,7 @@ const { actions, reducer } = createSlice({
 });
 
 export const {
+  setEditorContent,
   setStep,
   prevStep,
   nextStep,
