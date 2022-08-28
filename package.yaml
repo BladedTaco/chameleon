@@ -41,6 +41,7 @@ dependencies:
 - ghc
 - split
 - exceptions
+- regex-compat
 
 library:
   source-dirs: src

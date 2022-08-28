@@ -65,6 +65,7 @@ library
     , lens
     , parsec
     , process
+    , regex-compat
     , scotty
     , silently
     , split
@@ -99,6 +100,7 @@ executable chameleon
     , lens
     , parsec
     , process
+    , regex-compat
     , scotty
     , silently
     , split

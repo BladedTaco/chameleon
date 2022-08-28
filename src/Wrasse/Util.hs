@@ -49,6 +49,27 @@ padZipGeneral _ b   c      []    = zip c (repeat b)
     Combinator Utilities --------------------------------------------------------------------------
 -}
 
+-- | checks && over a fanout transformation
+--
+-- >>> ((1 <) <&&> (< 10)) <$> [0, 5, 10]
+-- [False,True,False]
+--
+(<&&>) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
+(<&&>) = uncurry (&&) <...> (&&&)
+
+infixr 4 <&&>
+
+-- | checks || over a fanout transformation
+--
+-- >>> ((1 <) <||> (> 10)) <$> [0, 5, 10]
+-- [False,True,True]
+--
+(<||>) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
+(<||>) = uncurry (||) <...> (&&&)
+
+infixr 4 <||>
+
+
 -- | Doubly nested map
 --
 -- >>> (<$$$>) head [[[[1, 2], [3, 4]]], [[[5, 6], [7, 8]]]]
@@ -167,25 +188,6 @@ infixr 9 <.....>
 infixr 9 <......>
 
 
--- | checks && over a fanout transformation
---
--- >>> ((1 <) <&&> (< 10)) <$> [0, 5, 10]
--- [False,True,False]
---
-(<&&>) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
-(<&&>) = uncurry (&&) <...> (&&&)
-
-infixr 4 <&&>
-
--- | checks || over a fanout transformation
---
--- >>> ((1 <) <||> (> 10)) <$> [0, 5, 10]
--- [False,True,True]
---
-(<||>) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
-(<||>) = uncurry (||) <...> (&&&)
-
-infixr 4 <||>
 
 ------------------------------ Combinator Functions
 
