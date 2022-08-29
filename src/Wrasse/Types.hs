@@ -62,6 +62,16 @@ data GHCMessage
       }       
       deriving (Show, Generic)
 
+data GHCIInfo
+  = GHCIInfo
+    {
+      definition :: String
+    , symbolType :: String
+    , symbolName :: String
+    , symbolDefinedAt :: String
+    , symbolEtc :: String
+    }
+
       
     {-
     

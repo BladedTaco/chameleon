@@ -1,5 +1,4 @@
 {-# LANGUAGE ScopedTypeVariables, PackageImports  #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TupleSections #-}
 
 module Wrasse.Hook (hook) where
@@ -44,17 +43,19 @@ import Data.List (intercalate, isInfixOf)
 
 import Wrasse.Tree (multiLevel)
 import "ghc" Util (uncurry3, OverridingBool (Always))
-import Control.Lens (traverseOf, Each (each))
+import Control.Lens (traverseOf, Each (each), (^..))
 import Control.Arrow
 import Agda.Utils.Tuple (uncurry4)
 import DriverPipeline (preprocess)
 
 import Wrasse.Util
 
-import System.Process 
+import System.Process
 
 import Text.Regex
 import Data.Maybe
+import Data.List.Split
+import Control.Monad (ap)
 
 -- main :: IO ()
 -- main = do
@@ -88,15 +89,16 @@ toolHook :: String -> FilePath -> IO [(String, [(String, [String])])]
 toolHook modName file = do
   (GHCResult g1 g2) <- ghcHook modName file
   (h1, h2) <- hlintHook file
-  (GHCResult d1 d2) <- ghcAltHook modName file
+  (d1, d2, d3) <- ghcAltHook modName file
   return [
-    ("GHC", [ 
+    ("GHC", [
       ("output", g1),
       ("code", g2)
     ]),
     ("Defer GHC", [
-      ("output", d1),
-      ("code", d2)
+      ("symbols", d1),
+      ("output", d2),
+      ("code", d3)
     ]),
     ("HLint", [
       ("console", h1),
@@ -106,7 +108,7 @@ toolHook modName file = do
 
 
 -- runs GHC
-ghcAltHook :: String -> FilePath -> IO GHCResult
+ghcAltHook :: String -> FilePath -> IO ([String], [String], [String])
 ghcAltHook modName file = do
   -- ref <- liftIO $ newIORef "" -- make an output IO stream
   -- result <- runGhc (Just libdir) (processGHC ref modName file)
@@ -128,20 +130,27 @@ ghcAltHook modName file = do
 
   (_, sOut, sErr) <- readCreateProcessWithExitCode ((shell cmd) {new_session = True, create_group = True}) sIn
 
-  -- let reg = mkRegex "^(.*? )?([a-zA-Z]+?)(( :: )|( => )|( = ))"
-  let reg = mkRegex "^(.*? )?([^ ]+) :: "
+  let reg = mkRegex "^([^:= ]* )? *([^:=]+)(( :: )|( => )|( = ))"
 
-  let symbols = filter (isInfixOf " :: " <||> isInfixOf " => " <||> isInfixOf " = ") $ lines sOut 
-  let symbolNames = filter (/= "") $ map (last . fromMaybe ["", ""] . matchRegex reg) symbols
+  let symbols = filter (isInfixOf " :: " <||> isInfixOf " => " <||> isInfixOf " = ") $ lines sOut
+  let symbolNames = filter (/= ["", "", ""]) $ map (ap (:) $ trim <$.> take 2 . fromMaybe ["", ""] . matchRegex reg) symbols
 
-  let stdInNew = intercalate "\n" $ map (":info " ++) symbolNames
+  let stdInNew = intercalate "\n" $ map ((":info " ++) . last) symbolNames
 
   (_, sOut2, sErr2) <- readCreateProcessWithExitCode ((shell cmd) {new_session = True, create_group = True}) stdInNew
 
+  let symbols = padZipGeneral [""] "" symbolNames $ tail $ splitOn "ghci> " sOut2
+
+  let sym = (\([x1, x2, x3], x4) -> GHCIInfo x1 x2 x3 "" x4) <$> symbols
+
   fileContents <- readFile file
 
+
+  -- "class" "type" "data" "newtype"
+
   -- return $ uncurry GHCResult $ mapTup2 lines (intercalate "\n" (show <$> symbolNames) ++ sOut2 ++ "\n" ++ sErr, fileContents)
-  return $ uncurry GHCResult $ mapTup2 lines (sOut2 ++ "\n" ++ sErr ++ sErr2, fileContents)
+  -- return $ uncurry GHCResult $ mapTup2 lines (intercalate "\n" (show <$> symbols) ++ "\n\n\n" ++ sOut ++ "\n\n\n" ++ sOut2 ++ "\n" ++ sErr ++ sErr2, fileContents)
+  return (show <$> symbols, lines $ sErr ++ sErr2, lines fileContents)
 
 
 
@@ -262,7 +271,7 @@ processGHC ref moduleName path = do
     , maxErrors = Just 10
     }
   -- general flags
-  let gflags = [ 
+  let gflags = [
           Opt_KeepGoing
         , Opt_DiagnosticsShowCaret
         , Opt_PrintPotentialInstances
@@ -292,7 +301,7 @@ processGHC ref moduleName path = do
         targetContents = Nothing
       }
 
-  
+
   -- ref <- liftIO $ newIORef "" -- make an output IO stream
   -- result <- runGhc (Just libdir) (processGHC ref modName file)
   -- ref_out <- readIORef ref -- read the output IO stream
@@ -322,7 +331,7 @@ processGHC ref moduleName path = do
           let ParsedModule _ ps imprts anns = p
           case t of
             Left se -> do
-            
+
               -- return ("Failed at stage: type checking", show $ bagToList $ srcErrorMessages se, showSDocUnsafe $ ppr ps)
               -- return ("Failed at stage: type checking", show se, showSDocUnsafe $ ppr ps)
               return (b, show se, showSDocUnsafe $ ppr ps)
@@ -330,7 +339,7 @@ processGHC ref moduleName path = do
             Right tc -> do
               let TypecheckedModule _ (Just rs) ts modInfo (typeGlobalEnv, moduleDeets) = tc
               let hieFile = mkHieFile modSum typeGlobalEnv rs
-              
+
               return ("Program looks good","", showSDocUnsafe $ ppr ps)
               -- return ("Program looks good", intercalate "\n\n" [
               --   show rs

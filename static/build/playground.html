@@ -23,7 +23,7 @@
 </head>
 
 <body class="h-screen w-full">
-    <div class="mainGrid h-screen w-full overflow-y-auto">
+    <div class="mainGrid h-full w-full overflow-y-auto">
         <div id="react-root" class="w-full h-full overflow-y-scroll"></div>
 
         <div id="wrasse-hover" class="wrasse-hover hidden grow">
@@ -32,7 +32,7 @@
 
         <div id="wrasse-block" class="wrasse-block hidden"></div>
 
-        <div class="grow h-full w-full overflow-y-hidden">
+        <div class="grow h-full w-full overflow-y-auto">
             <div class="wrasse-button h-12 bg-gray-200 w-full flex">
                 <div id="wrasse_tree" class="bg-green-400 rounded-md px-2 h-8 my-2 leading-8 mx-2 text-center cursor-pointer"> Interactive Tree </div>
                 <div id="wrasse_0" class="bg-green-400 rounded-md px-2 h-8 my-2 leading-8 mx-2 text-center cursor-pointer"> Wrasse Only </div>
@@ -41,7 +41,7 @@
                 <div id="wrasse_3" class="bg-green-400 rounded-md px-2 h-8 my-2 leading-8 mx-2 text-center cursor-pointer"> Refit Terminal </div>
             </div>
         
-            <div class="wrasse-window grow h-full overflow-y-auto">
+            <div class="wrasse-window grow overflow-y-hidden">
                 <div id="terminal-container"></div>
             </div>
         </div>

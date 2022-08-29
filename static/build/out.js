@@ -35251,6 +35251,7 @@ problem_1 = Task1.sum (check [1..999])
   };
   var fitTerminal = () => {
     fitAddon.fit();
+    console.log(fitAddon.proposeDimensions());
     wrasse.window.resizable = true;
     wrasse.window.movable = true;
     wrasse.window.expand();
@@ -35332,6 +35333,9 @@ $ `, scrollToTop);
     wrasse.data_1 = data;
     wrasse.data_2 = { ghc: ghc_data, chameleon: data };
     console.log(wrasse.tree);
+    const symbols = wrasse.tree?.children.find((x2) => x2.content === "Defer GHC")?.children.find((x2) => x2.content === "symbols")?.children ?? [];
+    console.log(...symbols.map((x2) => JSON.parse(JSON.stringify(x2))));
+    console.log(symbols);
     interactive_terminal(wrasse.tree);
   };
   var parse_tree = (tree) => {
@@ -35517,7 +35521,7 @@ $ `, scrollToTop);
                 let data = await response.json();
                 console.log(data);
                 const add = parse_tree(data.full);
-                const cd = add.children.find((x2) => x2.content === "GHC")?.children.find((x2) => x2.content === "code") ?? {};
+                const cd = add?.children.find((x2) => x2.content === "GHC")?.children.find((x2) => x2.content === "code") ?? {};
                 cd.content = "code [[commit]]";
                 cd.code = code;
                 node.children.push(add);

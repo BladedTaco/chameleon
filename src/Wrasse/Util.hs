@@ -3,7 +3,13 @@ module Wrasse.Util where
 import Data.Map
 import Control.Arrow
 import Control.Monad
+import Data.Char (isSpace)
 
+-- >>> trim " abc "
+-- "abc"
+trim :: String -> String
+trim = f . f
+   where f = reverse . dropWhile isSpace
 
 -- >>> dropUntil (== 5) [1, 2, 3, 4, 5, 6, 7, 8, 9]
 -- [6,7,8,9]

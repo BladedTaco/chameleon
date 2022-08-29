@@ -47,6 +47,7 @@ let scrollToTop = () => {
 
 const fitTerminal = () => {
   fitAddon.fit();
+  console.log(fitAddon.proposeDimensions())
   wrasse.window.resizable = true;
   wrasse.window.movable = true;
   wrasse.window.expand();
@@ -161,9 +162,17 @@ let hook = async ({code, response, editor}) => {
     wrasse.data_1 = data
     wrasse.data_2 = { ghc: ghc_data, chameleon: data }
 
-
     console.log(wrasse.tree)
     // switch_terminal(wrasse.data_0)
+
+    const symbols = wrasse.tree
+      ?.children.find(x => x.content === "Defer GHC")
+      ?.children.find(x => x.content === "symbols") 
+      ?.children
+      ?? [];
+
+    console.log(...symbols.map(x => JSON.parse(JSON.stringify(x))));
+    console.log(symbols);
 
     interactive_terminal(wrasse.tree)
 }
@@ -484,8 +493,8 @@ let interactive_terminal = (tree) => {
 
                 console.log(data)
                 const add = parse_tree(data.full);
-                const cd = add.children
-                  .find(x => x.content === "GHC")
+                const cd = add
+                  ?.children.find(x => x.content === "GHC")
                   ?.children.find(x => x.content === "code") 
                   ?? {};
                 cd.content = "code [[commit]]"

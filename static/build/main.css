@@ -202,22 +202,6 @@ body {
 .split-gutter-col-1 {
     grid-column: 2;
 }
-
-.wrasse-window {
-    clear:both;
-    position:relative;
-    bottom:0;
-    height:100%;
-    width:100%;
-    background-color:#000000;
-    color:#FFFFFF;
-    font-size:16px;
-    text-align:left;
-}
-
-.wrasse-button {
-    position:relative; 
-}
 /* New Editor  */
 
 
@@ -492,11 +476,27 @@ body {
 	color: #d8d8d8;
 }
 
-.wrasse-block{
+.wrasse-block {
 	position:absolute;
 	background-color: #0d4e57;
 	transform:translate(-50%, -50%);
 	width:20px;
 	height:20px;
 	z-index: 100000;
-  }
+}
+
+.wrasse-window {
+    clear:both;
+    position:absolute;
+    bottom:0;
+    height:100%;
+    width:100%;
+    background-color:#000000;
+    color:#FFFFFF;
+    font-size:16px;
+    text-align:left;
+}
+
+.wrasse-button {
+    position:relative; 
+}
