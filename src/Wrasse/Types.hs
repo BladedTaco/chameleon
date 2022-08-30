@@ -68,9 +68,10 @@ data GHCIInfo
       definition :: String
     , symbolType :: String
     , symbolName :: String
-    , symbolDefinedAt :: String
+    , symbolDefinedAt :: [String]
     , symbolEtc :: String
     }
+    deriving (Show, Generic)
 
       
     {-

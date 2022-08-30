@@ -34848,8 +34848,8 @@ problem_1 = Task1.sum (check [1..999])
     regex: {
       keyword: new RegExp(Object.keys(termMap).map((x2) => `(${x2})`).join("|"), "gi"),
       symbol: /‘(?<symbol>[a-zA-Z.0-9]+)’/g,
-      location: /generated\/Infile.hs:(?<line>[0-9]+):(?<colStart>[0-9]+)(?:\-(?<colEnd>[0-9]+))?/g,
-      ambiguous: /‘(?<namespace>([a-zA-Z.0-9]+\.)+)(?<symbol>[a-zA-Z.0-9]+)’/g,
+      location: /generated\/Infile.hs:(?<line>[0-9]+)(?:\-(?<lineEnd>[0-9]+))?:(?<colStart>[0-9]+)(?:\-(?<colEnd>[0-9]+))?/g,
+      ambiguous: /(?:^(?:either|or) )‘(?<namespace>([a-zA-Z.0-9]+\.)+)(?<symbol>[a-zA-Z.0-9]+)’/g,
       error: /\[(?<code>GHC-[0-9]+)\]/g,
       codeCommit: /\[\[commit\]\]/g
     },
@@ -35334,8 +35334,8 @@ $ `, scrollToTop);
     wrasse.data_2 = { ghc: ghc_data, chameleon: data };
     console.log(wrasse.tree);
     const symbols = wrasse.tree?.children.find((x2) => x2.content === "Defer GHC")?.children.find((x2) => x2.content === "symbols")?.children ?? [];
-    console.log(...symbols.map((x2) => JSON.parse(JSON.stringify(x2))));
-    console.log(symbols);
+    wrasse.perm.symbols = symbols.map((x2) => JSON.parse(x2.content));
+    console.log(wrasse.perm.symbols);
     interactive_terminal(wrasse.tree);
   };
   var parse_tree = (tree) => {
@@ -35483,7 +35483,7 @@ $ `, scrollToTop);
         for (const match of text.matchAll(wrasseGHC_default.regex.ambiguous)) {
           const { namespace, symbol } = match.groups;
           wrasse.window.addLink({
-            start: { x: range.start.x + match.index + 3, y: node.line },
+            start: { x: range.start.x + match.index + 1, y: node.line },
             end: { x: range.start.x + match.index + match[0].length, y: node.line }
           }, {
             click(link) {
@@ -35533,7 +35533,7 @@ $ `, scrollToTop);
               })();
             },
             enter(link) {
-              wrasse.set_hover_content(`See what happens if you use '${symbol}'`);
+              wrasse.set_hover_content(`See what happens if you use '${namespace + symbol}'`);
             },
             leave(link) {
               wrasse.set_hover_content();
@@ -35572,6 +35572,8 @@ $ `, scrollToTop);
           }, ansiEscapes_default.Colour.Grey);
         }
         for (const match of text.matchAll(wrasseGHC_default.regex.symbol)) {
+          const { symbol } = match.groups;
+          const sym = wrasse.perm.symbols.find((x2) => x2.symbolName === symbol) ?? {};
           wrasse.window.addLink({
             start: { x: range.start.x + match.index + 2, y: node.line },
             end: { x: range.start.x + match.index + match[0].length, y: node.line }
@@ -35579,12 +35581,22 @@ $ `, scrollToTop);
             click(link) {
             },
             enter(link) {
-              const { symbol } = match.groups;
+              let codeline = "";
+              const match2 = sym?.symbolDefinedAt?.[1]?.matchAll(wrasseGHC_default.regex.location)?.next()?.value;
+              console.log(match2);
+              if (match2?.groups) {
+                const { line, colStart, colEnd } = match2.groups;
+                if (wrasse?.data_0?.ghc?.code) {
+                  codeline = wrasse?.data_0?.ghc?.code[line - 1];
+                }
+              }
               wrasse.set_hover_content(`${symbol}
-                
-                type: TODO
-                defined at: TODO
-                etc.: TODO`);
+    type: ${sym?.symbolType || "constant"}
+    signature: ${sym?.definition || symbol}
+    defined ${sym?.symbolDefinedAt?.[0] === "in" ? "in package" : "at"}: ${sym?.symbolDefinedAt?.[1] || "unknown"}
+` + (codeline ? `     \u255A\u2550\u25BA ${codeline}
+` : "") + `    etc.: ${sym?.symbolEtc}
+`);
             },
             leave(link) {
               wrasse.set_hover_content();
@@ -35653,7 +35665,8 @@ $ `, scrollToTop);
   var perm = {
     "disposables": [],
     "keywords": [],
-    "windows": []
+    "windows": [],
+    "symbols": []
   };
   var wrasse = {
     "html": html,

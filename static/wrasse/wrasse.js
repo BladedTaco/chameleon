@@ -37,9 +37,6 @@ const html = {
     block: document.getElementById("wrasse-block"),
 }
 
-
-
-
 let scrollToTop = () => {
   wrasse.window.line = 0;
   wrasse.window.requestDraw();
@@ -165,16 +162,19 @@ let hook = async ({code, response, editor}) => {
     console.log(wrasse.tree)
     // switch_terminal(wrasse.data_0)
 
-    const symbols = wrasse.tree
-      ?.children.find(x => x.content === "Defer GHC")
-      ?.children.find(x => x.content === "symbols") 
-      ?.children
-      ?? [];
-
-    console.log(...symbols.map(x => JSON.parse(JSON.stringify(x))));
-    console.log(symbols);
+    wrasse.tree.symbols = parse_symbols(wrasse.tree)
 
     interactive_terminal(wrasse.tree)
+}
+
+let parse_symbols = (tree) => {
+  const symbols = tree
+  ?.children.find(x => x.content === "Defer GHC")
+  ?.children.find(x => x.content === "symbols") 
+  ?.children
+  ?? [];
+
+  return symbols.map(x => JSON.parse(x.content))
 }
 
 let parse_tree = (tree) => {
@@ -287,6 +287,14 @@ let interactive_terminal = (tree) => {
   perm.windows.push(hoverWin);
 
   let curr_line = 0;
+
+  // sets the head of each subtree in the recursive terminal
+  const setHead = (x, head) => {
+    if (x.content === "Root" && x !== head) {
+      x.head = head;
+      x.children.forEach(el => setHead(el, head));
+    }
+  }
 
   const write_text = (node, level, write = false) => {
     let line = curr_line
@@ -440,7 +448,7 @@ let interactive_terminal = (tree) => {
         const {namespace, symbol} = match.groups;
         wrasse.window.addLink(
           { 
-            start: { x: range.start.x + match.index + 3,                y: node.line },
+            start: { x: range.start.x + match.index + 1,                y: node.line },
             end:   { x: range.start.x + match.index + match[0].length,  y: node.line } 
           },
           {
@@ -493,6 +501,10 @@ let interactive_terminal = (tree) => {
 
                 console.log(data)
                 const add = parse_tree(data.full);
+
+                add.symbols = parse_symbols(add);
+                setHead(add, add);
+
                 const cd = add
                   ?.children.find(x => x.content === "GHC")
                   ?.children.find(x => x.content === "code") 
@@ -512,7 +524,7 @@ let interactive_terminal = (tree) => {
               })();
             },
             enter(link) {
-              wrasse.set_hover_content(`See what happens if you use '${symbol}'`)
+              wrasse.set_hover_content(`See what happens if you use '${namespace + symbol}'`)
             },
             leave(link) {
               wrasse.set_hover_content()
@@ -567,7 +579,10 @@ let interactive_terminal = (tree) => {
 
       // symbols
       for (const match of text.matchAll(wrasseGHC.regex.symbol)) {
-        wrasse.window.addLink(
+        const {symbol} = match.groups;
+        const sym = node.head.symbols.find(x => x.symbolName === symbol);
+        if (sym) {
+          wrasse.window.addLink(
             { 
               start: { x: range.start.x + match.index + 2,                y: node.line },
               end:   { x: range.start.x + match.index + match[0].length,  y: node.line } 
@@ -576,14 +591,25 @@ let interactive_terminal = (tree) => {
               click(link) {
               },
               enter(link) {
-                const {symbol} = match.groups;
-                
+                let codeline = ""
 
-                wrasse.set_hover_content(`${symbol}
-                
-                type: TODO
-                defined at: TODO
-                etc.: TODO`)
+                const match2 = sym?.symbolDefinedAt?.[1]?.matchAll(wrasseGHC.regex.location)?.next()?.value
+                console.log(match2)
+                if (match2?.groups) {
+                  const {line, colStart, colEnd} = match2.groups;
+                  
+                  if (wrasse?.data_0?.ghc?.code) {
+                    codeline = wrasse?.data_0?.ghc?.code[line-1];
+                  }
+                }
+
+                wrasse.set_hover_content(`${symbol}\n` +
+                  `    type: ${sym?.symbolType || "constant"}\n` +
+                  `    signature: ${sym?.definition || symbol}\n` +
+                  `    defined ${sym?.symbolDefinedAt?.[0] === "in" ? "in package" : "at"}: ${sym?.symbolDefinedAt?.[1] || "unknown"}\n` +
+                  (codeline ? `     ╚═► ${codeline}\n` : "") +
+                  `    etc.: ${sym?.symbolEtc}\n`
+                )
               },
               leave(link) {
                 wrasse.set_hover_content()
@@ -591,6 +617,7 @@ let interactive_terminal = (tree) => {
             },
             ESC.Colour.LightGrey
           );
+        }
       }
 
       // code locations
@@ -657,6 +684,8 @@ let interactive_terminal = (tree) => {
   register_links(tree, 0)
 
   register_keywords(tree)
+
+  setHead(tree, tree)
 }
 
 

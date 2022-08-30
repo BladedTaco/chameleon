@@ -40,3 +40,6 @@ instance Default GHCResult where
 
 instance Default WrasseResult where
     def = WrasseResult def def def def def def
+
+instance Default GHCIInfo where
+    def = GHCIInfo def def def def def

@@ -56,6 +56,10 @@ import Text.Regex
 import Data.Maybe
 import Data.List.Split
 import Control.Monad (ap)
+import Data.Aeson (encode)
+import Data.ByteString.Lazy.UTF8 (toString)
+import JsonInstance
+import Data.Maybe (fromMaybe)
 
 -- main :: IO ()
 -- main = do
@@ -139,9 +143,13 @@ ghcAltHook modName file = do
 
   (_, sOut2, sErr2) <- readCreateProcessWithExitCode ((shell cmd) {new_session = True, create_group = True}) stdInNew
 
-  let symbols = padZipGeneral [""] "" symbolNames $ tail $ splitOn "ghci> " sOut2
+  let symbols = padZipGeneral ["", "", ""] "" symbolNames $ tail $ splitOn "ghci> " sOut2
 
-  let sym = (\([x1, x2, x3], x4) -> GHCIInfo x1 x2 x3 "" x4) <$> symbols
+  let defReg = mkRegex "Defined (at|in) ([^ ]*)"
+
+  let definedAt = fromMaybe ["", ""] . matchRegex defReg
+
+  let sym = (\(x1, x4) -> GHCIInfo (head x1) (x1!!1) (x1!!2) (definedAt x4) x4) <$> symbols
 
   fileContents <- readFile file
 
@@ -150,7 +158,7 @@ ghcAltHook modName file = do
 
   -- return $ uncurry GHCResult $ mapTup2 lines (intercalate "\n" (show <$> symbolNames) ++ sOut2 ++ "\n" ++ sErr, fileContents)
   -- return $ uncurry GHCResult $ mapTup2 lines (intercalate "\n" (show <$> symbols) ++ "\n\n\n" ++ sOut ++ "\n\n\n" ++ sOut2 ++ "\n" ++ sErr ++ sErr2, fileContents)
-  return (show <$> symbols, lines $ sErr ++ sErr2, lines fileContents)
+  return (toString . encode <$> sym, lines $ sErr ++ sErr2, lines fileContents)
 
 
 
