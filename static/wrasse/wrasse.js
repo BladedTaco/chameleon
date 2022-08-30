@@ -290,7 +290,7 @@ let interactive_terminal = (tree) => {
 
   // sets the head of each subtree in the recursive terminal
   const setHead = (x, head) => {
-    if (x.content === "Root" && x !== head) {
+    if (x.content !== "Root" || x === head) {
       x.head = head;
       x.children.forEach(el => setHead(el, head));
     }
@@ -594,7 +594,6 @@ let interactive_terminal = (tree) => {
                 let codeline = ""
 
                 const match2 = sym?.symbolDefinedAt?.[1]?.matchAll(wrasseGHC.regex.location)?.next()?.value
-                console.log(match2)
                 if (match2?.groups) {
                   const {line, colStart, colEnd} = match2.groups;
                   
@@ -678,14 +677,13 @@ let interactive_terminal = (tree) => {
     }
     node?.children.forEach(register_keywords)
   }
+  setHead(tree, tree)
 
   write_text(tree, 0, true);
 
   register_links(tree, 0)
 
   register_keywords(tree)
-
-  setHead(tree, tree)
 }
 
 

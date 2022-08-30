@@ -35333,10 +35333,12 @@ $ `, scrollToTop);
     wrasse.data_1 = data;
     wrasse.data_2 = { ghc: ghc_data, chameleon: data };
     console.log(wrasse.tree);
-    const symbols = wrasse.tree?.children.find((x2) => x2.content === "Defer GHC")?.children.find((x2) => x2.content === "symbols")?.children ?? [];
-    wrasse.perm.symbols = symbols.map((x2) => JSON.parse(x2.content));
-    console.log(wrasse.perm.symbols);
+    wrasse.tree.symbols = parse_symbols(wrasse.tree);
     interactive_terminal(wrasse.tree);
+  };
+  var parse_symbols = (tree) => {
+    const symbols = tree?.children.find((x2) => x2.content === "Defer GHC")?.children.find((x2) => x2.content === "symbols")?.children ?? [];
+    return symbols.map((x2) => JSON.parse(x2.content));
   };
   var parse_tree = (tree) => {
     return {
@@ -35396,6 +35398,12 @@ $ `, scrollToTop);
     let hoverWin = new terminalWindows_default.Window(wrasse.terminal, wrasse.terminal.cols / 2, 0, wrasse.terminal.cols / 2 - 2, wrasse.terminal.rows / 2, { movable: true });
     perm.windows.push(hoverWin);
     let curr_line = 0;
+    const setHead = (x2, head2) => {
+      if (x2.content !== "Root" || x2 === head2) {
+        x2.head = head2;
+        x2.children.forEach((el) => setHead(el, head2));
+      }
+    };
     const write_text = (node, level, write = false) => {
       let line = curr_line;
       let prefix2 = "  ".repeat(level);
@@ -35521,6 +35529,8 @@ $ `, scrollToTop);
                 let data = await response.json();
                 console.log(data);
                 const add = parse_tree(data.full);
+                add.symbols = parse_symbols(add);
+                setHead(add, add);
                 const cd = add?.children.find((x2) => x2.content === "GHC")?.children.find((x2) => x2.content === "code") ?? {};
                 cd.content = "code [[commit]]";
                 cd.code = code;
@@ -35573,35 +35583,39 @@ $ `, scrollToTop);
         }
         for (const match of text.matchAll(wrasseGHC_default.regex.symbol)) {
           const { symbol } = match.groups;
-          const sym = wrasse.perm.symbols.find((x2) => x2.symbolName === symbol) ?? {};
-          wrasse.window.addLink({
-            start: { x: range.start.x + match.index + 2, y: node.line },
-            end: { x: range.start.x + match.index + match[0].length, y: node.line }
-          }, {
-            click(link) {
-            },
-            enter(link) {
-              let codeline = "";
-              const match2 = sym?.symbolDefinedAt?.[1]?.matchAll(wrasseGHC_default.regex.location)?.next()?.value;
-              console.log(match2);
-              if (match2?.groups) {
-                const { line, colStart, colEnd } = match2.groups;
-                if (wrasse?.data_0?.ghc?.code) {
-                  codeline = wrasse?.data_0?.ghc?.code[line - 1];
+          console.log(node.head);
+          console.log(node.head.symbols);
+          const sym = node.head.symbols.find((x2) => x2.symbolName === symbol);
+          if (sym) {
+            wrasse.window.addLink({
+              start: { x: range.start.x + match.index + 2, y: node.line },
+              end: { x: range.start.x + match.index + match[0].length, y: node.line }
+            }, {
+              click(link) {
+              },
+              enter(link) {
+                let codeline = "";
+                const match2 = sym?.symbolDefinedAt?.[1]?.matchAll(wrasseGHC_default.regex.location)?.next()?.value;
+                console.log(match2);
+                if (match2?.groups) {
+                  const { line, colStart, colEnd } = match2.groups;
+                  if (wrasse?.data_0?.ghc?.code) {
+                    codeline = wrasse?.data_0?.ghc?.code[line - 1];
+                  }
                 }
-              }
-              wrasse.set_hover_content(`${symbol}
+                wrasse.set_hover_content(`${symbol}
     type: ${sym?.symbolType || "constant"}
     signature: ${sym?.definition || symbol}
     defined ${sym?.symbolDefinedAt?.[0] === "in" ? "in package" : "at"}: ${sym?.symbolDefinedAt?.[1] || "unknown"}
 ` + (codeline ? `     \u255A\u2550\u25BA ${codeline}
 ` : "") + `    etc.: ${sym?.symbolEtc}
 `);
-            },
-            leave(link) {
-              wrasse.set_hover_content();
-            }
-          }, ansiEscapes_default.Colour.LightGrey);
+              },
+              leave(link) {
+                wrasse.set_hover_content();
+              }
+            }, ansiEscapes_default.Colour.LightGrey);
+          }
         }
         for (const match of text.matchAll(wrasseGHC_default.regex.location)) {
           wrasse.window.addLink({
@@ -35648,6 +35662,7 @@ $ `, scrollToTop);
       }
       node?.children.forEach(register_keywords);
     };
+    setHead(tree, tree);
     write_text(tree, 0, true);
     register_links(tree, 0);
     register_keywords(tree);
@@ -35665,8 +35680,7 @@ $ `, scrollToTop);
   var perm = {
     "disposables": [],
     "keywords": [],
-    "windows": [],
-    "symbols": []
+    "windows": []
   };
   var wrasse = {
     "html": html,
