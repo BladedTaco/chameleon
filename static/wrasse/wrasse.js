@@ -381,7 +381,7 @@ let interactive_terminal = (tree) => {
           click(link) {
             // remove all link providers except this one
             link.window.links
-              .filter(x => x !== link)
+              // .filter(x => x !== link)
               .forEach(x => {
                 x.highlight.fg.seq = ""
                 x.highlight.bg.seq = ""
@@ -389,7 +389,8 @@ let interactive_terminal = (tree) => {
                 x.highlight.resetBG.seq = ""
               });
             link.window.content.forEach(line => line.esc = line.esc.filter(esc => esc.seq !== ""))
-            link.window.links = [link]
+            // link.window.links = [link]
+            link.window.links = []
 
             // fix terminal output
             clean_lines(node, level)
@@ -400,7 +401,8 @@ let interactive_terminal = (tree) => {
             // update tree state
             curr_line = 0
             write_text(tree, 0, false)
-            register_links(tree, 0, node.line);
+            // register_links(tree, 0, node.line);
+            register_links(tree, 0);
 
             // perm.keywords.forEach(x => x.dispose())
             // perm.keywords = [];

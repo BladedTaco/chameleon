@@ -35951,19 +35951,19 @@ $ `, scrollToTop);
         let hovered = false;
         wrasse.window.addLink(node.link.range, {
           click(link) {
-            link.window.links.filter((x2) => x2 !== link).forEach((x2) => {
+            link.window.links.forEach((x2) => {
               x2.highlight.fg.seq = "";
               x2.highlight.bg.seq = "";
               x2.highlight.resetFG.seq = "";
               x2.highlight.resetBG.seq = "";
             });
             link.window.content.forEach((line) => line.esc = line.esc.filter((esc) => esc.seq !== ""));
-            link.window.links = [link];
+            link.window.links = [];
             clean_lines(node, level);
             node.active = !node.active;
             curr_line = 0;
             write_text(tree, 0, false);
-            register_links(tree, 0, node.line);
+            register_links(tree, 0);
             register_keywords(tree);
             wrasse.window.write(ansiEscapes_default.cursorTo(0, node.line));
           },
