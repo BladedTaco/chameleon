@@ -4,7 +4,8 @@ import ESC from './ansiEscapes';
 import wrasseGHC from './wrasseGHC';
 import messages from './messages';
 import tWin from './terminalWindows' ;
-import {sleep, clamp, within, start_pattern_gen, null_func} from './util';
+import {sleep, clamp, within, start_pattern_gen, null_func, deep_copy, debounce} from './util';
+import Split from 'split-grid';
 
 let initialized = false;
 const WrasseTerminal = new xTerminal({
@@ -23,13 +24,8 @@ WrasseTerminal.loadAddon(fitAddon);
 
 const html = {
     terminal : document.getElementById('terminal-container'),
-    buttons : [
-      document.getElementById('wrasse_0'),
-      document.getElementById('wrasse_1'), 
-      document.getElementById('wrasse_2'), 
-      document.getElementById('wrasse_3'), 
-      document.getElementById("wrasse_tree")
-    ],
+    buttons : {
+    },
     hover : {
       shell : document.getElementById("wrasse-hover"),
       content : document.getElementById("wrasse-hover-content"),
@@ -39,12 +35,15 @@ const html = {
 
 let scrollToTop = () => {
   wrasse.window.line = 0;
+  wrasse.window.scroll = 0;
   wrasse.window.requestDraw();
 }
 
 const fitTerminal = () => {
-  fitAddon.fit();
-  console.log(fitAddon.proposeDimensions())
+  const dims = fitAddon.proposeDimensions()
+  if (wrasse.terminal.rows != dims.rows || wrasse.terminal.cols != dims.cols) {
+    fitAddon.fit();
+  }
   wrasse.window.resizable = true;
   wrasse.window.movable = true;
   wrasse.window.expand();
@@ -53,6 +52,17 @@ const fitTerminal = () => {
 }
 
 let wrasse_setup = () => {
+
+
+    Split({
+        minSize: 100,
+        snapOffset: 10,
+        rowGutters: [{
+            track: 1,
+            element: document.querySelector('.gutter-row-1'),
+        }]
+    })
+
     console.log('wrasse init')
 
     console.log(wrasse.editor)
@@ -68,46 +78,13 @@ let wrasse_setup = () => {
     wrasse.terminal.modes.mouseTrackingMode = "any"
     wrasse.terminal.modes.wraparoundMode = true;
 
-    html.buttons[0].addEventListener('click', _ => {
-        wrasse.switch_terminal(wrasse.data_0)
-    });
-
-    html.buttons[1].addEventListener('click', _ => {
-        wrasse.switch_terminal(wrasse.data_1)
-    });
-
-    html.buttons[2].addEventListener('click', _ => {
-        wrasse.switch_terminal(wrasse.data_2)
-        let win = new tWin.Window(wrasse.terminal, 5, 5, 10, 5, {movable : true, scrollable : true});
-        win.content = [
-          "1234567",
-          " - ", 
-          "23432423423423",
-          "sdfdsfdf",
-          "",
-          ",",
-          "sdfd",
-          "34"
-        ]
-        win.draw();
-        perm.windows.push(win);
-    });
-
-    html.buttons[3].addEventListener('click', _ => {
-        fitTerminal();
-    });
-
-    html.buttons[4].addEventListener('click', _ => {
-      wrasse.interactive_terminal(wrasse.tree)
-    });
-
     // Make the terminal's size and geometry fit the size of #terminal-container
     fitTerminal();
-    // wrasse.terminal.resize(wrasse.terminal.cols, 1000);
+
+    new ResizeObserver( debounce(() => fitTerminal(), 100)).observe(html.terminal)
 
     // write starter text
-    // wrasse.window.write('Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ', scrollToTop)
-    wrasse.window.write(`Hello from ${ESC.colouredText(ESC.Colour.Red, ESC.Colour.Blue, "xterm.js")}m \n$ `, scrollToTop)
+    wrasse.terminal.write(`Hello from ${ESC.colouredText(ESC.Colour.Red, ESC.Colour.Blue, "xterm.js")}$ ` + `\rHello from ${ESC.colouredText(ESC.Colour.Blue, ESC.Colour.Red, `a${ESC.cursorTo(20, 2)}`)}\n$ `, scrollToTop)
 
     // setup mouse followers
     const onMouseMove = (e) =>{
@@ -395,6 +372,7 @@ let interactive_terminal = (tree) => {
         end:   { x: level*2 + 2 + node.content.length, y: node.line } 
       },
     }
+
     if (node.children.length > 0 && node.line != ignoreLine) {
       let hovered = false;
       wrasse.window.addLink(
@@ -402,6 +380,15 @@ let interactive_terminal = (tree) => {
         {
           click(link) {
             // remove all link providers except this one
+            link.window.links
+              .filter(x => x !== link)
+              .forEach(x => {
+                x.highlight.fg.seq = ""
+                x.highlight.bg.seq = ""
+                x.highlight.resetFG.seq = ""
+                x.highlight.resetBG.seq = ""
+              });
+            link.window.content.forEach(line => line.esc = line.esc.filter(esc => esc.seq !== ""))
             link.window.links = [link]
 
             // fix terminal output
@@ -415,8 +402,8 @@ let interactive_terminal = (tree) => {
             write_text(tree, 0, false)
             register_links(tree, 0, node.line);
 
-            perm.keywords.forEach(x => x.dispose())
-            perm.keywords = [];
+            // perm.keywords.forEach(x => x.dispose())
+            // perm.keywords = [];
             register_keywords(tree)
 
             wrasse.window.write(ESC.cursorTo(0, node.line));
@@ -432,7 +419,7 @@ let interactive_terminal = (tree) => {
           }
         },
         ESC.Colour.Blue
-      );
+      ).treelink = true;
     }
 
     if (node.active) {
@@ -537,44 +524,44 @@ let interactive_terminal = (tree) => {
       // keywords
       for (const match of text.matchAll(wrasseGHC.regex.keyword)) {
         wrasse.window.addLink(
-            { 
-              start: { x: range.start.x + match.index + 2,                    y: node.line },
-              end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line } 
+          { 
+            start: { x: range.start.x + match.index + 2,                    y: node.line },
+            end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line } 
+          },
+          {
+            click(link) {
             },
-            {
-              click(link) {
-              },
-              enter(link) {
-                wrasse.set_hover_content(wrasseGHC.map[match[0]])
-              },
-              leave(link) {
-                wrasse.set_hover_content()
-              }
+            enter(link) {
+              wrasse.set_hover_content(wrasseGHC.map[match[0]])
             },
-            ESC.Colour.Grey
-          );
+            leave(link) {
+              wrasse.set_hover_content()
+            }
+          },
+          ESC.Colour.Grey
+        );
       }
 
       // code commit
       for (const match of text.matchAll(wrasseGHC.regex.codeCommit)) {
         wrasse.window.addLink(
-            { 
-              start: { x: range.start.x + match.index + 2,                    y: node.line },
-              end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line } 
+          { 
+            start: { x: range.start.x + match.index + 2,                    y: node.line },
+            end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line } 
+          },
+          {
+            click(link) {
+              wrasse.editor(node?.code)
             },
-            {
-              click(link) {
-                wrasse.editor(node?.code)
-              },
-              enter(link) {
-                wrasse.set_hover_content("Commit code to main window")
-              },
-              leave(link) {
-                wrasse.set_hover_content()
-              }
+            enter(link) {
+              wrasse.set_hover_content("Commit code to main window")
             },
-            ESC.Colour.Grey
-          );
+            leave(link) {
+              wrasse.set_hover_content()
+            }
+          },
+          ESC.Colour.Grey
+        );
       }
 
       // symbols
@@ -675,7 +662,9 @@ let interactive_terminal = (tree) => {
       }
 
     }
-    node?.children.forEach(register_keywords)
+    if (node.active) {
+      node?.children.forEach(register_keywords)
+    }
   }
   setHead(tree, tree)
 

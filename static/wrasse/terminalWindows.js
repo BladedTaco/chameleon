@@ -63,31 +63,31 @@ class Link {
 
     setHighlight(multiplier) {
         this.highlight.bg.seq = ESC.colourSeq(this.colour.mul(multiplier), false);
-        this.window.links
-            // sort by x
-            .sort((a, b) =>
-                a.range.start.x - b.range.start.x
-            )
-            // sort by y
-            .sort((a, b) => 
-                a.range.start.y - b.range.start.y
-            )
-            .reduce((acc, curr) => {
+        // this.window.links
+        //     // sort by x
+        //     .sort((a, b) =>
+        //         a.range.start.x - b.range.start.x
+        //     )
+        //     // sort by y
+        //     .sort((a, b) => 
+        //         a.range.start.y - b.range.start.y
+        //     )
+        //     .reduce((acc, curr) => {
 
-                // filter out previous links which dont run past the end of this one
-                acc = acc.filter(el => 
-                    (el.range.end.y >= curr.range.end.y)
-                    && (el.range.end.x > curr.range.end.x)
-                );
+        //         // filter out previous links which dont run past the end of this one
+        //         acc = acc.filter(el => 
+        //             (el.range.end.y >= curr.range.end.y)
+        //             && (el.range.end.x > curr.range.end.x)
+        //         );
 
-                // match colour from last link at end of current link
-                curr.highlight.resetFG.seq = (last(acc)?.highlight.fg.seq) ?? "\u001b[39m";
-                curr.highlight.resetBG.seq = (last(acc)?.highlight.bg.seq) ?? "\u001b[49m";
+        //         // match colour from last link at end of current link
+        //         curr.highlight.resetFG.seq = (last(acc)?.highlight.fg.seq) ?? "\u001b[39m";
+        //         curr.highlight.resetBG.seq = (last(acc)?.highlight.bg.seq) ?? "\u001b[49m";
 
-                // add curr to accumulator
-                return [...acc, curr];
-            }, []);
-        this.window.requestDraw();
+        //         // add curr to accumulator
+        //         return [...acc, curr];
+        //     }, []);
+        // this.window.requestDraw();
     }
 }
 
@@ -216,7 +216,7 @@ class Window {
         
 
         // make link active if not already
-        if (activeLink?.active == false) {
+        if (activeLink?.active === false) {
             activeLink.funcs.enter(activeLink)
             activeLink.active = true;
             this.requestDraw();
@@ -260,9 +260,14 @@ class Window {
     */
 
     addLink(range, funcs, colour) {
-        this.links.push(new Link(
+        if (colour?.r == 190) {
+            console.log("MADE HERE")
+        }
+        let link = new Link(
             this, range, funcs, colour
-        ));
+        )
+        this.links.push(link);
+        return link;
     }
 
     reset() {
@@ -466,18 +471,18 @@ class Window {
         for (const line of this.content.slice(this.line, this.line + this.height)) {
             yield {
                 text: line.text.slice(this.scroll, this.width + this.scroll),
-                esc: line.esc.filter(({pos}) => within(this.scroll, pos, this.width + this.scroll))
+                // esc: line.esc.filter(({pos}) => within(this.scroll, pos, this.width + this.scroll))
+                esc: line.esc,
             }
         }
     }
 
     
     draw() {
-
-        
         const textWidth = this.content.reduce(
             (acc, curr) => Math.max(acc, curr.text.length)
         , 0);
+
         const scrollbarX = {
             low: Math.max(-0.01, this.scroll / textWidth) * this.width,
             hi: Math.min(1, (this.scroll + this.width) / textWidth) * this.width,
@@ -516,29 +521,59 @@ class Window {
             scrollbarChar = '║'
         }
 
+        let escString = ""
+
         for (let i = 1; i <= this.height; i++) {
             // get the next line
             const {text, esc} = lines.next().value ?? {text:"", esc:[]};
-        
             const sideChr = within(scrollbar.low, i, scrollbar.hi) 
                 ? scrollbarChar 
                 : '║';
 
+            const bodyText = esc
+            // sort by position
+            .sort((a, b) => a.pos - b.pos)
+            // map to colour pairs
+            .reduce((acc, curr) => {
+                // get fg/bg and colour/reset
+                const {type, col} = curr.seq.matchAll(/\x1b\[(?<type>3|4)(?<col>9m|8;2)/g).next().value.groups;
+                // get stack based on foreground or background
+                const stack = (type == "3" ? acc.fgstack : acc.bgstack);
+                // if resetting colour
+                if (col == "9m") {
+                    // remove current colour
+                    stack.pop();
+                    // pop stack to out with curr
+                    acc.out.push(stack.length == 0 
+                        // push colour reset
+                        ? curr
+                        // reset to last colour
+                        : {pos: curr.pos, seq: last(stack).seq }
+                    )
+                // adding colour
+                } else {
+                    // push current to stack and out
+                    stack.push(curr)
+                    acc.out.push(curr)
+                }
+                // return accumulator
+                return acc;
+            }, {fgstack:[], bgstack:[], out:[]})
+            // map colour pairs to escape sequence strings
+            .out.reduceRight(
+                // insert the escape sequence into the string
+                (acc, {pos, seq}) => {
+                    return acc.splice(pos, 0, seq)
+                }
+                , (text || "").padEnd(this.width)
+            )
+
             // add it to the write string
             writeString += `${ESC.cursorTo(this.x, this.y + i)}${sideChr}${
-                // sort escape sequences by position
-                esc.sort((a, b) => a.pos - b.pos)
-                // reduce from highest position to lowest
-                .reduceRight(
-                    // insert the escape sequence into the string
-                    (acc, {pos, seq}) => acc.splice(pos, 0, seq)
-                    , (text || "").padEnd(this.width)
-                )
+                bodyText
             }${sideChr}`;
         }
-
-        // colour scrollbar
-
+        
         // restore cursor
         this.terminal.write(writeString + ESC.cursorRestorePosition);
     }

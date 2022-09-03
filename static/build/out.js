@@ -633,11 +633,11 @@
           function escapeUserProvidedKey(text) {
             return text.replace(userProvidedKeyEscapeRegex, "$&/");
           }
-          function getElementKey(element, index) {
+          function getElementKey(element, index2) {
             if (typeof element === "object" && element !== null && element.key != null) {
               return escape("" + element.key);
             }
-            return index.toString(36);
+            return index2.toString(36);
           }
           function mapIntoArray(children, array, escapedPrefix, nameSoFar, callback) {
             var type3 = typeof children;
@@ -1792,9 +1792,9 @@
             };
           }
           function push(heap, node) {
-            var index = heap.length;
+            var index2 = heap.length;
             heap.push(node);
-            siftUp(heap, node, index);
+            siftUp(heap, node, index2);
           }
           function peek(heap) {
             var first = heap[0];
@@ -1814,41 +1814,41 @@
             }
           }
           function siftUp(heap, node, i3) {
-            var index = i3;
+            var index2 = i3;
             while (true) {
-              var parentIndex = index - 1 >>> 1;
+              var parentIndex = index2 - 1 >>> 1;
               var parent = heap[parentIndex];
               if (parent !== void 0 && compare(parent, node) > 0) {
                 heap[parentIndex] = node;
-                heap[index] = parent;
-                index = parentIndex;
+                heap[index2] = parent;
+                index2 = parentIndex;
               } else {
                 return;
               }
             }
           }
           function siftDown(heap, node, i3) {
-            var index = i3;
+            var index2 = i3;
             var length3 = heap.length;
-            while (index < length3) {
-              var leftIndex = (index + 1) * 2 - 1;
+            while (index2 < length3) {
+              var leftIndex = (index2 + 1) * 2 - 1;
               var left = heap[leftIndex];
               var rightIndex = leftIndex + 1;
               var right = heap[rightIndex];
               if (left !== void 0 && compare(left, node) < 0) {
                 if (right !== void 0 && compare(right, left) < 0) {
-                  heap[index] = right;
+                  heap[index2] = right;
                   heap[rightIndex] = node;
-                  index = rightIndex;
+                  index2 = rightIndex;
                 } else {
-                  heap[index] = left;
+                  heap[index2] = left;
                   heap[leftIndex] = node;
-                  index = leftIndex;
+                  index2 = leftIndex;
                 }
               } else if (right !== void 0 && compare(right, node) < 0) {
-                heap[index] = right;
+                heap[index2] = right;
                 heap[rightIndex] = node;
-                index = rightIndex;
+                index2 = rightIndex;
               } else {
                 return;
               }
@@ -6358,9 +6358,9 @@
               var entanglements = root2.entanglements;
               var lanes = nextLanes & entangledLanes;
               while (lanes > 0) {
-                var index2 = pickArbitraryLaneIndex(lanes);
-                var lane = 1 << index2;
-                nextLanes |= entanglements[index2];
+                var index3 = pickArbitraryLaneIndex(lanes);
+                var lane = 1 << index3;
+                nextLanes |= entanglements[index3];
                 lanes &= ~lane;
               }
             }
@@ -6370,9 +6370,9 @@
             var eventTimes = root2.eventTimes;
             var mostRecentEventTime = NoTimestamp;
             while (lanes > 0) {
-              var index2 = pickArbitraryLaneIndex(lanes);
-              var lane = 1 << index2;
-              var eventTime = eventTimes[index2];
+              var index3 = pickArbitraryLaneIndex(lanes);
+              var lane = 1 << index3;
+              var eventTime = eventTimes[index3];
               if (eventTime > mostRecentEventTime) {
                 mostRecentEventTime = eventTime;
               }
@@ -6398,12 +6398,12 @@
             var expirationTimes = root2.expirationTimes;
             var lanes = pendingLanes;
             while (lanes > 0) {
-              var index2 = pickArbitraryLaneIndex(lanes);
-              var lane = 1 << index2;
-              var expirationTime = expirationTimes[index2];
+              var index3 = pickArbitraryLaneIndex(lanes);
+              var lane = 1 << index3;
+              var expirationTime = expirationTimes[index3];
               if (expirationTime === NoTimestamp) {
                 if ((lane & suspendedLanes) === NoLanes || (lane & pingedLanes) !== NoLanes) {
-                  expirationTimes[index2] = computeExpirationTime(lane, currentTime);
+                  expirationTimes[index3] = computeExpirationTime(lane, currentTime);
                 }
               } else if (expirationTime <= currentTime) {
                 root2.expiredLanes |= lane;
@@ -6502,8 +6502,8 @@
             return lanes & -lanes;
           }
           function getLowestPriorityLane(lanes) {
-            var index2 = 31 - clz32(lanes);
-            return index2 < 0 ? NoLanes : 1 << index2;
+            var index3 = 31 - clz32(lanes);
+            return index3 < 0 ? NoLanes : 1 << index3;
           }
           function getEqualOrHigherPriorityLanes(lanes) {
             return (getLowestPriorityLane(lanes) << 1) - 1;
@@ -6548,8 +6548,8 @@
             root2.suspendedLanes &= higherPriorityLanes;
             root2.pingedLanes &= higherPriorityLanes;
             var eventTimes = root2.eventTimes;
-            var index2 = laneToIndex(updateLane);
-            eventTimes[index2] = eventTime;
+            var index3 = laneToIndex(updateLane);
+            eventTimes[index3] = eventTime;
           }
           function markRootSuspended(root2, suspendedLanes) {
             root2.suspendedLanes |= suspendedLanes;
@@ -6557,9 +6557,9 @@
             var expirationTimes = root2.expirationTimes;
             var lanes = suspendedLanes;
             while (lanes > 0) {
-              var index2 = pickArbitraryLaneIndex(lanes);
-              var lane = 1 << index2;
-              expirationTimes[index2] = NoTimestamp;
+              var index3 = pickArbitraryLaneIndex(lanes);
+              var lane = 1 << index3;
+              expirationTimes[index3] = NoTimestamp;
               lanes &= ~lane;
             }
           }
@@ -6588,11 +6588,11 @@
             var expirationTimes = root2.expirationTimes;
             var lanes = noLongerPendingLanes;
             while (lanes > 0) {
-              var index2 = pickArbitraryLaneIndex(lanes);
-              var lane = 1 << index2;
-              entanglements[index2] = NoLanes;
-              eventTimes[index2] = NoTimestamp;
-              expirationTimes[index2] = NoTimestamp;
+              var index3 = pickArbitraryLaneIndex(lanes);
+              var lane = 1 << index3;
+              entanglements[index3] = NoLanes;
+              eventTimes[index3] = NoTimestamp;
+              expirationTimes[index3] = NoTimestamp;
               lanes &= ~lane;
             }
           }
@@ -6601,9 +6601,9 @@
             var entanglements = root2.entanglements;
             var lanes = entangledLanes;
             while (lanes > 0) {
-              var index2 = pickArbitraryLaneIndex(lanes);
-              var lane = 1 << index2;
-              entanglements[index2] |= entangledLanes;
+              var index3 = pickArbitraryLaneIndex(lanes);
+              var lane = 1 << index3;
+              entanglements[index3] |= entangledLanes;
               lanes &= ~lane;
             }
           }
@@ -9762,36 +9762,36 @@
           {
             fiberStack = [];
           }
-          var index = -1;
+          var index2 = -1;
           function createCursor(defaultValue) {
             return {
               current: defaultValue
             };
           }
           function pop(cursor, fiber) {
-            if (index < 0) {
+            if (index2 < 0) {
               {
                 error("Unexpected pop.");
               }
               return;
             }
             {
-              if (fiber !== fiberStack[index]) {
+              if (fiber !== fiberStack[index2]) {
                 error("Unexpected Fiber popped.");
               }
             }
-            cursor.current = valueStack[index];
-            valueStack[index] = null;
+            cursor.current = valueStack[index2];
+            valueStack[index2] = null;
             {
-              fiberStack[index] = null;
+              fiberStack[index2] = null;
             }
-            index--;
+            index2--;
           }
           function push(cursor, value, fiber) {
-            index++;
-            valueStack[index] = cursor.current;
+            index2++;
+            valueStack[index2] = cursor.current;
             {
-              fiberStack[index] = fiber;
+              fiberStack[index2] = fiber;
             }
             cursor.current = value;
           }
@@ -13138,11 +13138,11 @@
           function rerenderState(initialState2) {
             return rerenderReducer(basicStateReducer);
           }
-          function pushEffect(tag, create, destroy, deps) {
+          function pushEffect(tag, create, destroy3, deps) {
             var effect = {
               tag,
               create,
-              destroy,
+              destroy: destroy3,
               deps,
               next: null
             };
@@ -13188,20 +13188,20 @@
           function updateEffectImpl(fiberFlags, hookFlags, create, deps) {
             var hook2 = updateWorkInProgressHook();
             var nextDeps = deps === void 0 ? null : deps;
-            var destroy = void 0;
+            var destroy3 = void 0;
             if (currentHook !== null) {
               var prevEffect = currentHook.memoizedState;
-              destroy = prevEffect.destroy;
+              destroy3 = prevEffect.destroy;
               if (nextDeps !== null) {
                 var prevDeps = prevEffect.deps;
                 if (areHookInputsEqual(nextDeps, prevDeps)) {
-                  pushEffect(hookFlags, create, destroy, nextDeps);
+                  pushEffect(hookFlags, create, destroy3, nextDeps);
                   return;
                 }
               }
             }
             currentlyRenderingFiber$1.flags |= fiberFlags;
-            hook2.memoizedState = pushEffect(HasEffect | hookFlags, create, destroy, nextDeps);
+            hook2.memoizedState = pushEffect(HasEffect | hookFlags, create, destroy3, nextDeps);
           }
           function mountEffect(create, deps) {
             {
@@ -15231,13 +15231,13 @@
               }
             }
           }
-          function validateSuspenseListNestedChild(childSlot, index2) {
+          function validateSuspenseListNestedChild(childSlot, index3) {
             {
               var isArray2 = Array.isArray(childSlot);
               var isIterable = !isArray2 && typeof getIteratorFn(childSlot) === "function";
               if (isArray2 || isIterable) {
                 var type3 = isArray2 ? "array" : "iterable";
-                error("A nested %s was passed to row #%s in <SuspenseList />. Wrap it in an additional SuspenseList to configure its revealOrder: <SuspenseList revealOrder=...> ... <SuspenseList revealOrder=...>{%s}</SuspenseList> ... </SuspenseList>", type3, index2, type3);
+                error("A nested %s was passed to row #%s in <SuspenseList />. Wrap it in an additional SuspenseList to configure its revealOrder: <SuspenseList revealOrder=...> ... <SuspenseList revealOrder=...>{%s}</SuspenseList> ... </SuspenseList>", type3, index3, type3);
                 return false;
               }
             }
@@ -16445,9 +16445,9 @@
               }
             }
           }
-          function safelyCallDestroy(current2, destroy) {
+          function safelyCallDestroy(current2, destroy3) {
             {
-              invokeGuardedCallback(null, destroy, null);
+              invokeGuardedCallback(null, destroy3, null);
               if (hasCaughtError()) {
                 var error2 = clearCaughtError();
                 captureCommitPhaseError(current2, error2);
@@ -16520,10 +16520,10 @@
               var effect = firstEffect;
               do {
                 if ((effect.tag & tag) === tag) {
-                  var destroy = effect.destroy;
+                  var destroy3 = effect.destroy;
                   effect.destroy = void 0;
-                  if (destroy !== void 0) {
-                    destroy();
+                  if (destroy3 !== void 0) {
+                    destroy3();
                   }
                 }
                 effect = effect.next;
@@ -16541,15 +16541,15 @@
                   var create = effect.create;
                   effect.destroy = create();
                   {
-                    var destroy = effect.destroy;
-                    if (destroy !== void 0 && typeof destroy !== "function") {
+                    var destroy3 = effect.destroy;
+                    if (destroy3 !== void 0 && typeof destroy3 !== "function") {
                       var addendum = void 0;
-                      if (destroy === null) {
+                      if (destroy3 === null) {
                         addendum = " You returned null. If your effect does not require clean up, return undefined (or nothing).";
-                      } else if (typeof destroy.then === "function") {
+                      } else if (typeof destroy3.then === "function") {
                         addendum = "\n\nIt looks like you wrote useEffect(async () => ...) or returned a Promise. Instead, write the async function inside your effect and call it immediately:\n\nuseEffect(() => {\n  async function fetchData() {\n    // You can await here\n    const response = await MyAPI.getData(someId);\n    // ...\n  }\n  fetchData();\n}, [someId]); // Or [] if effect doesn't need props or state\n\nLearn more about data fetching with Hooks: https://reactjs.org/link/hooks-data-fetching";
                       } else {
-                        addendum = " You returned: " + destroy;
+                        addendum = " You returned: " + destroy3;
                       }
                       error("An effect function must not return anything besides a function, which is used for clean-up.%s", addendum);
                     }
@@ -16790,13 +16790,13 @@
                     var firstEffect = lastEffect.next;
                     var effect = firstEffect;
                     do {
-                      var _effect2 = effect, destroy = _effect2.destroy, tag = _effect2.tag;
-                      if (destroy !== void 0) {
+                      var _effect2 = effect, destroy3 = _effect2.destroy, tag = _effect2.tag;
+                      if (destroy3 !== void 0) {
                         if ((tag & Passive$1) !== NoFlags$1) {
                           enqueuePendingPassiveHookEffectUnmount(current2, effect);
                         } else {
                           {
-                            safelyCallDestroy(current2, destroy);
+                            safelyCallDestroy(current2, destroy3);
                           }
                         }
                       }
@@ -18427,7 +18427,7 @@
             for (var i3 = 0; i3 < unmountEffects.length; i3 += 2) {
               var _effect = unmountEffects[i3];
               var fiber = unmountEffects[i3 + 1];
-              var destroy = _effect.destroy;
+              var destroy3 = _effect.destroy;
               _effect.destroy = void 0;
               {
                 fiber.flags &= ~PassiveUnmountPendingDev;
@@ -18436,11 +18436,11 @@
                   alternate.flags &= ~PassiveUnmountPendingDev;
                 }
               }
-              if (typeof destroy === "function") {
+              if (typeof destroy3 === "function") {
                 {
                   setCurrentFiber(fiber);
                   {
-                    invokeGuardedCallback(null, destroy, null);
+                    invokeGuardedCallback(null, destroy3, null);
                   }
                   if (hasCaughtError()) {
                     if (!(fiber !== null)) {
@@ -19902,10 +19902,10 @@ For more info, visit https://reactjs.org/link/mock-scheduler`);
           var scheduleUpdate = null;
           var setSuspenseHandler = null;
           {
-            var copyWithDeleteImpl = function(obj, path3, index2) {
-              var key = path3[index2];
+            var copyWithDeleteImpl = function(obj, path3, index3) {
+              var key = path3[index3];
               var updated = Array.isArray(obj) ? obj.slice() : _assign({}, obj);
-              if (index2 + 1 === path3.length) {
+              if (index3 + 1 === path3.length) {
                 if (Array.isArray(updated)) {
                   updated.splice(key, 1);
                 } else {
@@ -19913,17 +19913,17 @@ For more info, visit https://reactjs.org/link/mock-scheduler`);
                 }
                 return updated;
               }
-              updated[key] = copyWithDeleteImpl(obj[key], path3, index2 + 1);
+              updated[key] = copyWithDeleteImpl(obj[key], path3, index3 + 1);
               return updated;
             };
             var copyWithDelete = function(obj, path3) {
               return copyWithDeleteImpl(obj, path3, 0);
             };
-            var copyWithRenameImpl = function(obj, oldPath, newPath, index2) {
-              var oldKey = oldPath[index2];
+            var copyWithRenameImpl = function(obj, oldPath, newPath, index3) {
+              var oldKey = oldPath[index3];
               var updated = Array.isArray(obj) ? obj.slice() : _assign({}, obj);
-              if (index2 + 1 === oldPath.length) {
-                var newKey = newPath[index2];
+              if (index3 + 1 === oldPath.length) {
+                var newKey = newPath[index3];
                 updated[newKey] = updated[oldKey];
                 if (Array.isArray(updated)) {
                   updated.splice(oldKey, 1);
@@ -19931,7 +19931,7 @@ For more info, visit https://reactjs.org/link/mock-scheduler`);
                   delete updated[oldKey];
                 }
               } else {
-                updated[oldKey] = copyWithRenameImpl(obj[oldKey], oldPath, newPath, index2 + 1);
+                updated[oldKey] = copyWithRenameImpl(obj[oldKey], oldPath, newPath, index3 + 1);
               }
               return updated;
             };
@@ -19949,13 +19949,13 @@ For more info, visit https://reactjs.org/link/mock-scheduler`);
               }
               return copyWithRenameImpl(obj, oldPath, newPath, 0);
             };
-            var copyWithSetImpl = function(obj, path3, index2, value) {
-              if (index2 >= path3.length) {
+            var copyWithSetImpl = function(obj, path3, index3, value) {
+              if (index3 >= path3.length) {
                 return value;
               }
-              var key = path3[index2];
+              var key = path3[index3];
               var updated = Array.isArray(obj) ? obj.slice() : _assign({}, obj);
-              updated[key] = copyWithSetImpl(obj[key], path3, index2 + 1, value);
+              updated[key] = copyWithSetImpl(obj[key], path3, index3 + 1, value);
               return updated;
             };
             var copyWithSet = function(obj, path3, value) {
@@ -29990,14 +29990,14 @@ For more info, visit https://reactjs.org/link/mock-scheduler`);
           _this.emit("register");
         };
         this.deregister = function(openInstance) {
-          var index = _this.openInstances.indexOf(openInstance);
-          if (index === -1) {
+          var index2 = _this.openInstances.indexOf(openInstance);
+          if (index2 === -1) {
             if (true) {
               console.warn("React-Modal: Unable to deregister " + openInstance + " as it was never registered");
             }
             return;
           }
-          _this.openInstances.splice(index, 1);
+          _this.openInstances.splice(index2, 1);
           _this.emit("deregister");
         };
         this.subscribe = function(callback) {
@@ -31890,8 +31890,8 @@ For more info, visit https://reactjs.org/link/mock-scheduler`);
         }
         isSubscribed = false;
         ensureCanMutateNextListeners();
-        var index = nextListeners.indexOf(listener2);
-        nextListeners.splice(index, 1);
+        var index2 = nextListeners.indexOf(listener2);
+        nextListeners.splice(index2, 1);
         currentListeners = null;
       };
     }
@@ -34697,6 +34697,28 @@ problem_1 = Task1.sum (check [1..999])
   function last(array) {
     return array.length == 0 ? void 0 : array[array.length - 1];
   }
+  function debounce(func, timeout = 300) {
+    let keepGoing = false;
+    let running = false;
+    let nextArgs = [];
+    const debouncedFunc = (...args) => {
+      if (running) {
+        keepGoing = true;
+        nextArgs = args;
+        return;
+      }
+      func.apply(this, args);
+      keepGoing = false;
+      running = true;
+      sleep(timeout).then(() => {
+        running = false;
+        if (keepGoing) {
+          debouncedFunc(...args);
+        }
+      });
+    };
+    return debouncedFunc;
+  }
 
   // wrasse/ansiEscapes.js
   var ESC = "\x1B[";
@@ -34858,14 +34880,14 @@ problem_1 = Task1.sum (check [1..999])
   var wrasseGHC_default = wrasseGHC;
 
   // wrasse/terminalWindows.js
-  String.prototype.splice = function(index, count, add) {
-    if (index < 0) {
-      index = this.length + index;
-      if (index < 0) {
-        index = 0;
+  String.prototype.splice = function(index2, count, add) {
+    if (index2 < 0) {
+      index2 = this.length + index2;
+      if (index2 < 0) {
+        index2 = 0;
       }
     }
-    return this.slice(0, index) + (add || "") + this.slice(index + count);
+    return this.slice(0, index2) + (add || "") + this.slice(index2 + count);
   };
   var _Link = class {
     constructor(window2, range, funcs, colour) {
@@ -34899,13 +34921,6 @@ problem_1 = Task1.sum (check [1..999])
     }
     setHighlight(multiplier) {
       this.highlight.bg.seq = ansiEscapes_default.colourSeq(this.colour.mul(multiplier), false);
-      this.window.links.sort((a3, b3) => a3.range.start.x - b3.range.start.x).sort((a3, b3) => a3.range.start.y - b3.range.start.y).reduce((acc, curr) => {
-        acc = acc.filter((el) => el.range.end.y >= curr.range.end.y && el.range.end.x > curr.range.end.x);
-        curr.highlight.resetFG.seq = last(acc)?.highlight.fg.seq ?? "\x1B[39m";
-        curr.highlight.resetBG.seq = last(acc)?.highlight.bg.seq ?? "\x1B[49m";
-        return [...acc, curr];
-      }, []);
-      this.window.requestDraw();
     }
   };
   var Link = _Link;
@@ -34994,7 +35009,7 @@ problem_1 = Task1.sum (check [1..999])
       let { x: x2, y: y3 } = this.mouseToCell(event.offsetX, event.offsetY);
       y3 += this.line;
       let activeLink = this.links.filter((curr) => within2(curr.range.start.x, x2, curr.range.end.x) && within2(curr.range.start.y, y3, curr.range.end.y)).sort((a3, b3) => b3.range.start.x - a3.range.start.x)[0];
-      if (activeLink?.active == false) {
+      if (activeLink?.active === false) {
         activeLink.funcs.enter(activeLink);
         activeLink.active = true;
         this.requestDraw();
@@ -35013,7 +35028,12 @@ problem_1 = Task1.sum (check [1..999])
       return true;
     }
     addLink(range, funcs, colour) {
-      this.links.push(new Link(this, range, funcs, colour));
+      if (colour?.r == 190) {
+        console.log("MADE HERE");
+      }
+      let link = new Link(this, range, funcs, colour);
+      this.links.push(link);
+      return link;
     }
     reset() {
       this.clean();
@@ -35159,7 +35179,7 @@ problem_1 = Task1.sum (check [1..999])
       for (const line of this.content.slice(this.line, this.line + this.height)) {
         yield {
           text: line.text.slice(this.scroll, this.width + this.scroll),
-          esc: line.esc.filter(({ pos }) => within2(this.scroll, pos, this.width + this.scroll))
+          esc: line.esc
         };
       }
     }
@@ -35186,10 +35206,25 @@ problem_1 = Task1.sum (check [1..999])
       if (scrollbar.low <= 0 && scrollbar.hi >= this.height) {
         scrollbarChar = "\u2551";
       }
+      let escString = "";
       for (let i3 = 1; i3 <= this.height; i3++) {
         const { text, esc } = lines.next().value ?? { text: "", esc: [] };
         const sideChr = within2(scrollbar.low, i3, scrollbar.hi) ? scrollbarChar : "\u2551";
-        writeString += `${ansiEscapes_default.cursorTo(this.x, this.y + i3)}${sideChr}${esc.sort((a3, b3) => a3.pos - b3.pos).reduceRight((acc, { pos, seq }) => acc.splice(pos, 0, seq), (text || "").padEnd(this.width))}${sideChr}`;
+        const bodyText = esc.sort((a3, b3) => a3.pos - b3.pos).reduce((acc, curr) => {
+          const { type: type3, col } = curr.seq.matchAll(/\x1b\[(?<type>3|4)(?<col>9m|8;2)/g).next().value.groups;
+          const stack = type3 == "3" ? acc.fgstack : acc.bgstack;
+          if (col == "9m") {
+            stack.pop();
+            acc.out.push(stack.length == 0 ? curr : { pos: curr.pos, seq: last(stack).seq });
+          } else {
+            stack.push(curr);
+            acc.out.push(curr);
+          }
+          return acc;
+        }, { fgstack: [], bgstack: [], out: [] }).out.reduceRight((acc, { pos, seq }) => {
+          return acc.splice(pos, 0, seq);
+        }, (text || "").padEnd(this.width));
+        writeString += `${ansiEscapes_default.cursorTo(this.x, this.y + i3)}${sideChr}${bodyText}${sideChr}`;
       }
       this.terminal.write(writeString + ansiEscapes_default.cursorRestorePosition);
     }
@@ -35217,6 +35252,483 @@ problem_1 = Task1.sum (check [1..999])
   };
   var terminalWindows_default = termWindows;
 
+  // node_modules/split-grid/dist/split-grid.mjs
+  var numeric = function(value, unit) {
+    return Number(value.slice(0, -1 * unit.length));
+  };
+  var parseValue = function(value) {
+    if (value.endsWith("px")) {
+      return { value, type: "px", numeric: numeric(value, "px") };
+    }
+    if (value.endsWith("fr")) {
+      return { value, type: "fr", numeric: numeric(value, "fr") };
+    }
+    if (value.endsWith("%")) {
+      return { value, type: "%", numeric: numeric(value, "%") };
+    }
+    if (value === "auto") {
+      return { value, type: "auto" };
+    }
+    return null;
+  };
+  var parse = function(rule) {
+    return rule.split(" ").map(parseValue);
+  };
+  var getSizeAtTrack = function(index2, tracks, gap, end) {
+    if (gap === void 0) {
+      gap = 0;
+    }
+    if (end === void 0) {
+      end = false;
+    }
+    var newIndex = end ? index2 + 1 : index2;
+    var trackSum = tracks.slice(0, newIndex).reduce(function(accum, value) {
+      return accum + value.numeric;
+    }, 0);
+    var gapSum = gap ? index2 * gap : 0;
+    return trackSum + gapSum;
+  };
+  var getStyles = function(rule, ownRules, matchedRules) {
+    return ownRules.concat(matchedRules).map(function(r3) {
+      return r3.style[rule];
+    }).filter(function(style) {
+      return style !== void 0 && style !== "";
+    });
+  };
+  var getGapValue = function(unit, size) {
+    if (size.endsWith(unit)) {
+      return Number(size.slice(0, -1 * unit.length));
+    }
+    return null;
+  };
+  var firstNonZero = function(tracks) {
+    for (var i3 = 0; i3 < tracks.length; i3++) {
+      if (tracks[i3].numeric > 0) {
+        return i3;
+      }
+    }
+    return null;
+  };
+  var NOOP = function() {
+    return false;
+  };
+  var defaultWriteStyle = function(element, gridTemplateProp, style) {
+    element.style[gridTemplateProp] = style;
+  };
+  var getOption = function(options, propName, def) {
+    var value = options[propName];
+    if (value !== void 0) {
+      return value;
+    }
+    return def;
+  };
+  function getMatchedCSSRules(el) {
+    var ref;
+    return (ref = []).concat.apply(ref, Array.from(el.ownerDocument.styleSheets).map(function(s3) {
+      var rules = [];
+      try {
+        rules = Array.from(s3.cssRules || []);
+      } catch (e3) {
+      }
+      return rules;
+    })).filter(function(r3) {
+      var matches = false;
+      try {
+        matches = el.matches(r3.selectorText);
+      } catch (e3) {
+      }
+      return matches;
+    });
+  }
+  var gridTemplatePropColumns = "grid-template-columns";
+  var gridTemplatePropRows = "grid-template-rows";
+  var Gutter = function Gutter2(direction, options, parentOptions) {
+    this.direction = direction;
+    this.element = options.element;
+    this.track = options.track;
+    if (direction === "column") {
+      this.gridTemplateProp = gridTemplatePropColumns;
+      this.gridGapProp = "grid-column-gap";
+      this.cursor = getOption(parentOptions, "columnCursor", getOption(parentOptions, "cursor", "col-resize"));
+      this.snapOffset = getOption(parentOptions, "columnSnapOffset", getOption(parentOptions, "snapOffset", 30));
+      this.dragInterval = getOption(parentOptions, "columnDragInterval", getOption(parentOptions, "dragInterval", 1));
+      this.clientAxis = "clientX";
+      this.optionStyle = getOption(parentOptions, "gridTemplateColumns");
+    } else if (direction === "row") {
+      this.gridTemplateProp = gridTemplatePropRows;
+      this.gridGapProp = "grid-row-gap";
+      this.cursor = getOption(parentOptions, "rowCursor", getOption(parentOptions, "cursor", "row-resize"));
+      this.snapOffset = getOption(parentOptions, "rowSnapOffset", getOption(parentOptions, "snapOffset", 30));
+      this.dragInterval = getOption(parentOptions, "rowDragInterval", getOption(parentOptions, "dragInterval", 1));
+      this.clientAxis = "clientY";
+      this.optionStyle = getOption(parentOptions, "gridTemplateRows");
+    }
+    this.onDragStart = getOption(parentOptions, "onDragStart", NOOP);
+    this.onDragEnd = getOption(parentOptions, "onDragEnd", NOOP);
+    this.onDrag = getOption(parentOptions, "onDrag", NOOP);
+    this.writeStyle = getOption(parentOptions, "writeStyle", defaultWriteStyle);
+    this.startDragging = this.startDragging.bind(this);
+    this.stopDragging = this.stopDragging.bind(this);
+    this.drag = this.drag.bind(this);
+    this.minSizeStart = options.minSizeStart;
+    this.minSizeEnd = options.minSizeEnd;
+    if (options.element) {
+      this.element.addEventListener("mousedown", this.startDragging);
+      this.element.addEventListener("touchstart", this.startDragging);
+    }
+  };
+  Gutter.prototype.getDimensions = function getDimensions() {
+    var ref = this.grid.getBoundingClientRect();
+    var width = ref.width;
+    var height = ref.height;
+    var top = ref.top;
+    var bottom = ref.bottom;
+    var left = ref.left;
+    var right = ref.right;
+    if (this.direction === "column") {
+      this.start = top;
+      this.end = bottom;
+      this.size = height;
+    } else if (this.direction === "row") {
+      this.start = left;
+      this.end = right;
+      this.size = width;
+    }
+  };
+  Gutter.prototype.getSizeAtTrack = function getSizeAtTrack$1(track, end) {
+    return getSizeAtTrack(track, this.computedPixels, this.computedGapPixels, end);
+  };
+  Gutter.prototype.getSizeOfTrack = function getSizeOfTrack(track) {
+    return this.computedPixels[track].numeric;
+  };
+  Gutter.prototype.getRawTracks = function getRawTracks() {
+    var tracks = getStyles(this.gridTemplateProp, [this.grid], getMatchedCSSRules(this.grid));
+    if (!tracks.length) {
+      if (this.optionStyle) {
+        return this.optionStyle;
+      }
+      throw Error("Unable to determine grid template tracks from styles.");
+    }
+    return tracks[0];
+  };
+  Gutter.prototype.getGap = function getGap() {
+    var gap = getStyles(this.gridGapProp, [this.grid], getMatchedCSSRules(this.grid));
+    if (!gap.length) {
+      return null;
+    }
+    return gap[0];
+  };
+  Gutter.prototype.getRawComputedTracks = function getRawComputedTracks() {
+    return window.getComputedStyle(this.grid)[this.gridTemplateProp];
+  };
+  Gutter.prototype.getRawComputedGap = function getRawComputedGap() {
+    return window.getComputedStyle(this.grid)[this.gridGapProp];
+  };
+  Gutter.prototype.setTracks = function setTracks(raw) {
+    this.tracks = raw.split(" ");
+    this.trackValues = parse(raw);
+  };
+  Gutter.prototype.setComputedTracks = function setComputedTracks(raw) {
+    this.computedTracks = raw.split(" ");
+    this.computedPixels = parse(raw);
+  };
+  Gutter.prototype.setGap = function setGap(raw) {
+    this.gap = raw;
+  };
+  Gutter.prototype.setComputedGap = function setComputedGap(raw) {
+    this.computedGap = raw;
+    this.computedGapPixels = getGapValue("px", this.computedGap) || 0;
+  };
+  Gutter.prototype.getMousePosition = function getMousePosition(e3) {
+    if ("touches" in e3) {
+      return e3.touches[0][this.clientAxis];
+    }
+    return e3[this.clientAxis];
+  };
+  Gutter.prototype.startDragging = function startDragging(e3) {
+    if ("button" in e3 && e3.button !== 0) {
+      return;
+    }
+    e3.preventDefault();
+    if (this.element) {
+      this.grid = this.element.parentNode;
+    } else {
+      this.grid = e3.target.parentNode;
+    }
+    this.getDimensions();
+    this.setTracks(this.getRawTracks());
+    this.setComputedTracks(this.getRawComputedTracks());
+    this.setGap(this.getGap());
+    this.setComputedGap(this.getRawComputedGap());
+    var trackPercentage = this.trackValues.filter(function(track2) {
+      return track2.type === "%";
+    });
+    var trackFr = this.trackValues.filter(function(track2) {
+      return track2.type === "fr";
+    });
+    this.totalFrs = trackFr.length;
+    if (this.totalFrs) {
+      var track = firstNonZero(trackFr);
+      if (track !== null) {
+        this.frToPixels = this.computedPixels[track].numeric / trackFr[track].numeric;
+      }
+    }
+    if (trackPercentage.length) {
+      var track$1 = firstNonZero(trackPercentage);
+      if (track$1 !== null) {
+        this.percentageToPixels = this.computedPixels[track$1].numeric / trackPercentage[track$1].numeric;
+      }
+    }
+    var gutterStart = this.getSizeAtTrack(this.track, false) + this.start;
+    this.dragStartOffset = this.getMousePosition(e3) - gutterStart;
+    this.aTrack = this.track - 1;
+    if (this.track < this.tracks.length - 1) {
+      this.bTrack = this.track + 1;
+    } else {
+      throw Error("Invalid track index: " + this.track + ". Track must be between two other tracks and only " + this.tracks.length + " tracks were found.");
+    }
+    this.aTrackStart = this.getSizeAtTrack(this.aTrack, false) + this.start;
+    this.bTrackEnd = this.getSizeAtTrack(this.bTrack, true) + this.start;
+    this.dragging = true;
+    window.addEventListener("mouseup", this.stopDragging);
+    window.addEventListener("touchend", this.stopDragging);
+    window.addEventListener("touchcancel", this.stopDragging);
+    window.addEventListener("mousemove", this.drag);
+    window.addEventListener("touchmove", this.drag);
+    this.grid.addEventListener("selectstart", NOOP);
+    this.grid.addEventListener("dragstart", NOOP);
+    this.grid.style.userSelect = "none";
+    this.grid.style.webkitUserSelect = "none";
+    this.grid.style.MozUserSelect = "none";
+    this.grid.style.pointerEvents = "none";
+    this.grid.style.cursor = this.cursor;
+    window.document.body.style.cursor = this.cursor;
+    this.onDragStart(this.direction, this.track);
+  };
+  Gutter.prototype.stopDragging = function stopDragging() {
+    this.dragging = false;
+    this.cleanup();
+    this.onDragEnd(this.direction, this.track);
+    if (this.needsDestroy) {
+      if (this.element) {
+        this.element.removeEventListener("mousedown", this.startDragging);
+        this.element.removeEventListener("touchstart", this.startDragging);
+      }
+      this.destroyCb();
+      this.needsDestroy = false;
+      this.destroyCb = null;
+    }
+  };
+  Gutter.prototype.drag = function drag(e3) {
+    var mousePosition = this.getMousePosition(e3);
+    var gutterSize = this.getSizeOfTrack(this.track);
+    var minMousePosition = this.aTrackStart + this.minSizeStart + this.dragStartOffset + this.computedGapPixels;
+    var maxMousePosition = this.bTrackEnd - this.minSizeEnd - this.computedGapPixels - (gutterSize - this.dragStartOffset);
+    var minMousePositionOffset = minMousePosition + this.snapOffset;
+    var maxMousePositionOffset = maxMousePosition - this.snapOffset;
+    if (mousePosition < minMousePositionOffset) {
+      mousePosition = minMousePosition;
+    }
+    if (mousePosition > maxMousePositionOffset) {
+      mousePosition = maxMousePosition;
+    }
+    if (mousePosition < minMousePosition) {
+      mousePosition = minMousePosition;
+    } else if (mousePosition > maxMousePosition) {
+      mousePosition = maxMousePosition;
+    }
+    var aTrackSize = mousePosition - this.aTrackStart - this.dragStartOffset - this.computedGapPixels;
+    var bTrackSize = this.bTrackEnd - mousePosition + this.dragStartOffset - gutterSize - this.computedGapPixels;
+    if (this.dragInterval > 1) {
+      var aTrackSizeIntervaled = Math.round(aTrackSize / this.dragInterval) * this.dragInterval;
+      bTrackSize -= aTrackSizeIntervaled - aTrackSize;
+      aTrackSize = aTrackSizeIntervaled;
+    }
+    if (aTrackSize < this.minSizeStart) {
+      aTrackSize = this.minSizeStart;
+    }
+    if (bTrackSize < this.minSizeEnd) {
+      bTrackSize = this.minSizeEnd;
+    }
+    if (this.trackValues[this.aTrack].type === "px") {
+      this.tracks[this.aTrack] = aTrackSize + "px";
+    } else if (this.trackValues[this.aTrack].type === "fr") {
+      if (this.totalFrs === 1) {
+        this.tracks[this.aTrack] = "1fr";
+      } else {
+        var targetFr = aTrackSize / this.frToPixels;
+        this.tracks[this.aTrack] = targetFr + "fr";
+      }
+    } else if (this.trackValues[this.aTrack].type === "%") {
+      var targetPercentage = aTrackSize / this.percentageToPixels;
+      this.tracks[this.aTrack] = targetPercentage + "%";
+    }
+    if (this.trackValues[this.bTrack].type === "px") {
+      this.tracks[this.bTrack] = bTrackSize + "px";
+    } else if (this.trackValues[this.bTrack].type === "fr") {
+      if (this.totalFrs === 1) {
+        this.tracks[this.bTrack] = "1fr";
+      } else {
+        var targetFr$1 = bTrackSize / this.frToPixels;
+        this.tracks[this.bTrack] = targetFr$1 + "fr";
+      }
+    } else if (this.trackValues[this.bTrack].type === "%") {
+      var targetPercentage$1 = bTrackSize / this.percentageToPixels;
+      this.tracks[this.bTrack] = targetPercentage$1 + "%";
+    }
+    var style = this.tracks.join(" ");
+    this.writeStyle(this.grid, this.gridTemplateProp, style);
+    this.onDrag(this.direction, this.track, style);
+  };
+  Gutter.prototype.cleanup = function cleanup() {
+    window.removeEventListener("mouseup", this.stopDragging);
+    window.removeEventListener("touchend", this.stopDragging);
+    window.removeEventListener("touchcancel", this.stopDragging);
+    window.removeEventListener("mousemove", this.drag);
+    window.removeEventListener("touchmove", this.drag);
+    if (this.grid) {
+      this.grid.removeEventListener("selectstart", NOOP);
+      this.grid.removeEventListener("dragstart", NOOP);
+      this.grid.style.userSelect = "";
+      this.grid.style.webkitUserSelect = "";
+      this.grid.style.MozUserSelect = "";
+      this.grid.style.pointerEvents = "";
+      this.grid.style.cursor = "";
+    }
+    window.document.body.style.cursor = "";
+  };
+  Gutter.prototype.destroy = function destroy(immediate, cb) {
+    if (immediate === void 0)
+      immediate = true;
+    if (immediate || this.dragging === false) {
+      this.cleanup();
+      if (this.element) {
+        this.element.removeEventListener("mousedown", this.startDragging);
+        this.element.removeEventListener("touchstart", this.startDragging);
+      }
+      if (cb) {
+        cb();
+      }
+    } else {
+      this.needsDestroy = true;
+      if (cb) {
+        this.destroyCb = cb;
+      }
+    }
+  };
+  var getTrackOption = function(options, track, defaultValue) {
+    if (track in options) {
+      return options[track];
+    }
+    return defaultValue;
+  };
+  var createGutter = function(direction, options) {
+    return function(gutterOptions) {
+      if (gutterOptions.track < 1) {
+        throw Error("Invalid track index: " + gutterOptions.track + ". Track must be between two other tracks.");
+      }
+      var trackMinSizes = direction === "column" ? options.columnMinSizes || {} : options.rowMinSizes || {};
+      var trackMinSize = direction === "column" ? "columnMinSize" : "rowMinSize";
+      return new Gutter(direction, Object.assign({}, {
+        minSizeStart: getTrackOption(trackMinSizes, gutterOptions.track - 1, getOption(options, trackMinSize, getOption(options, "minSize", 0))),
+        minSizeEnd: getTrackOption(trackMinSizes, gutterOptions.track + 1, getOption(options, trackMinSize, getOption(options, "minSize", 0)))
+      }, gutterOptions), options);
+    };
+  };
+  var Grid = function Grid2(options) {
+    var this$1 = this;
+    this.columnGutters = {};
+    this.rowGutters = {};
+    this.options = Object.assign({}, {
+      columnGutters: options.columnGutters || [],
+      rowGutters: options.rowGutters || [],
+      columnMinSizes: options.columnMinSizes || {},
+      rowMinSizes: options.rowMinSizes || {}
+    }, options);
+    this.options.columnGutters.forEach(function(gutterOptions) {
+      this$1.columnGutters[gutterOptions.track] = createGutter("column", this$1.options)(gutterOptions);
+    });
+    this.options.rowGutters.forEach(function(gutterOptions) {
+      this$1.rowGutters[gutterOptions.track] = createGutter("row", this$1.options)(gutterOptions);
+    });
+  };
+  Grid.prototype.addColumnGutter = function addColumnGutter(element, track) {
+    if (this.columnGutters[track]) {
+      this.columnGutters[track].destroy();
+    }
+    this.columnGutters[track] = createGutter("column", this.options)({
+      element,
+      track
+    });
+  };
+  Grid.prototype.addRowGutter = function addRowGutter(element, track) {
+    if (this.rowGutters[track]) {
+      this.rowGutters[track].destroy();
+    }
+    this.rowGutters[track] = createGutter("row", this.options)({
+      element,
+      track
+    });
+  };
+  Grid.prototype.removeColumnGutter = function removeColumnGutter(track, immediate) {
+    var this$1 = this;
+    if (immediate === void 0)
+      immediate = true;
+    if (this.columnGutters[track]) {
+      this.columnGutters[track].destroy(immediate, function() {
+        delete this$1.columnGutters[track];
+      });
+    }
+  };
+  Grid.prototype.removeRowGutter = function removeRowGutter(track, immediate) {
+    var this$1 = this;
+    if (immediate === void 0)
+      immediate = true;
+    if (this.rowGutters[track]) {
+      this.rowGutters[track].destroy(immediate, function() {
+        delete this$1.rowGutters[track];
+      });
+    }
+  };
+  Grid.prototype.handleDragStart = function handleDragStart(e3, direction, track) {
+    if (direction === "column") {
+      if (this.columnGutters[track]) {
+        this.columnGutters[track].destroy();
+      }
+      this.columnGutters[track] = createGutter("column", this.options)({
+        track
+      });
+      this.columnGutters[track].startDragging(e3);
+    } else if (direction === "row") {
+      if (this.rowGutters[track]) {
+        this.rowGutters[track].destroy();
+      }
+      this.rowGutters[track] = createGutter("row", this.options)({
+        track
+      });
+      this.rowGutters[track].startDragging(e3);
+    }
+  };
+  Grid.prototype.destroy = function destroy2(immediate) {
+    var this$1 = this;
+    if (immediate === void 0)
+      immediate = true;
+    Object.keys(this.columnGutters).forEach(function(track) {
+      return this$1.columnGutters[track].destroy(immediate, function() {
+        delete this$1.columnGutters[track];
+      });
+    });
+    Object.keys(this.rowGutters).forEach(function(track) {
+      return this$1.rowGutters[track].destroy(immediate, function() {
+        delete this$1.rowGutters[track];
+      });
+    });
+  };
+  function index(options) {
+    return new Grid(options);
+  }
+  var split_grid_default = index;
+
   // wrasse/wrasse.js
   var initialized = false;
   var WrasseTerminal = new import_xterm.Terminal({
@@ -35232,13 +35744,7 @@ problem_1 = Task1.sum (check [1..999])
   WrasseTerminal.loadAddon(fitAddon);
   var html = {
     terminal: document.getElementById("terminal-container"),
-    buttons: [
-      document.getElementById("wrasse_0"),
-      document.getElementById("wrasse_1"),
-      document.getElementById("wrasse_2"),
-      document.getElementById("wrasse_3"),
-      document.getElementById("wrasse_tree")
-    ],
+    buttons: {},
     hover: {
       shell: document.getElementById("wrasse-hover"),
       content: document.getElementById("wrasse-hover-content")
@@ -35247,11 +35753,14 @@ problem_1 = Task1.sum (check [1..999])
   };
   var scrollToTop = () => {
     wrasse.window.line = 0;
+    wrasse.window.scroll = 0;
     wrasse.window.requestDraw();
   };
   var fitTerminal = () => {
-    fitAddon.fit();
-    console.log(fitAddon.proposeDimensions());
+    const dims = fitAddon.proposeDimensions();
+    if (wrasse.terminal.rows != dims.rows || wrasse.terminal.cols != dims.cols) {
+      fitAddon.fit();
+    }
     wrasse.window.resizable = true;
     wrasse.window.movable = true;
     wrasse.window.expand();
@@ -35259,6 +35768,14 @@ problem_1 = Task1.sum (check [1..999])
     wrasse.window.resizable = false;
   };
   var wrasse_setup = () => {
+    split_grid_default({
+      minSize: 100,
+      snapOffset: 10,
+      rowGutters: [{
+        track: 1,
+        element: document.querySelector(".gutter-row-1")
+      }]
+    });
     console.log("wrasse init");
     console.log(wrasse.editor);
     wrasse.terminal.open(html.terminal);
@@ -35266,36 +35783,9 @@ problem_1 = Task1.sum (check [1..999])
     initialized = true;
     wrasse.terminal.modes.mouseTrackingMode = "any";
     wrasse.terminal.modes.wraparoundMode = true;
-    html.buttons[0].addEventListener("click", (_3) => {
-      wrasse.switch_terminal(wrasse.data_0);
-    });
-    html.buttons[1].addEventListener("click", (_3) => {
-      wrasse.switch_terminal(wrasse.data_1);
-    });
-    html.buttons[2].addEventListener("click", (_3) => {
-      wrasse.switch_terminal(wrasse.data_2);
-      let win = new terminalWindows_default.Window(wrasse.terminal, 5, 5, 10, 5, { movable: true, scrollable: true });
-      win.content = [
-        "1234567",
-        " - ",
-        "23432423423423",
-        "sdfdsfdf",
-        "",
-        ",",
-        "sdfd",
-        "34"
-      ];
-      win.draw();
-      perm.windows.push(win);
-    });
-    html.buttons[3].addEventListener("click", (_3) => {
-      fitTerminal();
-    });
-    html.buttons[4].addEventListener("click", (_3) => {
-      wrasse.interactive_terminal(wrasse.tree);
-    });
     fitTerminal();
-    wrasse.window.write(`Hello from ${ansiEscapes_default.colouredText(ansiEscapes_default.Colour.Red, ansiEscapes_default.Colour.Blue, "xterm.js")}m 
+    new ResizeObserver(debounce(() => fitTerminal(), 100)).observe(html.terminal);
+    wrasse.terminal.write(`Hello from ${ansiEscapes_default.colouredText(ansiEscapes_default.Colour.Red, ansiEscapes_default.Colour.Blue, "xterm.js")}$ \rHello from ${ansiEscapes_default.colouredText(ansiEscapes_default.Colour.Blue, ansiEscapes_default.Colour.Red, `a${ansiEscapes_default.cursorTo(20, 2)}`)}
 $ `, scrollToTop);
     const onMouseMove = (e3) => {
       html.hover.shell.style.left = e3.pageX + "px";
@@ -35461,14 +35951,19 @@ $ `, scrollToTop);
         let hovered = false;
         wrasse.window.addLink(node.link.range, {
           click(link) {
+            link.window.links.filter((x2) => x2 !== link).forEach((x2) => {
+              x2.highlight.fg.seq = "";
+              x2.highlight.bg.seq = "";
+              x2.highlight.resetFG.seq = "";
+              x2.highlight.resetBG.seq = "";
+            });
+            link.window.content.forEach((line) => line.esc = line.esc.filter((esc) => esc.seq !== ""));
             link.window.links = [link];
             clean_lines(node, level);
             node.active = !node.active;
             curr_line = 0;
             write_text(tree, 0, false);
             register_links(tree, 0, node.line);
-            perm.keywords.forEach((x2) => x2.dispose());
-            perm.keywords = [];
             register_keywords(tree);
             wrasse.window.write(ansiEscapes_default.cursorTo(0, node.line));
           },
@@ -35479,7 +35974,7 @@ $ `, scrollToTop);
             hovered = false;
             wrasse.set_hover_content();
           }
-        }, ansiEscapes_default.Colour.Blue);
+        }, ansiEscapes_default.Colour.Blue).treelink = true;
       }
       if (node.active) {
         node.children.forEach((x2) => register_links(x2, level + 1));
@@ -35583,8 +36078,6 @@ $ `, scrollToTop);
         }
         for (const match of text.matchAll(wrasseGHC_default.regex.symbol)) {
           const { symbol } = match.groups;
-          console.log(node.head);
-          console.log(node.head.symbols);
           const sym = node.head.symbols.find((x2) => x2.symbolName === symbol);
           if (sym) {
             wrasse.window.addLink({
@@ -35596,7 +36089,6 @@ $ `, scrollToTop);
               enter(link) {
                 let codeline = "";
                 const match2 = sym?.symbolDefinedAt?.[1]?.matchAll(wrasseGHC_default.regex.location)?.next()?.value;
-                console.log(match2);
                 if (match2?.groups) {
                   const { line, colStart, colEnd } = match2.groups;
                   if (wrasse?.data_0?.ghc?.code) {
@@ -35660,7 +36152,9 @@ $ `, scrollToTop);
           });
         }
       }
-      node?.children.forEach(register_keywords);
+      if (node.active) {
+        node?.children.forEach(register_keywords);
+      }
     };
     setHead(tree, tree);
     write_text(tree, 0, true);

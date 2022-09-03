@@ -450,6 +450,7 @@ body {
 
 .mainGrid {
 	/* position: absolute; */
+    overflow: hidden;
 	display: grid;
 	grid-auto-columns: 1;
 	 grid-auto-flow: row;
@@ -486,6 +487,7 @@ body {
 }
 
 .wrasse-window {
+	overflow:hidden;
     clear:both;
     position:relative;
     bottom:0;
@@ -499,4 +501,25 @@ body {
 
 .wrasse-button {
     position:relative; 
+}
+
+.xterm .xterm-viewport {
+    /* see : https://github.com/xtermjs/xterm.js/issues/3564#issuecomment-1004417440 */
+    width: initial !important;
+}
+
+.grid {
+    display: grid;
+    grid-template-rows: 1fr 10px 1fr;
+}
+
+.gutter-row {
+    grid-column: 1/-1;
+    cursor: row-resize;
+	background-color: #ABBAEA;
+}
+
+.gutter-row-1 {
+    grid-row: 2;
+	background-color: #ABBAEA;
 }
