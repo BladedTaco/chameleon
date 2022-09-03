@@ -44,11 +44,8 @@ const fitTerminal = () => {
   if (wrasse.terminal.rows != dims.rows || wrasse.terminal.cols != dims.cols) {
     fitAddon.fit();
   }
-  wrasse.window.resizable = true;
-  wrasse.window.movable = true;
-  wrasse.window.expand();
-  wrasse.window.movable = false;
-  wrasse.window.resizable = false;
+  wrasse.window.expand(true);
+  perm.windows?.[0]?.resize(wrasse.window.width / 2, wrasse.window.height / 2, false, true)
 }
 
 let wrasse_setup = () => {

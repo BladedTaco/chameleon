@@ -423,8 +423,8 @@ class Window {
         }
     }
 
-    resize(width, height, relative) {
-        if (!this.resizable) return;
+    resize(width, height, relative, force = false) {
+        if (!this.resizable && !force) return;
 
         // check for relative resizing
         if (relative) {
@@ -436,18 +436,21 @@ class Window {
         this.clean();
 
         // update size
-        this.width = width;
-        this.height = height;
+        this.width = Math.floor(width);
+        this.height = Math.floor(height);
+
+        this.move(0,0, true, true)
+
         this.requestDraw();
     }
 
-    expand() {
-        this.move(0, 0, false);
-        this.resize(this.terminal.cols - 2, this.terminal.rows - 2);
+    expand(force = false) {
+        this.move(0, 0, false, force);
+        this.resize(this.terminal.cols - 2, this.terminal.rows - 2, false, force);
     }
 
-    move(x, y, relative) {
-        if (!this.movable) return;
+    move(x, y, relative, force = false) {
+        if (!this.movable && !force) return;
 
         // check for relative positioning
         if (relative) {
@@ -462,8 +465,8 @@ class Window {
         this.clean();
 
         // update position
-        this.x = x;
-        this.y = y;
+        this.x = Math.floor(x);
+        this.y = Math.floor(y);
         this.requestDraw();
     }
 

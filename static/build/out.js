@@ -35145,24 +35145,25 @@ problem_1 = Task1.sum (check [1..999])
         y: Math.floor(relY / cellHeight - 1)
       };
     }
-    resize(width, height, relative) {
-      if (!this.resizable)
+    resize(width, height, relative, force = false) {
+      if (!this.resizable && !force)
         return;
       if (relative) {
         width += this.width;
         height += this.height;
       }
       this.clean();
-      this.width = width;
-      this.height = height;
+      this.width = Math.floor(width);
+      this.height = Math.floor(height);
+      this.move(0, 0, true, true);
       this.requestDraw();
     }
-    expand() {
-      this.move(0, 0, false);
-      this.resize(this.terminal.cols - 2, this.terminal.rows - 2);
+    expand(force = false) {
+      this.move(0, 0, false, force);
+      this.resize(this.terminal.cols - 2, this.terminal.rows - 2, false, force);
     }
-    move(x2, y3, relative) {
-      if (!this.movable)
+    move(x2, y3, relative, force = false) {
+      if (!this.movable && !force)
         return;
       if (relative) {
         x2 += this.x;
@@ -35171,8 +35172,8 @@ problem_1 = Task1.sum (check [1..999])
       x2 = clamp3(0, x2, this.terminal.cols - this.width - 2);
       y3 = clamp3(0, y3, this.terminal.rows - this.height - 2);
       this.clean();
-      this.x = x2;
-      this.y = y3;
+      this.x = Math.floor(x2);
+      this.y = Math.floor(y3);
       this.requestDraw();
     }
     *lines() {
@@ -35761,11 +35762,8 @@ problem_1 = Task1.sum (check [1..999])
     if (wrasse.terminal.rows != dims.rows || wrasse.terminal.cols != dims.cols) {
       fitAddon.fit();
     }
-    wrasse.window.resizable = true;
-    wrasse.window.movable = true;
-    wrasse.window.expand();
-    wrasse.window.movable = false;
-    wrasse.window.resizable = false;
+    wrasse.window.expand(true);
+    perm.windows?.[0]?.resize(wrasse.window.width / 2, wrasse.window.height / 2, false, true);
   };
   var wrasse_setup = () => {
     split_grid_default({
