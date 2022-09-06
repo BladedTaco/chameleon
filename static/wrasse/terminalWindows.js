@@ -260,9 +260,6 @@ class Window {
     */
 
     addLink(range, funcs, colour) {
-        if (colour?.r == 190) {
-            console.log("MADE HERE")
-        }
         let link = new Link(
             this, range, funcs, colour
         )

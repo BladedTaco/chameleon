@@ -503,6 +503,10 @@ body {
     position:relative; 
 }
 
+.chameleon-view {
+	min-width: 0;
+}
+
 .xterm .xterm-viewport {
     /* see : https://github.com/xtermjs/xterm.js/issues/3564#issuecomment-1004417440 */
     width: initial !important;
