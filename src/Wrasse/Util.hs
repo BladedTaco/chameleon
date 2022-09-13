@@ -208,6 +208,16 @@ infixr 9 <......>
 
 infixr 9 <$$.>
 
+
+-- >>> let f = (head . head) <.$$> (+1)
+-- >>> f [[1, 2]]
+-- 2
+--
+(<.$$>) :: (Functor f, Functor g) =>  (f (g b) -> c) -> (a -> b) -> f (g a) -> c
+(<.$$>) = (<..> (<$$>))
+
+infixr 9 <.$$>
+
 -- | map over the result of a function waiting on 3 arguments
 --
 -- Equivalent to (f1 <$>) <...> f2

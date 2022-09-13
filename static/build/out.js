@@ -35780,8 +35780,6 @@ problem_1 = Task1.sum (check [1..999])
     wrasse.terminal.modes.wraparoundMode = true;
     fitTerminal();
     new ResizeObserver(debounce(() => fitTerminal(), 100)).observe(html.terminal);
-    wrasse.terminal.write(`Hello from ${ansiEscapes_default.colouredText(ansiEscapes_default.Colour.Red, ansiEscapes_default.Colour.Blue, "xterm.js")}$ \rHello from ${ansiEscapes_default.colouredText(ansiEscapes_default.Colour.Blue, ansiEscapes_default.Colour.Red, `a${ansiEscapes_default.cursorTo(20, 2)}`)}
-$ `, scrollToTop);
     const onMouseMove = (e3) => {
       html.hover.shell.style.left = e3.pageX + "px";
       html.hover.shell.style.top = e3.pageY + "px";
