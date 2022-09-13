@@ -102,12 +102,15 @@ class Window {
         this.scroll = 0;
         this.content = [{text:"", esc:[]}];
         this.cursor = {x:0, y:0, saved: {x:0, y:0}};
-        options = {movable : false, scrollable : true, resizable : false, ...options};
+        options = {movable : false, scrollable : true, resizable : false, softwrap: false, ...options};
         this.movable = options.movable;
         this.scrollable = options.scrollable;
         this.resizable = options.resizable;
+        this.softwrap = options.softwrap;
         this.links = [];
         this.active = false;
+        this.softLength = 0;
+
 
         Window.setup();
     }
@@ -162,11 +165,11 @@ class Window {
         if (!this.scrollable || !this.active) return false;
 
         const dir = Math.sign(event.deltaY)
-        if (event.shiftKey) {
+        if (event.ctrlKey) { // move LR
             this.move(dir, 0, true);
-        } else if (event.altKey) {
+        } else if (event.altKey) { // move UD
             this.move(0, dir, true);
-        } else if (event.ctrlKey) {
+        } else if (event.shiftKey) { // scroll horizontal
             const textWidth = this.content.reduce(
                 (acc, curr) => Math.max(acc, curr.text.length)
             , 0);
@@ -180,7 +183,7 @@ class Window {
                 this.scroll + dirX,
                 textWidth - this.width
             );
-        } else {
+        } else { // scroll vertical
             const dirY = dir * clamp(
                 1, 
                 Math.round(this.content.length / this.height), 
@@ -188,7 +191,7 @@ class Window {
             );
             this.line = clamp(0, 
                 this.line + dirY,
-                this.content.length - this.height
+                Math.max(this.softLength, this.content.length) - this.height 
             );
         }
         this.onMouseMove(event);
@@ -203,6 +206,7 @@ class Window {
 
         // get cell x and y
         let {x, y} = this.mouseToCell(event.offsetX, event.offsetY);
+        x += this.scroll
         y += this.line 
 
         // get active link
@@ -213,7 +217,6 @@ class Window {
             )
             .sort((a, b) => b.range.start.x - a.range.start.x)
             [0]
-        
 
         // make link active if not already
         if (activeLink?.active === false) {
@@ -471,10 +474,50 @@ class Window {
         for (const line of this.content.slice(this.line, this.line + this.height)) {
             yield {
                 text: line.text.slice(this.scroll, this.width + this.scroll),
-                // esc: line.esc.filter(({pos}) => within(this.scroll, pos, this.width + this.scroll))
-                esc: line.esc,
+                esc: line.esc
+                .map(({pos, seq}) => {return {pos: clamp(0, pos - this.scroll, this.width), seq}})
+                // .filter(({pos, seq}) => within(0, pos, this.width) || seq.match(/\[(3|4)9m/g))
+                // esc: line.esc,
             }
         }
+    }
+
+    *linesWrap() {
+        const window = this;
+        function* softlines() {
+            let lines = 0;
+            for (const line of window.content.slice(0, window.line + window.height)) {
+                let range = {start: 0, end: window.width}
+                for (const text of group_n(line.text, window.width)) {
+                    yield {
+                        text : text.join(""),
+                        esc: line.esc
+                        .filter(({pos}) => within(range.start, pos, range.end))
+                        .map(({pos}) => pos - range.start)
+                    }
+                    range.start = range.end + 1
+                    range.end += window.width
+                    lines += 1
+
+                    if (lines > window.height) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        let queue = [];
+
+        for (const x of softlines()) {
+            queue.push(x)
+        }
+
+        this.softLength = queue.length;
+
+        for (const x of queue.slice(this.line, this.line + this.height)) {
+            yield x;
+        }
+        
     }
 
     
@@ -500,16 +543,21 @@ class Window {
             : '═')
             .join('')
 
+
+        const borderChar = (s) => ESC.colouredText(ESC.Colour.LtDkGrey, {}, s)
+
         // draw top and bottom border
-        let writeString =
+        let writeString = borderChar(
             ESC.cursorSavePosition 
           + ESC.cursorTo(this.x, this.y) 
           + `╔${top}╗`
           + ESC.cursorTo(this.x, this.y + this.height + 1) 
-          + `╚${top}╝`;
+          + `╚${top}╝`);
         
         // draw content
-        let lines = this.lines();
+        let lines = this.softwrap 
+            ? this.linesWrap() 
+            : this.lines()
         const scrollbar = {
             low: Math.max(-0.01, this.line / this.content.length) * this.height,
             hi: Math.min(1, (this.line + this.height) / this.content.length) * this.height,
@@ -526,9 +574,11 @@ class Window {
         for (let i = 1; i <= this.height; i++) {
             // get the next line
             const {text, esc} = lines.next().value ?? {text:"", esc:[]};
-            const sideChr = within(scrollbar.low, i, scrollbar.hi) 
+            const sideChr = borderChar(within(scrollbar.low, i, scrollbar.hi) 
                 ? scrollbarChar 
-                : '║';
+                : '║')
+
+            console.log(text)
 
             const bodyText = esc
             // sort by position

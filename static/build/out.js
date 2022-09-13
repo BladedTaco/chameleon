@@ -34850,7 +34850,7 @@ problem_1 = Task1.sum (check [1..999])
         b: Math.round(clamp3(0, this.b * multiplier, 255))
       };
     }
-  }, __publicField(_a, "Red", new _a({ r: 255 })), __publicField(_a, "Blue", new _a({ b: 255 })), __publicField(_a, "Green", new _a({ g: 255 })), __publicField(_a, "Grey", new _a({ r: 128, g: 128, b: 128 })), __publicField(_a, "LightGrey", new _a({ r: 190, g: 190, b: 190 })), __publicField(_a, "White", new _a({ r: 255, g: 255, b: 255 })), _a);
+  }, __publicField(_a, "Red", new _a({ r: 255 })), __publicField(_a, "Blue", new _a({ b: 255 })), __publicField(_a, "Green", new _a({ g: 255 })), __publicField(_a, "Yellow", new _a({ r: 236, g: 232, b: 26 })), __publicField(_a, "DarkGrey", new _a({ r: 50, g: 50, b: 50 })), __publicField(_a, "LtDkGrey", new _a({ r: 75, g: 75, b: 75 })), __publicField(_a, "Grey", new _a({ r: 128, g: 128, b: 128 })), __publicField(_a, "LightGrey", new _a({ r: 190, g: 190, b: 190 })), __publicField(_a, "White", new _a({ r: 255, g: 255, b: 255 })), _a);
   var ansiEscapes_default = ansiEscapes;
 
   // wrasse/wrasseGHC.js
@@ -34940,12 +34940,14 @@ problem_1 = Task1.sum (check [1..999])
       this.scroll = 0;
       this.content = [{ text: "", esc: [] }];
       this.cursor = { x: 0, y: 0, saved: { x: 0, y: 0 } };
-      options = { movable: false, scrollable: true, resizable: false, ...options };
+      options = { movable: false, scrollable: true, resizable: false, softwrap: false, ...options };
       this.movable = options.movable;
       this.scrollable = options.scrollable;
       this.resizable = options.resizable;
+      this.softwrap = options.softwrap;
       this.links = [];
       this.active = false;
+      this.softLength = 0;
       _Window.setup();
     }
     static setup() {
@@ -34986,17 +34988,17 @@ problem_1 = Task1.sum (check [1..999])
       if (!this.scrollable || !this.active)
         return false;
       const dir = Math.sign(event.deltaY);
-      if (event.shiftKey) {
+      if (event.ctrlKey) {
         this.move(dir, 0, true);
       } else if (event.altKey) {
         this.move(0, dir, true);
-      } else if (event.ctrlKey) {
+      } else if (event.shiftKey) {
         const textWidth = this.content.reduce((acc, curr) => Math.max(acc, curr.text.length), 0);
         const dirX = dir * clamp3(1, Math.round(Math.pow(textWidth / this.width, 1.3)), Math.floor(this.width * 0.7));
         this.scroll = clamp3(0, this.scroll + dirX, textWidth - this.width);
       } else {
         const dirY = dir * clamp3(1, Math.round(this.content.length / this.height), Math.floor(this.height * 0.7));
-        this.line = clamp3(0, this.line + dirY, this.content.length - this.height);
+        this.line = clamp3(0, this.line + dirY, Math.max(this.softLength, this.content.length) - this.height);
       }
       this.onMouseMove(event);
       this.requestDraw();
@@ -35007,6 +35009,7 @@ problem_1 = Task1.sum (check [1..999])
       if (!this.active)
         return false;
       let { x: x2, y: y3 } = this.mouseToCell(event.offsetX, event.offsetY);
+      x2 += this.scroll;
       y3 += this.line;
       let activeLink = this.links.filter((curr) => within2(curr.range.start.x, x2, curr.range.end.x) && within2(curr.range.start.y, y3, curr.range.end.y)).sort((a3, b3) => b3.range.start.x - a3.range.start.x)[0];
       if (activeLink?.active === false) {
@@ -35177,8 +35180,39 @@ problem_1 = Task1.sum (check [1..999])
       for (const line of this.content.slice(this.line, this.line + this.height)) {
         yield {
           text: line.text.slice(this.scroll, this.width + this.scroll),
-          esc: line.esc
+          esc: line.esc.map(({ pos, seq }) => {
+            return { pos: clamp3(0, pos - this.scroll, this.width), seq };
+          })
         };
+      }
+    }
+    *linesWrap() {
+      const window2 = this;
+      function* softlines() {
+        let lines = 0;
+        for (const line of window2.content.slice(0, window2.line + window2.height)) {
+          let range = { start: 0, end: window2.width };
+          for (const text of group_n(line.text, window2.width)) {
+            yield {
+              text: text.join(""),
+              esc: line.esc.filter(({ pos }) => within2(range.start, pos, range.end)).map(({ pos }) => pos - range.start)
+            };
+            range.start = range.end + 1;
+            range.end += window2.width;
+            lines += 1;
+            if (lines > window2.height) {
+              break;
+            }
+          }
+        }
+      }
+      let queue = [];
+      for (const x2 of softlines()) {
+        queue.push(x2);
+      }
+      this.softLength = queue.length;
+      for (const x2 of queue.slice(this.line, this.line + this.height)) {
+        yield x2;
       }
     }
     draw() {
@@ -35193,8 +35227,9 @@ problem_1 = Task1.sum (check [1..999])
         scrollbarXChar = "\u2550";
       }
       const top = Array.from(Array(this.width).keys()).map((x2) => within2(scrollbarX.low, x2, scrollbarX.hi) ? scrollbarXChar : "\u2550").join("");
-      let writeString = ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(this.x, this.y) + `\u2554${top}\u2557` + ansiEscapes_default.cursorTo(this.x, this.y + this.height + 1) + `\u255A${top}\u255D`;
-      let lines = this.lines();
+      const borderChar = (s3) => ansiEscapes_default.colouredText(ansiEscapes_default.Colour.LtDkGrey, {}, s3);
+      let writeString = borderChar(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(this.x, this.y) + `\u2554${top}\u2557` + ansiEscapes_default.cursorTo(this.x, this.y + this.height + 1) + `\u255A${top}\u255D`);
+      let lines = this.softwrap ? this.linesWrap() : this.lines();
       const scrollbar = {
         low: Math.max(-0.01, this.line / this.content.length) * this.height,
         hi: Math.min(1, (this.line + this.height) / this.content.length) * this.height
@@ -35207,7 +35242,8 @@ problem_1 = Task1.sum (check [1..999])
       let escString = "";
       for (let i3 = 1; i3 <= this.height; i3++) {
         const { text, esc } = lines.next().value ?? { text: "", esc: [] };
-        const sideChr = within2(scrollbar.low, i3, scrollbar.hi) ? scrollbarChar : "\u2551";
+        const sideChr = borderChar(within2(scrollbar.low, i3, scrollbar.hi) ? scrollbarChar : "\u2551");
+        console.log(text);
         const bodyText = esc.sort((a3, b3) => a3.pos - b3.pos).reduce((acc, curr) => {
           const { type: type3, col } = curr.seq.matchAll(/\x1b\[(?<type>3|4)(?<col>9m|8;2)/g).next().value.groups;
           const stack = type3 == "3" ? acc.fgstack : acc.bgstack;
@@ -35760,7 +35796,9 @@ problem_1 = Task1.sum (check [1..999])
       fitAddon.fit();
     }
     wrasse.window.expand(true);
-    perm.windows?.[0]?.resize(wrasse.window.width / 2, wrasse.window.height / 2, false, true);
+    perm.windows?.[0]?.resize(wrasse.window.width / 2 - 1, wrasse.window.height, false, true);
+    wrasse.window.resize(wrasse.window.width / 2, wrasse.window.height, false, true);
+    perm.windows?.[0]?.move(wrasse.window.width + 2, 0, false, true);
   };
   var wrasse_setup = () => {
     split_grid_default({
@@ -35878,8 +35916,9 @@ problem_1 = Task1.sum (check [1..999])
   };
   var interactive_terminal = (tree) => {
     switch_terminal();
-    let hoverWin = new terminalWindows_default.Window(wrasse.terminal, wrasse.terminal.cols / 2, 0, wrasse.terminal.cols / 2 - 2, wrasse.terminal.rows / 2, { movable: true });
+    let hoverWin = new terminalWindows_default.Window(wrasse.terminal, wrasse.terminal.cols / 2, 0, wrasse.terminal.cols / 2 - 2, wrasse.terminal.rows, { movable: true, softwrap: true });
     perm.windows.push(hoverWin);
+    fitTerminal();
     let curr_line = 0;
     const setHead = (x2, head2) => {
       if (x2.content !== "Root" || x2 === head2) {
@@ -36093,8 +36132,9 @@ problem_1 = Task1.sum (check [1..999])
     signature: ${sym?.definition || symbol}
     defined ${sym?.symbolDefinedAt?.[0] === "in" ? "in package" : "at"}: ${sym?.symbolDefinedAt?.[1] || "unknown"}
 ` + (codeline ? `     \u255A\u2550\u25BA ${codeline}
-` : "") + `    etc.: ${sym?.symbolEtc}
-`);
+` : "") + `    etc.:` + `
+${sym?.symbolEtc}
+`.split("\n").join("\n      "));
               },
               leave(link) {
                 wrasse.set_hover_content();
@@ -36115,8 +36155,8 @@ problem_1 = Task1.sum (check [1..999])
               if (wrasse?.data_0?.ghc?.code) {
                 x2 = wrasse?.data_0?.ghc?.code[line - 1];
               }
-              wrasse.set_hover_content(`not implemented, look at line ${line}, column ${colStart} to ${colEnd}
-              ${x2}`);
+              wrasse.set_hover_content(`line ${line}, column ${colStart} to ${colEnd}
+   ${x2}`);
             },
             leave(link) {
               wrasse.set_hover_content();
@@ -36134,7 +36174,31 @@ problem_1 = Task1.sum (check [1..999])
               const { code } = match.groups;
               let msg = wrasse.messages.find((x2) => x2.errCode == code);
               if (msg) {
-                wrasse.set_hover_content(JSON.stringify(msg, null, 2));
+                const { summary, removed, bodyText, introduced, errCode, severity, extension, flag, title, examples: examples2 } = msg;
+                const nest = (x2) => x2.split("\n").join("\n|   ");
+                const ex = examples2.map(({ beforeCode, explanation, errorMsg, exTitle, afterCode }) => `${ansiEscapes_default.colouredText(ansiEscapes_default.Colour.Yellow, {}, exTitle)}
+` + nest(`before:
+${beforeCode}`) + `
+
+` + nest(`after:
+${afterCode}`));
+                const flags = [severity, extension, flag, introduced, removed];
+                const subtitle = [
+                  `severity: ${ansiEscapes_default.colouredText({ error: ansiEscapes_default.Colour.Red, warning: ansiEscapes_default.Colour.Yellow }[severity] ?? ansiEscapes_default.Colour.Green, {}, severity)}`,
+                  `originates from: ${extension}`,
+                  `requires compiler flag: ${flag}`,
+                  `introduced in ${introduced}`,
+                  `removed in ${removed}`
+                ].filter((x2, i3) => flags[i3] != "").join("; ");
+                wrasse.set_hover_content(`[${errCode}] -> ${title}
+${subtitle}
+
+${summary}
+
+${bodyText}
+
+examples:${["", ...ex].join("\n" + "-".repeat(10) + "\n")}
+`);
               } else {
                 wrasse.set_hover_content(`No file found for error code ${code}`);
               }

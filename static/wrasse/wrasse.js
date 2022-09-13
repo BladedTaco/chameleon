@@ -45,7 +45,9 @@ const fitTerminal = () => {
     fitAddon.fit();
   }
   wrasse.window.expand(true);
-  perm.windows?.[0]?.resize(wrasse.window.width / 2, wrasse.window.height / 2, false, true)
+  perm.windows?.[0]?.resize(wrasse.window.width / 2 - 1, wrasse.window.height, false, true)
+  wrasse.window.resize(wrasse.window.width / 2, wrasse.window.height, false, true)
+  perm.windows?.[0]?.move(wrasse.window.width + 2, 0, false, true)
 }
 
 let wrasse_setup = () => {
@@ -255,10 +257,12 @@ let interactive_terminal = (tree) => {
     wrasse.terminal.cols / 2,
     0,
     wrasse.terminal.cols / 2 - 2,
-    wrasse.terminal.rows / 2,
-    {movable : true}
+    wrasse.terminal.rows,
+    {movable : true, softwrap: true}
   );
   perm.windows.push(hoverWin);
+
+  fitTerminal();
 
   let curr_line = 0;
 
@@ -593,7 +597,7 @@ let interactive_terminal = (tree) => {
                   `    signature: ${sym?.definition || symbol}\n` +
                   `    defined ${sym?.symbolDefinedAt?.[0] === "in" ? "in package" : "at"}: ${sym?.symbolDefinedAt?.[1] || "unknown"}\n` +
                   (codeline ? `     ╚═► ${codeline}\n` : "") +
-                  `    etc.: ${sym?.symbolEtc}\n`
+                  `    etc.:` + `\n${sym?.symbolEtc}\n`.split("\n").join("\n      ")
                 )
               },
               leave(link) {
@@ -623,8 +627,8 @@ let interactive_terminal = (tree) => {
                 x = wrasse?.data_0?.ghc?.code[line-1];
               }
 
-              wrasse.set_hover_content(`not implemented, look at line ${line}, column ${colStart} to ${colEnd}
-              ${x}`)
+              wrasse.set_hover_content(`line ${line}, column ${colStart} to ${colEnd}\n`+
+              `   ${x}`)
             },
             leave(link) {
               wrasse.set_hover_content()
@@ -648,7 +652,35 @@ let interactive_terminal = (tree) => {
               let msg = wrasse.messages.find((x) => x.errCode == code);
 
               if (msg) {
-                wrasse.set_hover_content(JSON.stringify(msg, null, 2))
+                const {summary, removed, bodyText, introduced, errCode, severity, extension, flag, title, examples} = msg
+                
+                const nest = (x) => x.split("\n").join("\n|   ")
+
+                const ex = examples.map(({beforeCode, explanation, errorMsg, exTitle, afterCode}) => `${ESC.colouredText(ESC.Colour.Yellow, {}, exTitle)}\n`+
+                nest(`before:\n${beforeCode}`) 
+                + `\n\n`+
+                nest(`after:\n${afterCode}`))
+
+                const flags = [severity, extension, flag, introduced, removed]
+                const subtitle = [
+                  `severity: ${ESC.colouredText(
+                    {error : ESC.Colour.Red, warning : ESC.Colour.Yellow}[severity] ?? ESC.Colour.Green, {}, 
+                    severity)}`,
+                  `originates from: ${extension}`,
+                  `requires compiler flag: ${flag}`,
+                  `introduced in ${introduced}`,
+                  `removed in ${removed}`,
+                ].filter((x, i) => flags[i] != "")
+                .join("; ")
+
+                wrasse.set_hover_content(`[${errCode}] -> ${title}\n`+
+                `${subtitle}\n\n`+
+                `${summary}\n\n`+
+                `${bodyText}\n\n`+
+                `examples:${["", ...ex].join("\n" + "-".repeat(10) + "\n")}\n`
+                )
+
+                // wrasse.set_hover_content(JSON.stringify(msg, null, 2))
               } else {
                 wrasse.set_hover_content(`No file found for error code ${code}`)
               }
