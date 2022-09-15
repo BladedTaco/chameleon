@@ -109,8 +109,8 @@ class Window {
         this.softwrap = options.softwrap;
         this.links = [];
         this.active = false;
-        this.softLength = 0;
-
+        this.dirty = true;
+        this.softContent = [];
 
         Window.setup();
     }
@@ -170,6 +170,7 @@ class Window {
         } else if (event.altKey) { // move UD
             this.move(0, dir, true);
         } else if (event.shiftKey) { // scroll horizontal
+            if (this.softwrap) return;
             const textWidth = this.content.reduce(
                 (acc, curr) => Math.max(acc, curr.text.length)
             , 0);
@@ -191,7 +192,7 @@ class Window {
             );
             this.line = clamp(0, 
                 this.line + dirY,
-                Math.max(this.softLength, this.content.length) - this.height 
+                Math.max(this.softContent.length, this.content.length) - this.height 
             );
         }
         this.onMouseMove(event);
@@ -281,6 +282,7 @@ class Window {
     }
 
     write(text, callback) {
+        this.dirty = true;
         const handleEscape = (text) => {
             // special character regex
             const regex = /\u001B\[(?:(?<nums>(?:[0-9]+;)*)(?<num>(?:[0-9]+)))?(?<char>[a-zA-Z])/gi;
@@ -426,6 +428,8 @@ class Window {
     resize(width, height, relative, force = false) {
         if (!this.resizable && !force) return;
 
+        // make softContent dirty
+        this.dirty = true;
         // check for relative resizing
         if (relative) {
             width += this.width;
@@ -440,6 +444,8 @@ class Window {
         this.height = Math.floor(height);
 
         this.move(0,0, true, true)
+
+        this.onWheel({deltaY: 0})
 
         this.requestDraw();
     }
@@ -482,39 +488,52 @@ class Window {
         }
     }
 
+    // inefficient function that regenerates on each draw
+    // soft-wraps the lines
     *linesWrap() {
         const window = this;
         function* softlines() {
             let lines = 0;
-            for (const line of window.content.slice(0, window.line + window.height)) {
+            for (const line of window.content) {
+                console.log(line)
                 let range = {start: 0, end: window.width}
+                let lastEsc = []
                 for (const text of group_n(line.text, window.width)) {
+                    const escs = lastEsc.concat(
+                        line.esc
+                            .filter(({pos}) => within(range.start, pos, range.end))
+                            .map(({pos, ...rest}) => {return {...rest, pos: pos - range.start}})
+                    )
+
+                    console.log(text.join(""), escs)
+
                     yield {
                         text : text.join(""),
-                        esc: line.esc
-                        .filter(({pos}) => within(range.start, pos, range.end))
-                        .map(({pos}) => pos - range.start)
+                        esc: escs
                     }
-                    range.start = range.end + 1
+                    range.start = range.end
                     range.end += window.width
                     lines += 1
-
-                    if (lines > window.height) {
-                        break;
-                    }
+                    lastEsc = Object.values(escs.reduce((acc, curr) => {
+                        const {type} = curr.seq.matchAll(/\x1b\[(?<type>3|4)(?<col>9m|8;2)/g)?.next()?.value?.groups
+                        return {...acc, ...(
+                              type === '3' ? {fg : curr} 
+                            : type === '4' ? {bg : curr} 
+                            : {}
+                        )}
+                    }, {}))
+                        .filter(x => x !== undefined)
+                        .map(({pos, ...rest}) => {return {...rest, pos: 0}})
                 }
             }
         }
 
-        let queue = [];
-
-        for (const x of softlines()) {
-            queue.push(x)
+        if (this.dirty) {
+            this.dirty = false;
+            this.softContent = Array.from(softlines())
         }
 
-        this.softLength = queue.length;
-
-        for (const x of queue.slice(this.line, this.line + this.height)) {
+        for (const x of this.softContent.slice(this.line, this.line + this.height)) {
             yield x;
         }
         
@@ -558,9 +577,10 @@ class Window {
         let lines = this.softwrap 
             ? this.linesWrap() 
             : this.lines()
+        const len = Math.max(this.content.length, this.softContent.length)
         const scrollbar = {
-            low: Math.max(-0.01, this.line / this.content.length) * this.height,
-            hi: Math.min(1, (this.line + this.height) / this.content.length) * this.height,
+            low: Math.max(-0.01, this.line / len) * this.height,
+            hi: Math.min(1, (this.line + this.height) / len) * this.height,
         }
         scrollbar.hi = Math.max(Math.ceil(scrollbar.low)+0.5, scrollbar.hi)
 
@@ -586,6 +606,7 @@ class Window {
             // map to colour pairs
             .reduce((acc, curr) => {
                 // get fg/bg and colour/reset
+                console.log(curr)
                 const {type, col} = curr.seq.matchAll(/\x1b\[(?<type>3|4)(?<col>9m|8;2)/g).next().value.groups;
                 // get stack based on foreground or background
                 const stack = (type == "3" ? acc.fgstack : acc.bgstack);

@@ -34947,7 +34947,8 @@ problem_1 = Task1.sum (check [1..999])
       this.softwrap = options.softwrap;
       this.links = [];
       this.active = false;
-      this.softLength = 0;
+      this.dirty = true;
+      this.softContent = [];
       _Window.setup();
     }
     static setup() {
@@ -34998,7 +34999,7 @@ problem_1 = Task1.sum (check [1..999])
         this.scroll = clamp3(0, this.scroll + dirX, textWidth - this.width);
       } else {
         const dirY = dir * clamp3(1, Math.round(this.content.length / this.height), Math.floor(this.height * 0.7));
-        this.line = clamp3(0, this.line + dirY, Math.max(this.softLength, this.content.length) - this.height);
+        this.line = clamp3(0, this.line + dirY, Math.max(this.softContent.length, this.content.length) - this.height);
       }
       this.onMouseMove(event);
       this.requestDraw();
@@ -35044,6 +35045,7 @@ problem_1 = Task1.sum (check [1..999])
       return this;
     }
     write(text, callback) {
+      this.dirty = true;
       const handleEscape = (text2) => {
         const regex = /\u001B\[(?:(?<nums>(?:[0-9]+;)*)(?<num>(?:[0-9]+)))?(?<char>[a-zA-Z])/gi;
         let cutString = [];
@@ -35148,6 +35150,7 @@ problem_1 = Task1.sum (check [1..999])
     resize(width, height, relative, force = false) {
       if (!this.resizable && !force)
         return;
+      this.dirty = true;
       if (relative) {
         width += this.width;
         height += this.height;
@@ -35156,6 +35159,7 @@ problem_1 = Task1.sum (check [1..999])
       this.width = Math.floor(width);
       this.height = Math.floor(height);
       this.move(0, 0, true, true);
+      this.onWheel({ deltaY: 0 });
       this.requestDraw();
     }
     expand(force = false) {
@@ -35190,28 +35194,36 @@ problem_1 = Task1.sum (check [1..999])
       const window2 = this;
       function* softlines() {
         let lines = 0;
-        for (const line of window2.content.slice(0, window2.line + window2.height)) {
+        for (const line of window2.content) {
+          console.log(line);
           let range = { start: 0, end: window2.width };
+          let lastEsc = [];
           for (const text of group_n(line.text, window2.width)) {
+            const escs = lastEsc.concat(line.esc.filter(({ pos }) => within2(range.start, pos, range.end)).map(({ pos, ...rest }) => {
+              return { ...rest, pos: pos - range.start };
+            }));
+            console.log(text.join(""), escs);
             yield {
               text: text.join(""),
-              esc: line.esc.filter(({ pos }) => within2(range.start, pos, range.end)).map(({ pos }) => pos - range.start)
+              esc: escs
             };
-            range.start = range.end + 1;
+            range.start = range.end;
             range.end += window2.width;
             lines += 1;
-            if (lines > window2.height) {
-              break;
-            }
+            lastEsc = Object.values(escs.reduce((acc, curr) => {
+              const { type: type3 } = curr.seq.matchAll(/\x1b\[(?<type>3|4)(?<col>9m|8;2)/g)?.next()?.value?.groups;
+              return { ...acc, ...type3 === "3" ? { fg: curr } : type3 === "4" ? { bg: curr } : {} };
+            }, {})).filter((x2) => x2 !== void 0).map(({ pos, ...rest }) => {
+              return { ...rest, pos: 0 };
+            });
           }
         }
       }
-      let queue = [];
-      for (const x2 of softlines()) {
-        queue.push(x2);
+      if (this.dirty) {
+        this.dirty = false;
+        this.softContent = Array.from(softlines());
       }
-      this.softLength = queue.length;
-      for (const x2 of queue.slice(this.line, this.line + this.height)) {
+      for (const x2 of this.softContent.slice(this.line, this.line + this.height)) {
         yield x2;
       }
     }
@@ -35230,9 +35242,10 @@ problem_1 = Task1.sum (check [1..999])
       const borderChar = (s3) => ansiEscapes_default.colouredText(ansiEscapes_default.Colour.LtDkGrey, {}, s3);
       let writeString = borderChar(ansiEscapes_default.cursorSavePosition + ansiEscapes_default.cursorTo(this.x, this.y) + `\u2554${top}\u2557` + ansiEscapes_default.cursorTo(this.x, this.y + this.height + 1) + `\u255A${top}\u255D`);
       let lines = this.softwrap ? this.linesWrap() : this.lines();
+      const len = Math.max(this.content.length, this.softContent.length);
       const scrollbar = {
-        low: Math.max(-0.01, this.line / this.content.length) * this.height,
-        hi: Math.min(1, (this.line + this.height) / this.content.length) * this.height
+        low: Math.max(-0.01, this.line / len) * this.height,
+        hi: Math.min(1, (this.line + this.height) / len) * this.height
       };
       scrollbar.hi = Math.max(Math.ceil(scrollbar.low) + 0.5, scrollbar.hi);
       let scrollbarChar = "\u2588";
@@ -35245,6 +35258,7 @@ problem_1 = Task1.sum (check [1..999])
         const sideChr = borderChar(within2(scrollbar.low, i3, scrollbar.hi) ? scrollbarChar : "\u2551");
         console.log(text);
         const bodyText = esc.sort((a3, b3) => a3.pos - b3.pos).reduce((acc, curr) => {
+          console.log(curr);
           const { type: type3, col } = curr.seq.matchAll(/\x1b\[(?<type>3|4)(?<col>9m|8;2)/g).next().value.groups;
           const stack = type3 == "3" ? acc.fgstack : acc.bgstack;
           if (col == "9m") {
