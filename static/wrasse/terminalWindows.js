@@ -213,7 +213,7 @@ class Window {
         // get active link
         let activeLink = this.links
             .filter (curr => 
-                within(curr.range.start.x, x, curr.range.end.x)
+                within(curr.range.start.x, x, curr.range.end.x - 1)
                 && within(curr.range.start.y, y, curr.range.end.y)
             )
             .sort((a, b) => b.range.start.x - a.range.start.x)
@@ -417,8 +417,9 @@ class Window {
     }
 
     mouseToCell(relX, relY) {
-        const cellHeight = wrasse.html.terminal.offsetHeight / wrasse.terminal.rows;
-        const cellWidth  = wrasse.html.terminal.offsetWidth  / wrasse.terminal.cols;
+        const textLayer = wrasse.html.terminal.querySelector('.xterm-text-layer')
+        const cellHeight = textLayer.offsetHeight / wrasse.terminal.rows;
+        const cellWidth  = textLayer.offsetWidth  / wrasse.terminal.cols;
         return {
             x : Math.floor(relX / cellWidth  - 1),
             y : Math.floor(relY / cellHeight - 1),

@@ -61,7 +61,7 @@ let wrasse_setup = () => {
             element: document.querySelector('.gutter-row-1'),
         }]
     })
-
+    
     console.log('wrasse init')
 
     console.log(wrasse.editor)
@@ -141,6 +141,9 @@ let hook = async ({code, response, editor}) => {
     wrasse.tree.symbols = parse_symbols(wrasse.tree)
 
     interactive_terminal(wrasse.tree)
+
+    
+    html.terminal.querySelectorAll('.xterm-selection-layer, .xterm-link-layer, .xterm-cursor-layer').forEach(x => x.remove())
 }
 
 let parse_symbols = (tree) => {
@@ -641,8 +644,8 @@ let interactive_terminal = (tree) => {
       for (const match of text.matchAll(wrasseGHC.regex.error)) {
         wrasse.window.addLink(
           { 
-            start: { x: range.start.x + match.index + 2,                    y: node.line },
-            end:   { x: range.start.x + match.index + match[0].length,  y: node.line }
+            start: { x: range.start.x + match.index + 1,                    y: node.line },
+            end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line }
           },
           {
             click(link) {

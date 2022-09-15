@@ -34994,6 +34994,8 @@ problem_1 = Task1.sum (check [1..999])
       } else if (event.altKey) {
         this.move(0, dir, true);
       } else if (event.shiftKey) {
+        if (this.softwrap)
+          return;
         const textWidth = this.content.reduce((acc, curr) => Math.max(acc, curr.text.length), 0);
         const dirX = dir * clamp3(1, Math.round(Math.pow(textWidth / this.width, 1.3)), Math.floor(this.width * 0.7));
         this.scroll = clamp3(0, this.scroll + dirX, textWidth - this.width);
@@ -35012,7 +35014,7 @@ problem_1 = Task1.sum (check [1..999])
       let { x: x2, y: y3 } = this.mouseToCell(event.offsetX, event.offsetY);
       x2 += this.scroll;
       y3 += this.line;
-      let activeLink = this.links.filter((curr) => within2(curr.range.start.x, x2, curr.range.end.x) && within2(curr.range.start.y, y3, curr.range.end.y)).sort((a3, b3) => b3.range.start.x - a3.range.start.x)[0];
+      let activeLink = this.links.filter((curr) => within2(curr.range.start.x, x2, curr.range.end.x - 1) && within2(curr.range.start.y, y3, curr.range.end.y)).sort((a3, b3) => b3.range.start.x - a3.range.start.x)[0];
       if (activeLink?.active === false) {
         activeLink.funcs.enter(activeLink);
         activeLink.active = true;
@@ -35140,8 +35142,9 @@ problem_1 = Task1.sum (check [1..999])
       return within2(this.x - 0.5, x2, this.x + this.width + 0.5) && within2(this.y - 0.5, y3, this.y + this.height + 0.5);
     }
     mouseToCell(relX, relY) {
-      const cellHeight = wrasse_default.html.terminal.offsetHeight / wrasse_default.terminal.rows;
-      const cellWidth = wrasse_default.html.terminal.offsetWidth / wrasse_default.terminal.cols;
+      const textLayer = wrasse_default.html.terminal.querySelector(".xterm-text-layer");
+      const cellHeight = textLayer.offsetHeight / wrasse_default.terminal.rows;
+      const cellWidth = textLayer.offsetWidth / wrasse_default.terminal.cols;
       return {
         x: Math.floor(relX / cellWidth - 1),
         y: Math.floor(relY / cellHeight - 1)
@@ -35870,6 +35873,7 @@ problem_1 = Task1.sum (check [1..999])
     console.log(wrasse.tree);
     wrasse.tree.symbols = parse_symbols(wrasse.tree);
     interactive_terminal(wrasse.tree);
+    html.terminal.querySelectorAll(".xterm-selection-layer, .xterm-link-layer, .xterm-cursor-layer").forEach((x2) => x2.remove());
   };
   var parse_symbols = (tree) => {
     const symbols = tree?.children.find((x2) => x2.content === "Defer GHC")?.children.find((x2) => x2.content === "symbols")?.children ?? [];
@@ -36179,8 +36183,8 @@ ${sym?.symbolEtc}
         }
         for (const match of text.matchAll(wrasseGHC_default.regex.error)) {
           wrasse.window.addLink({
-            start: { x: range.start.x + match.index + 2, y: node.line },
-            end: { x: range.start.x + match.index + match[0].length, y: node.line }
+            start: { x: range.start.x + match.index + 1, y: node.line },
+            end: { x: range.start.x + match.index + match[0].length + 1, y: node.line }
           }, {
             click(link) {
             },
