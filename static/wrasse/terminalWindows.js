@@ -188,7 +188,7 @@ class Window {
             const dirY = dir * clamp(
                 1, 
                 Math.round(this.content.length / this.height), 
-                Math.floor(this.height * 0.7)
+                Math.floor(this.height * 0.25)
             );
             this.line = clamp(0, 
                 this.line + dirY,

@@ -82,8 +82,8 @@ let wrasse_setup = () => {
 
     new ResizeObserver( debounce(() => fitTerminal(), 100)).observe(html.terminal)
 
-    // // write starter text
-    // wrasse.window.write(`Hello from ${ESC.colouredText(ESC.Colour.Red, ESC.Colour.Blue, "xterm.js")}$ ` + `\rHello from ${ESC.colouredText(ESC.Colour.Blue, ESC.Colour.Red, `a${ESC.cursorTo(20, 2)}`)}\n$ `, scrollToTop)
+    // write starter text
+    wrasse.window.write(`${ESC.colouredText(ESC.Colour.Yellow, ESC.Colour.LtDkGrey, "Wrasse")} is loading, please wait.\ntype-check the code to start if nothing happens after a few seconds.\n`, scrollToTop)
 
     // setup mouse followers
     const onMouseMove = (e) =>{

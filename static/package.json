@@ -31,6 +31,7 @@
     "react-modal": "^3.15.1",
     "react-redux": "7.2.5",
     "split-grid": "^1.0.11",
+    "stackframe": "^1.3.4",
     "xterm": "^4.18.0",
     "xterm-addon-fit": "^0.5.0"
   }
