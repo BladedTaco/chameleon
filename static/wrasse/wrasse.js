@@ -64,8 +64,6 @@ let wrasse_setup = () => {
     
     console.log('wrasse init')
 
-    console.log(wrasse.editor)
-
     wrasse.terminal.open(html.terminal);
 
     wrasse.window = new tWin.Window(WrasseTerminal, 2, 2, 10, 10);

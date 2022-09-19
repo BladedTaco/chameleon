@@ -496,7 +496,6 @@ class Window {
         function* softlines() {
             let lines = 0;
             for (const line of window.content) {
-                console.log(line)
                 let range = {start: 0, end: window.width}
                 let lastEsc = []
                 for (const text of group_n(line.text, window.width)) {
@@ -505,8 +504,6 @@ class Window {
                             .filter(({pos}) => within(range.start, pos, range.end))
                             .map(({pos, ...rest}) => {return {...rest, pos: pos - range.start}})
                     )
-
-                    console.log(text.join(""), escs)
 
                     yield {
                         text : text.join(""),
@@ -597,9 +594,7 @@ class Window {
             const {text, esc} = lines.next().value ?? {text:"", esc:[]};
             const sideChr = borderChar(within(scrollbar.low, i, scrollbar.hi) 
                 ? scrollbarChar 
-                : '║')
-
-            console.log(text)
+                : '║');
 
             const bodyText = esc
             // sort by position
@@ -607,7 +602,6 @@ class Window {
             // map to colour pairs
             .reduce((acc, curr) => {
                 // get fg/bg and colour/reset
-                console.log(curr)
                 const {type, col} = curr.seq.matchAll(/\x1b\[(?<type>3|4)(?<col>9m|8;2)/g).next().value.groups;
                 // get stack based on foreground or background
                 const stack = (type == "3" ? acc.fgstack : acc.bgstack);

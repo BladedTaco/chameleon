@@ -39,6 +39,7 @@ library
       Wrasse.Hook
       Wrasse.Instance
       Wrasse.Messages
+      Wrasse.Test
       Wrasse.Tree
       Wrasse.TypeInfo
       Wrasse.Types

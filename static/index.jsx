@@ -239,8 +239,8 @@ const ModelContent = () => {
           if (currentTaskNum === 8) {
             let participant_id = localStorage.getItem('userId');
             console.log(participant_id)
-            window.location =
-            `https://tally.so/r/nrjAxX?participant_id=${participant_id}`;
+            //window.location =
+            //`https://tally.so/r/nrjAxX?participant_id=${participant_id}`;
             return;
           } else {
             dispatch(switchTaskThunk(currentTaskNum + 1));

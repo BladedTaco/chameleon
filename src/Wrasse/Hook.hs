@@ -60,6 +60,8 @@ import Data.Aeson (encode)
 import Data.ByteString.Lazy.UTF8 (toString)
 import JsonInstance
 import Data.Maybe (fromMaybe)
+import Text.Parsec.Combinator (manyTill)
+import Text.Parsec (anyChar)
 
 -- main :: IO ()
 -- main = do
@@ -185,8 +187,22 @@ ghcHook :: String -> FilePath -> IO GHCResult
 ghcHook modName file = do
   let flags = [
           "-fprint-potential-instances"
+        , "-fforce-recomp"
+        , "-fno-code"
+        , "-fobject-code"
+        , "-fwarn-monomorphism-restriction"
+        , "-fwarn-name-shadowing "
+        , "-Wmissed-specialisations"
         , "-ferror-spans"
         , "-Wall"
+        , "-fdefer-diagnostics"
+        , "-fprint-axiom-incomps"
+        , "-fprint-equality-relations"
+        , "-fprint-expanded-synonyms"
+        , "-fprint-explicit-coercions"
+        , "-fprint-typechecker-elaboration"
+        , "-fhelpful-errors"
+        , "-fshow-warning-groups"
         ]
 
   let cmd = "ghc " ++ unwords flags ++ " generated/Infile.hs"
@@ -213,14 +229,15 @@ hlintHook file = do
   -- return $ GHCResult (("hlint console: " ++) <$> lines ref_out) $ fmap ("hlint out: " ++) out ++ fmap (("idea: " ++) . show) ideas
   return (lines ref_out, out ++ [""] ++ (show <$> ideas))
 
-
+-- parser for the input code to extract the module name
 moduleParser :: Parsec String () String
 moduleParser = do
-    string "module "
+    manyTill anyChar (string "module ")
     res <- many $ noneOf " "
     string " where"
     return res
 
+-- gets the module name from the code
 getModuleName :: String -> String
 getModuleName s = case parse moduleParser "" s of
     Left err -> ""

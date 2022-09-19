@@ -444,8 +444,28 @@ check (x:xs)
 
 problem_1 = sum (check [1..999])
 `
+
+const test = n => `module Task${n} where
+
+-- safely convert a maybe value
+-- to a value of the inner type
+fromMaybe' ma x = 
+  case ma of
+    Nothing -> x
+    Just a -> a
+  
+-- Feed zero if the maybe value is nothing
+justOrZero n = fromMaybe' 0 n
+
+-- add two maybe words
+x = let a = justOrZero (Just 3)
+        b = justOrZero Nothing
+    in a + b
+`
+
+
 const examples = [
-  euler1,
+  test,//euler1,
   dropEvery,
   rotate,
   insertAt,

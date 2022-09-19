@@ -136,8 +136,8 @@ const MenuBar = () => {
               });
               if (currentTaskNum === 8) {
                 let participant_id = localStorage.getItem('userId');
-                window.location =
-                  `https://tally.so/r/nrjAxX?participant_id=${participant_id}`;
+                //window.location =
+                //  `https://tally.so/r/nrjAxX?participant_id=${participant_id}`;
               } else {
                 localStorage.setItem('userProgress', currentTaskNum);
                 dispatch(switchTaskThunk(currentTaskNum + 1));
