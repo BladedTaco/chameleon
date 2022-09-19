@@ -1,7 +1,0 @@
-.git/
-.stack-work/
-dist/
-
-cc/*
-!cc/*.cabal
-!cc/*.hs
