@@ -465,7 +465,8 @@ x = let a = justOrZero (Just 3)
 
 
 const examples = [
-  test,//euler1,
+  // test,
+  euler1,
   dropEvery,
   rotate,
   insertAt,

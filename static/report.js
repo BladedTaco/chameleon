@@ -36,12 +36,12 @@ if (OUTPUT_TARGET === 'playground') {
 } else {
     if (process.env.NODE_ENV === 'production') {
       track = ({ event, task, mode, source }) => {
-        mixpanel.track(event, {
-          Stage: 'live',
-          Task: task,
-          Mode: mode,
-          'Input Source': source,
-        });
+        // mixpanel.track(event, {
+        //   Stage: 'live',
+        //   Task: task,
+        //   Mode: mode,
+        //   'Input Source': source,
+        // });
       };
     } else {
       track = ({ event, task, mode, source }) => {

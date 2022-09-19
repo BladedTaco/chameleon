@@ -35,7 +35,7 @@ const tracker = new Tracker({
 Modal.setAppElement('#react-root');
 
 let userId, userProgress;
-if (localStorage.getItem('userId') === null) {
+if (true) {
   userId = nanoid();
   userProgress = -1;
   localStorage.setItem('userId', userId);
@@ -43,20 +43,20 @@ if (localStorage.getItem('userId') === null) {
 } else {
   userId = localStorage.getItem('userId');
   userProgress = parseInt(localStorage.getItem('userProgress'), 10) || -1;
-  if (userProgress === 8) {
-    window.location = '/playground'
-  }
+  // if (userProgress === 8) {
+  //   window.location = '/playground'
+  // }
 }
 
-mixpanel.init('6be6077e1d5b8de6978c65490e1666ea', {
-  debug: false,
-  ignore_dnt: true,
-  api_host: 'https://data.chameleon.typecheck.me',
-});
+// mixpanel.init('6be6077e1d5b8de6978c65490e1666ea', {
+//   debug: false,
+//   ignore_dnt: true,
+//   // api_host: 'https://data.chameleon.typecheck.me',
+// });
 
-mixpanel.identify(userId);
-tracker.start();
-tracker.setUserID(userId)
+// mixpanel.identify(userId);
+// tracker.start();
+// tracker.setUserID(userId)
 
 store.dispatch(switchTaskThunk(userProgress + 1));
 
