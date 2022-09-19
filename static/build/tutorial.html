@@ -111,7 +111,7 @@
                 Highlights are fragments of code with
                 <button @mouseenter="step = 1" @mouseleave="step=0"
                     class="px-1 h-6 leading-6 border border-black rounded-sm">
-                    colored backgorund
+                    colored background
                 </button>
 
                 . Highlights can be either
@@ -136,8 +136,8 @@
 
         <section class="step-container" x-data="{step : 0}">
             <div class="leading-8">
-                <h2 class="font-bold" id="color-switching">Highlights (color switching)</h2>
-                Highlights switch color (blue to orange or vice versa) the
+                <h2 class="font-bold" id="color-switching">Highlights (color-switching)</h2>
+                Highlights switch color (blue to orange or vice versa) when the
                 <a class="underline text-blue-800" href="#expression-cards">active card</a> (or
                 <a class="underline text-blue-800" href="#deduction-step-ui">deduction step</a>
                 ) changes.
@@ -194,14 +194,14 @@
                     class="px-1 h-6 leading-6 border border-black rounded-sm">step
                     buttons</button>
                 . Clicking on
-                a step button activates the step. There can be 0 or 1
+                a step button activates the step. Each card can associate with 0 or 1
                 <button @mouseenter="step = 2" @mouseleave="step=0"
                     class="px-1 h-6 leading-6 border border-black rounded-sm">active
                     step
                 </button> and any number of
                 <button @mouseenter="step = 3" @mouseleave="step=0"
                     class="px-1 h-6 leading-6 border border-black rounded-sm">inactive
-                    steps</button> associated to a card.
+                    steps</button>.
             </div>
             <div class="relative border">
                 <img class="absolute" :class="assetShow(step, 0)" src="./tutorial/pngs/Deduction Example Step 1.png">
@@ -237,32 +237,6 @@
                 <img class="" :class="assetShow(step, 3)" src="./tutorial/pngs/Deduction Example Step 4.png">
             </div>
         </section>
-
-        <section class="step-container" x-data="{step: 0}">
-            <div class="leading-8">
-                <h2 class="font-bold" id="deduction-step-example">Modes </h2>
-                Chameleon can be configured in three modes based on the features we illustrated before, namely
-                <button @mouseenter="step = 0" @mouseleave="step=0"
-                class="px-1 h-6 leading-6 border border-black rounded-sm"> Basic Mode</button>
-                <button @mouseenter="step = 1" @mouseleave="step=0"
-                class="px-1 h-6 leading-6 border border-black rounded-sm"> Balanced Mode</button>(basic mode with uncertain expression cards), and
-                <button @mouseenter="step = 2" @mouseleave="step=0"
-                class="px-1 h-6 leading-6 border border-black rounded-sm"> Advanced Mode</button>(balanced mode with deduction steps).
-                You will start off with different mode throughout the study. However, you are free to switch between modes at any time by pressing the 
-                tab key or click the expand buttons.
-            </div>
-            <div class="relative border">
-                <img class="absolute" :class="assetShow(step, 0)" src="./tutorial/pngs/Original.png">
-                <img class="absolute" :class="assetShow(step, 1)" src="./tutorial/pngs/Card X.png">
-                <img class="" :class="assetShow(step, 2)" src="./tutorial/pngs/Deduction Example Step 1.png">
-            </div>
-        </section>
-
-        <div class="flex mb-12">
-            <a href="/study" class="block bg-green-400 py-1 px-3 rounded-md text-xl">
-                Start code challenges
-            </a>
-        </div>
     </main>
 </body>
 

@@ -1,5 +1,5 @@
 const intro = n => `module Task${n} where
-
+-- Objective: fix the type error in this file
 x y =
   case y of
     3 -> '3'
@@ -7,6 +7,7 @@ x y =
 `
 
 const dropEvery = n => `module Task${n} where
+-- Objective: fix the type error in this file
 
 divides x y = y \`mod\` x == 0
 
@@ -25,6 +26,8 @@ dropEvery' (x:xs) n i =
 `
 
 const rotate = n => `module Task${n} where
+-- Objective: fix the type error in this file
+
 -- Rotate a list N places to the left.
 
 rotate1 :: [a] -> [a]
@@ -295,6 +298,7 @@ validate password =
 
 
 const insertAt = n => `module Task${n} where
+-- Objective: fix the type error in this file
 
 -- Insert an element at a given position into a list.
 
@@ -309,6 +313,7 @@ insertAt el lst n =
 `
 
 const balanceTree = n => `module Task${n} where
+-- Objective: fix the type error in this file
 
 data Tree a = Empty | Branch a (Tree a) (Tree a)
 leaf x = Branch x Empty Empty
@@ -340,6 +345,8 @@ y = if z then u else v
 `
 [[1,2,3,4], [4,5,6,7]] [[1,2,3,4], [5,6,7,8]]
 const compress = n => `module Task${n} where
+-- Objective: fix the type error in this file
+
 --  Eliminate consecutive duplicates of list elements.
 
 compress = foldr skipDups
@@ -353,25 +360,31 @@ expect = [3,4,5,6]
 
 actual = compress [3,3,4,5,6,6]
 
-y :: Bool
-y =  expect == actual
+test :: Bool
+test =  expect == actual
 `
 
 
 const uconandvcon = n => `module Task${n} where
+-- Objective: fix the type error in this file
 
-data V = VCon String
 data U = UCon Bool Int (Int, Int)
 
-u :: U -> V
-u (UCon x y j) =
+u (UCon x y z) =
   if x
-    then j
+    then z
     else fst y + snd y
+
+actual = u (UCon False 0 (15, 10))
+expect = 25
+
+test :: Bool
+test = actual == expect
 
 `
 
 const quicksort = n => `module Task${n} where
+-- Objective: fix the type error in this file
 
 quick :: [Int] -> [Int]
 quick []   = []
@@ -391,6 +404,7 @@ split (x:xs) n (littles, bigs) =
 
 
 const printXML = n => `module Task${n} where
+-- Objective: fix the type error in this file
 
 data XML = XML Position Part
 data Position = Top | Bottom | Left | Right
@@ -416,25 +430,19 @@ printXML (Text text) = text
 `
 
 const euler1 = n => `module Task${n} where
+-- Objective: fix the type error in this file
 
 -- Add all the natural numbers below 1000
 -- that are multiples of 3 or 5.
-
--- This comment contains ‮bidirectional format‬ chars
-
--- add :: a -> a -> a
--- add x y = x + y
-
-
 sum [] = 0
 sum [x] = x
-sum (x:xs) = x + Task1.sum xs
+sum (x:xs) = x + sum xs
 
 check (x:xs)
   | x \`mod\` 3 == 0 || x \`mod\` 5 == 0 = x + check xs
   | otherwise = check xs
 
-problem_1 = Task1.sum (check [1..999])
+problem_1 = sum (check [1..999])
 `
 const examples = [
   euler1,

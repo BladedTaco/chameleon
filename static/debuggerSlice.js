@@ -101,6 +101,7 @@ const initialState = {
   prevLocs: [],
   nextLocs: [],
   currentTaskNum: null,
+  cursorPosition: 0,
   wellTyped: false,
   loadError: null,
   parseError: null,
@@ -134,6 +135,9 @@ const { actions, reducer } = createSlice({
     toggleMultipleExps: R.modify('multipleExps', R.not),
     incrementAttemps(state, action) {
       state.attempts = state.attempts.map((v, i) => i === action.payload ? v + 1 : v)
+    },
+    setCursorPosition (state, action) {
+      state.cursorPosition = action.payload
     },
     debuggingLevel1(state) {
       state.debuggingSteps = false
@@ -400,6 +404,7 @@ export const {
   debuggingLevel2,
   debuggingLevel3,
   incrementAttemps,
+  setCursorPosition
 } = actions;
 export default reducer;
 

@@ -4,8 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "esbuild index.jsx --bundle --sourcemap --outfile=build/out.js",
-    "dev": "esbuild index.jsx --bundle --sourcemap --outfile=build/out.js --watch"
+    "build": "esbuild index.jsx --define:OUTPUT_TARGET=\\\"userstudy\\\"  --define:process.env.NODE_ENV=\\\"production\\\" --bundle --minify --sourcemap --outfile=build/out.js",
+    "dev": "esbuild index.jsx  --define:OUTPUT_TARGET=\\\"userstudy\\\"  --define:process.env.NODE_ENV=\\\"development\\\" --bundle --sourcemap --outfile=build/out.js --watch",
+    "build:playground": "esbuild playground.jsx --define:OUTPUT_TARGET=\\\"playground\\\" --define:process.env.NODE_ENV=\\\"production\\\" --bundle --minify --sourcemap --bundle --outfile=build/playground.js",
+    "dev:playground": "esbuild playground.jsx --define:OUTPUT_TARGET=\\\"playground\\\" --define:process.env.NODE_ENV=\\\"development\\\" --bundle --outfile=build/playground.js --watch"
   },
   "keywords": [],
   "author": "",
@@ -16,12 +18,13 @@
     "@floating-ui/react-dom": "^0.7.1",
     "@floating-ui/react-dom-interactions": "^0.6.1",
     "@heroicons/react": "^1.0.6",
-    "@openreplay/tracker": "^3.5.4",
+    "@openreplay/tracker": "3.4.7",
     "@reduxjs/toolkit": "^1.8.0",
     "analytics": "^0.8.1",
     "ansi-escapes": "^5.0.0",
     "esbuild": "^0.14.29",
-    "nanoid": "^3.3.2",
+    "mixpanel-browser": "^2.45.0",
+    "nanoid": "^3.3.4",
     "ramda": "^0.28.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
