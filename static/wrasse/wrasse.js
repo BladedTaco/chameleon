@@ -154,14 +154,33 @@ let parse_symbols = (tree) => {
   return symbols.map(x => JSON.parse(x.content))
 }
 
+const find_child = (tree, ...content) => {
+  if (tree == undefined || tree == {}) return {};
+  if (content.length == 0) return tree;
+  
+  return find_child(tree.children.find(x => x.content === content[0]), ...content.slice(1))
+}
+
 let parse_tree = (tree) => {
-  return {
-    content: tree[0][0],
-    active: tree[0][1],
-    line: tree[0][2],
-    children: tree[1].map(parse_tree),
-    link: undefined,
+  const parse_node = (node) => {
+    return {
+      content: node[0][0],
+      active: node[0][1],
+      line: node[0][2],
+      children: node[1].map(parse_node),
+      link: undefined,
+    }
   }
+
+  const parsedTree = parse_node(tree);
+  const parsedTree_GHC = find_child(parsedTree, "GHC");
+  const parsedTree_GHC_out = find_child(parsedTree_GHC, "output");
+
+  parsedTree.active = true;
+  parsedTree_GHC.active = true;
+  parsedTree_GHC_out.active = true;
+
+  return parsedTree;
 }
 
 
@@ -244,15 +263,6 @@ let interactive_terminal = (tree) => {
   // wrasse.terminal.reset()
   switch_terminal();
 
-  // let parse_tree = (tree) => {
-  //   return {
-  //     content: tree[0][0],
-  //     active: tree[0][1],
-  //     line: tree[0][2],
-  //     children: tree[1].map(parse_tree)
-  //   }
-  // }
-  
   let hoverWin = new tWin.Window(
     wrasse.terminal,
     wrasse.terminal.cols / 2,
@@ -328,7 +338,7 @@ let interactive_terminal = (tree) => {
       )
     } else {
       ///write in new lines
-      
+
       // insert childnum empty lines
       wrasse.window.write(
         ESC.cursorSavePosition +
@@ -445,7 +455,9 @@ let interactive_terminal = (tree) => {
           {
             click(link) {
               if (node.active) {
-                node.children = node.children.pop();
+                node.children = node.children.filter(x => x.content !== "Root");
+                node.active = false;
+                wrasse.interactive_terminal(wrasse.tree);
                 return;
               }
 
@@ -495,14 +507,12 @@ let interactive_terminal = (tree) => {
 
                 add.symbols = parse_symbols(add);
                 setHead(add, add);
-
-                const cd = add
-                  ?.children.find(x => x.content === "GHC")
-                  ?.children.find(x => x.content === "code") 
-                  ?? {};
+                
+                const cd = find_child(add, "GHC", "code");
                 cd.content = "code [[commit]]"
                 cd.code = code
                 node.children.push(add);
+                node.active = true;
 
                 finished = true;
 

@@ -302,6 +302,7 @@ const insertAt = n => `module Task${n} where
 
 -- Insert an element at a given position into a list.
 
+insertAt :: a -> [a] -> Int -> [a]
 insertAt el lst n =
     let accu (i, acc) x =
             if i == n
@@ -324,7 +325,7 @@ isBalancedTree (Branch _ l r) =
     || (countBranches r - countBranches l) == 1
     && isBalancedTree l && isBalancedTree r
 
-
+countBranches :: Tree a -> Int
 countBranches Empty = 0
 countBranches (Branch _ l r) = 1 + l + r
 `
@@ -349,6 +350,7 @@ const compress = n => `module Task${n} where
 
 --  Eliminate consecutive duplicates of list elements.
 
+compress :: [Int] -> [Int]
 compress = foldr skipDups
 
 skipDups x [] = [x]
@@ -388,13 +390,16 @@ const quicksort = n => `module Task${n} where
 
 quick :: [Int] -> [Int]
 quick []   = []
-quick (x:xs)=
- let littlebigs = split xs
+quick (x:xs) =
+ let 
+    littlebigs :: ([Int], [Int])
+    littlebigs = split xs
  in
    quick (fst littlebigs)
     ++ [x]
     ++  quick (snd littlebigs)
 
+split :: [Int] -> Int -> ([Int], [Int]) -> ([Int], [Int])
 split [] _ result = result
 split (x:xs) n (littles, bigs) =
   if x < n
@@ -406,6 +411,7 @@ split (x:xs) n (littles, bigs) =
 const printXML = n => `module Task${n} where
 -- Objective: fix the type error in this file
 
+data Attribute = X
 data XML = XML Position Part
 data Position = Top | Bottom | Left | Right
 
@@ -420,7 +426,8 @@ getPart :: XML -> Part
 getPart (XML pos part) = part
 
 
-printXML (Element name [attributs] xmls) =
+printXML :: Part -> String
+printXML (Element name _ xmls) =
   "<" ++ name ++ ">"
   ++ mconcat (map printXML xmls)
   ++ "</" ++ name ++ ">"
@@ -434,14 +441,17 @@ const euler1 = n => `module Task${n} where
 
 -- Add all the natural numbers below 1000
 -- that are multiples of 3 or 5.
+sum :: [Int] -> Int
 sum [] = 0
 sum [x] = x
 sum (x:xs) = x + sum xs
 
+check :: [Int] -> [Int]
 check (x:xs)
   | x \`mod\` 3 == 0 || x \`mod\` 5 == 0 = x + check xs
   | otherwise = check xs
 
+problem_1 :: Int
 problem_1 = sum (check [1..999])
 `
 

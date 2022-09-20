@@ -550,7 +550,7 @@ class Window {
         scrollbarX.hi = Math.max(Math.ceil(scrollbarX.low)+0.5, scrollbarX.hi)
 
         let scrollbarXChar = '▅';
-        if (scrollbarX.low <= 0 && scrollbarX.hi >= this.height) {
+        if (this.softwrap || (scrollbarX.low <= 0 && scrollbarX.hi >= this.height)) {
             scrollbarXChar = '═'
         }
 
