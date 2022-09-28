@@ -3,39 +3,27 @@
 
 module Wrasse.Hook (hook) where
 
-import "ghc" Exception
-import GHC
+import "ghc" Exception ( gtry )
 
-import "ghc" GhcMonad
+import "ghc" GhcMonad ( liftIO )
 
-import GHC.Paths
-import "ghc" HscTypes
-import System.Environment
+import "ghc" HscTypes ( SourceError )
 
 import System.Directory (createDirectoryIfMissing, getTemporaryDirectory, removeFile)
 import System.FilePath.Posix (takeDirectory)
 
-import System.IO.Silently
-
-import GHC.IO.Handle
-import System.IO
-
-import GHC.Generics
-import Text.Parsec
+import Text.Parsec ( anyChar, noneOf, string, manyTill, many, parse, Parsec )
 import "ghc" Bag ( bagToList )
 import "ghc" Outputable ( SDoc(runSDoc), initSDocContext, Outputable (ppr), showSDocUnsafe )
 
-import "ghc" DynFlags
-import "ghc" ErrUtils
-
+import "ghc" DynFlags ( LogAction, dopt_set, gopt_set, DumpFlag(Opt_D_dump_json) )
+import "ghc" ErrUtils ( mkLocMessage )
 
 import GHC.IORef (newIORef, IORef)
-import Data.IORef
+import Data.IORef ( IORef, modifyIORef', newIORef, readIORef )
 import HieAst (mkHieFile)
 
-import Language.Haskell.Exts.Lexer
-
-import Language.Haskell.HLint
+import Language.Haskell.HLint ( defaultParseFlags, parseModuleEx, hlint, ModuleEx, ParseError )
 
 import Wrasse.Types
 import Data.Tree (Tree(..), drawTree)
@@ -44,36 +32,26 @@ import Data.List (intercalate, isInfixOf)
 import Wrasse.Tree (multiLevel)
 import "ghc" Util (uncurry3, OverridingBool (Always))
 import Control.Lens (traverseOf, Each (each), (^..))
-import Control.Arrow
 import Agda.Utils.Tuple (uncurry4)
 import DriverPipeline (preprocess)
-
-import Wrasse.Util
-
 import System.Process
+    ( readCreateProcessWithExitCode,
+      shell,
+      CreateProcess(new_session, create_group) )
 
-import Text.Regex
-import Data.Maybe
-import Data.List.Split
+import Text.Regex ( matchRegex, mkRegex )
+import Data.List.Split ( splitOn )
 import Control.Monad (ap)
 import Data.Aeson (encode)
 import Data.ByteString.Lazy.UTF8 (toString)
-import JsonInstance
 import Data.Maybe (fromMaybe)
 import Text.Parsec.Combinator (manyTill)
-import Text.Parsec (anyChar)
 
--- main :: IO ()
--- main = do
---   args <- getArgs :: IO [String]
---   ref <- liftIO $ newIORef ""
---   r <- runGhc (Just libdir) (processGHC ref "Example" (head args))
---   putStrLn "start output"
---   mconcat $ mapTup3 putStrLn  r
---   r' <- readIORef ref
---   putStrLn r'
---   putStrLn "end output"
+import Wrasse.Util
+import JsonInstance
+import GHC
 
+-- map a module name to filepath for source code
 ghcFile :: String -> FilePath
 ghcFile = ("generated/" ++) . (++ ".hs")
 
@@ -88,9 +66,10 @@ hook f = do
   writeFile file s
   tools <- toolHook modName file
   ghcData <- ghcHook modName file
-  return $ WrasseResult tools ghcData "" "" ((, False, -1) <$> multiLevel tools) [] -- (lines $ Data.Tree.drawTree $ filter (/= '\n') <$> multiLevel tools)
+  return $ WrasseResult tools ghcData "" "" ((, False, -1) <$> multiLevel tools) []
 
---
+
+-- The hook for the various tools
 toolHook :: String -> FilePath -> IO [(String, [(String, [String])])]
 toolHook modName file = do
   (GHCResult g1 g2) <- ghcHook modName file
@@ -113,15 +92,9 @@ toolHook modName file = do
     ]
 
 
--- runs GHC
+-- handles Defer GHC subtree
 ghcAltHook :: String -> FilePath -> IO ([String], [String], [String])
 ghcAltHook modName file = do
-  -- ref <- liftIO $ newIORef "" -- make an output IO stream
-  -- result <- runGhc (Just libdir) (processGHC ref modName file)
-  -- ref_out <- readIORef ref -- read the output IO stream
-  -- return $ GHCResult (("ghc console: " ++) <$> lines ref_out) (lines $ show result)
-
-
   let flags = [
           "-fprint-potential-instances"
         , "-ferror-spans"
@@ -130,59 +103,36 @@ ghcAltHook modName file = do
         , "--interactive"
         ]
 
+  -- get list of symbols from ghci
   let cmd = "ghc " ++ unwords flags ++ " generated/Infile.hs"
-  -- let sIn = ":browse!\n:show bindings"
   let sIn = ":browse! *" ++ modName
 
   (_, sOut, sErr) <- readCreateProcessWithExitCode ((shell cmd) {new_session = True, create_group = True}) sIn
 
+  -- parse string to get symbols names
   let reg = mkRegex "^([^:= ]* )? *([^:=]+)(( :: )|( => )|( = ))"
-
   let symbols = filter (isInfixOf " :: " <||> isInfixOf " => " <||> isInfixOf " = ") $ lines sOut
   let symbolNames = filter (/= ["", "", ""]) $ map (ap (:) $ trim <$.> take 2 . fromMaybe ["", ""] . matchRegex reg) symbols
 
-  let stdInNew = intercalate "\n" $ map ((":info " ++) . last) symbolNames
+  -- poll ghci again to get symbol information
+  let sIn2 = intercalate "\n" $ map ((":info " ++) . last) symbolNames
+  (_, sOut2, sErr2) <- readCreateProcessWithExitCode ((shell cmd) {new_session = True, create_group = True}) sIn2
 
-  (_, sOut2, sErr2) <- readCreateProcessWithExitCode ((shell cmd) {new_session = True, create_group = True}) stdInNew
-
+  -- parse text and join symbol info with symbol name
   let symbols = padZipGeneral ["", "", ""] "" symbolNames $ tail $ splitOn "ghci> " sOut2
-
   let defReg = mkRegex "Defined (at|in) ([^ ]*)"
-
   let definedAt = fromMaybe ["", ""] . matchRegex defReg
-
+  -- output into GHCIInfo list
   let sym = (\(x1, x4) -> GHCIInfo (head x1) (x1!!1) (x1!!2) (definedAt x4) x4) <$> symbols
 
+  -- read the code into a string
   fileContents <- readFile file
 
-
-  -- "class" "type" "data" "newtype"
-
-  -- return $ uncurry GHCResult $ mapTup2 lines (intercalate "\n" (show <$> symbolNames) ++ sOut2 ++ "\n" ++ sErr, fileContents)
-  -- return $ uncurry GHCResult $ mapTup2 lines (intercalate "\n" (show <$> symbols) ++ "\n\n\n" ++ sOut ++ "\n\n\n" ++ sOut2 ++ "\n" ++ sErr ++ sErr2, fileContents)
+  -- return information
   return (toString . encode <$> sym, lines $ sErr ++ sErr2, lines fileContents)
 
 
-
---   let flags = [
---           "-fprint-potential-instances"
---         , "-ferror-spans"
---         , "-Wall"
---         , "-fdefer-type-errors"
---         ]
-
---   let cmd = "ghc " ++ unwords flags ++ " generated/Infile.hs"
---   let sIn = ""
-
---   (_, sOut, sErr) <- readCreateProcessWithExitCode ((shell cmd) {new_session = True, create_group = True}) sIn
-
---   fileContents <- readFile file
-
---   return $ uncurry GHCResult $ mapTup2 lines (sOut ++ "\n" ++ sErr, fileContents)
-
-
-
--- runs GHC
+-- runs GHC on the given code file
 ghcHook :: String -> FilePath -> IO GHCResult
 ghcHook modName file = do
   let flags = [
@@ -207,11 +157,12 @@ ghcHook modName file = do
 
   let cmd = "ghc " ++ unwords flags ++ " generated/Infile.hs"
   let sIn = ""
-
   (_, sOut, sErr) <- readCreateProcessWithExitCode ((shell cmd) {new_session = True, create_group = True}) sIn
 
+  -- read the code into a string
   fileContents <- readFile file
 
+  -- return result
   return $ uncurry GHCResult $ mapTup2 lines (sOut ++ "\n" ++ sErr, fileContents)
 
 
@@ -226,7 +177,6 @@ hlintHook file = do
   -- hlint
   ideas <- hlint ["generated", "--quiet", "-s"]
   ref_out <- readIORef ref -- read the output IO stream
-  -- return $ GHCResult (("hlint console: " ++) <$> lines ref_out) $ fmap ("hlint out: " ++) out ++ fmap (("idea: " ++) . show) ideas
   return (lines ref_out, out ++ [""] ++ (show <$> ideas))
 
 -- parser for the input code to extract the module name
@@ -243,8 +193,7 @@ getModuleName s = case parse moduleParser "" s of
     Left err -> ""
     Right xs -> xs
 
-
-
+-- deprecated, loghandler for runghc function to capture output
 -- LogAction == DynFlags -> Severity -> SrcSpan -> PprStyle -> MsgDoc -> IO ()
 logHandler :: IORef String -> LogAction
 logHandler ref dflags warn severity srcSpan style msg =
@@ -258,7 +207,7 @@ logHandler ref dflags warn severity srcSpan style msg =
 
 
 
--- the boilerplate GHC
+-- the boilerplate Hlint
 processHLint :: Either Language.Haskell.HLint.ParseError ModuleEx -> [String]
 processHLint e = do
   case e of
@@ -266,20 +215,8 @@ processHLint e = do
     Right me -> ["COMPILED SUCCESSFULLY"]
 
 
--- getHieAst modSum env source = mkHieFile modsum env source
 
-
-cleanGHCOutput :: String -> String
-cleanGHCOutput = undefined
-
-
-
-
-
-
-
-
--- the boilerplate GHC
+-- the boilerplate GHC (deprecated)
 processGHC :: IORef String -> String -> FilePath -> Ghc (String, String, String)
 processGHC ref moduleName path = do
   dflags <- getSessionDynFlags
@@ -313,9 +250,11 @@ processGHC ref moduleName path = do
           Opt_D_dump_json
         ]
 
+  -- add in dump and general flags to dynflags
   let dflags'' = foldl dopt_set dflags' dpflags
   let dflags''' = foldl gopt_set dflags'' gflags
 
+  -- setup session
   setSessionDynFlags dflags'''
   let mn = mkModuleName moduleName
   let hsTarketId = TargetFile path Nothing
@@ -326,11 +265,7 @@ processGHC ref moduleName path = do
         targetContents = Nothing
       }
 
-
-  -- ref <- liftIO $ newIORef "" -- make an output IO stream
-  -- result <- runGhc (Just libdir) (processGHC ref modName file)
-  -- ref_out <- readIORef ref -- read the output IO stream
-
+  -- run session
   session <- getSession
   a <- liftIO $ preprocess session path Nothing Nothing
   let b = (
@@ -339,7 +274,7 @@ processGHC ref moduleName path = do
             Right x0 -> ("succ " ++) $ show $ snd x0
           )
 
-
+  -- find at what stage GHC fails
   eitherl <- gtry (load LoadAllTargets) :: Ghc (Either SourceError SuccessFlag)
   case eitherl of
     Left se -> do
@@ -356,21 +291,9 @@ processGHC ref moduleName path = do
           let ParsedModule _ ps imprts anns = p
           case t of
             Left se -> do
-
-              -- return ("Failed at stage: type checking", show $ bagToList $ srcErrorMessages se, showSDocUnsafe $ ppr ps)
-              -- return ("Failed at stage: type checking", show se, showSDocUnsafe $ ppr ps)
               return (b, show se, showSDocUnsafe $ ppr ps)
-              -- return ("Failed at stage: type checking", show se, codeFile)
             Right tc -> do
               let TypecheckedModule _ (Just rs) ts modInfo (typeGlobalEnv, moduleDeets) = tc
               let hieFile = mkHieFile modSum typeGlobalEnv rs
 
               return ("Program looks good","", showSDocUnsafe $ ppr ps)
-              -- return ("Program looks good", intercalate "\n\n" [
-              --   show rs
-              --   , show ts
-              --   , show modInfo
-              --   , show typeGlobalEnv
-              --   , show moduleDeets
-              --   ], showSDocUnsafe $ ppr ps)
-

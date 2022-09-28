@@ -34,14 +34,10 @@ library
       Run
       Scope
       Typing
-      Wrasse.Cleanup
-      Wrasse.Fixes
       Wrasse.Hook
       Wrasse.Instance
       Wrasse.Messages
-      Wrasse.Test
       Wrasse.Tree
-      Wrasse.TypeInfo
       Wrasse.Types
       Wrasse.Util
   other-modules:

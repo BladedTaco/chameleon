@@ -5,6 +5,10 @@ import Data.Tree
 import qualified Binding as Wrasse
 import Wrasse.Types
 
+{-
+Default instancing for various types
+-}
+
 instance Default Char where
     def = '\NUL'
 

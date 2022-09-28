@@ -23,23 +23,28 @@
 </head>
 
 <body class="h-screen w-full">
+    <!-- Main Grid to split Chameleon in the top half and Wrasse in the bottom half -->
     <div class="mainGrid h-full w-full">
         <div class="grid h-full w-full overflow-y-auto">
+            <!-- Chameleon html root -->
             <div id="react-root" class="w-full h-full overflow-y-scroll chameleon-view"></div>
+            <!-- Draggable reszier -->
             <div class="gutter-row gutter-row-1 __dbk__gutter Vertical Dark">
                 <div class="__dbk__dragger Vertical Dark"></div>
             </div>
-                <div class="wrasse-window">
-                    <div id="terminal-container" class="wrasse-window"></div>
-                </div>
+            <!-- Wrasse terminal root -->
+            <div class="wrasse-window">
+                <div id="terminal-container" class="wrasse-window"></div>
             </div>
         </div>
     </div>
 
+    <!-- deprecated div for mouse hover tooltips -->
     <div id="wrasse-hover" class="wrasse-hover hidden grow">
         <div id="wrasse-hover-content" class="wrasse-hover-content"></div>
     </div>
 
+    <!-- deprecated div for blocking mouse input -->
     <div id="wrasse-block" class="wrasse-block hidden"></div>
 </body>
 </html>

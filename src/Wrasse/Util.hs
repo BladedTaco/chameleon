@@ -1,9 +1,22 @@
 module Wrasse.Util where
 
-import Data.Map
-import Control.Arrow
-import Control.Monad
+import Data.Map ( Map, (!) )
+import Control.Arrow ( Arrow((&&&), (***)) )
+import Control.Monad ( join, liftM2, liftM3 )
 import Data.Char (isSpace)
+
+
+
+
+{-
+
+Utility functions I have built up throughout the years of working with haskell
+partially trimmed to those relevant to this project
+
+-}
+
+
+
 
 -- >>> trim " abc "
 -- "abc"

@@ -1,6 +1,8 @@
+// trimmed version of the ansiescapes npm package with minor edits.
 
 import {clamp} from './util';
 
+// string constants for escape sequences
 const ESC = '\u001B[';
 const OSC = '\u001B]';
 const BEL = '\u0007';
@@ -9,6 +11,7 @@ const isTerminalApp = false;
 
 const ansiEscapes = {};
 
+// moves the cursor to the specified position in the terminal, top left is (1,1)
 ansiEscapes.cursorTo = (x, y) => {
 	if (typeof x !== 'number') {
 		throw new TypeError('The `x` argument is required');
@@ -21,6 +24,7 @@ ansiEscapes.cursorTo = (x, y) => {
 	return ESC + (y + 1) + ';' + (x + 1) + 'H';
 };
 
+// moves the cursor relative to its current position
 ansiEscapes.cursorMove = (x, y) => {
 	if (typeof x !== 'number') {
 		throw new TypeError('The `x` argument is required');
@@ -43,11 +47,13 @@ ansiEscapes.cursorMove = (x, y) => {
 	return returnValue;
 };
 
+// set of functions to move the cursor in a single direction
 ansiEscapes.cursorUp = (count = 1) => ESC + count + 'A';
 ansiEscapes.cursorDown = (count = 1) => ESC + count + 'B';
 ansiEscapes.cursorForward = (count = 1) => ESC + count + 'C';
 ansiEscapes.cursorBackward = (count = 1) => ESC + count + 'D';
 
+// constants for cursor manipulation
 ansiEscapes.cursorLeft = ESC + 'G';
 ansiEscapes.cursorSavePosition = isTerminalApp ? '\u001B7' : ESC + 's';
 ansiEscapes.cursorRestorePosition = isTerminalApp ? '\u001B8' : ESC + 'u';
@@ -57,6 +63,7 @@ ansiEscapes.cursorPrevLine = ESC + 'F';
 ansiEscapes.cursorHide = ESC + '?25l';
 ansiEscapes.cursorShow = ESC + '?25h';
 
+// erases the given number of lines from the terminal
 ansiEscapes.eraseLines = count => {
 	let clear = '';
 
@@ -71,19 +78,23 @@ ansiEscapes.eraseLines = count => {
 	return clear;
 };
 
+// constants for various erasure sequences
 ansiEscapes.eraseEndLine = ESC + 'K';
 ansiEscapes.eraseStartLine = ESC + '1K';
 ansiEscapes.eraseLine = ESC + '2K';
 ansiEscapes.eraseDown = ESC + 'J';
 ansiEscapes.eraseUp = ESC + '1J';
 ansiEscapes.eraseScreen = ESC + '2J';
+// scrolling sequences
 ansiEscapes.scrollUp = ESC + 'S';
 ansiEscapes.scrollDown = ESC + 'T';
 
 ansiEscapes.clearScreen = '\u001Bc';
 
+// produces terminal beep
 ansiEscapes.beep = BEL;
 
+// creates a hypertext link
 ansiEscapes.link = (text, url) => {
 	return [
 		OSC,
@@ -101,6 +112,7 @@ ansiEscapes.link = (text, url) => {
 	].join('');
 };
 
+// embeds an image
 ansiEscapes.image = (buffer, options = {}) => {
 	let returnValue = `${OSC}1337;File=inline=1`;
 
@@ -119,15 +131,17 @@ ansiEscapes.image = (buffer, options = {}) => {
 	return returnValue + ':' + buffer.toString('base64') + BEL;
 };
 
+// inserts n new lines at current cursor position
 ansiEscapes.insertLine = (number) => {
 	return ESC + number + "L";
 }
 
+// deletes n lines from the current cursor position
 ansiEscapes.deleteLine = (number) => {
 	return ESC + number + "M";
 }
 
-
+// sets the position of the cursor 0 indexed.
 ansiEscapes.cursorRow = (row) => {
 	return ESC + row + 'd';
 }
@@ -135,6 +149,7 @@ ansiEscapes.cursorPos = (row, col) => {
 	return ESC + row + SEP + col + 'd';
 }
 
+// colourizes the text with the specified foreground and background colour
 ansiEscapes.colouredText = (fg_col, bg_col, text) => {
 	// get colours with 0 in defaults
 	let fg = {r:0, g:0, b:0, ...fg_col}
@@ -146,6 +161,7 @@ ansiEscapes.colouredText = (fg_col, bg_col, text) => {
 		 + ESC + "39m" + ESC + "49m"
 }
 
+// produces an ansi sequence for a certain colour either foreground or background
 ansiEscapes.colourSeq = (col, isFG) => {
 	// get colours with 0 in defaults
 	isFG ??= false;
@@ -154,8 +170,9 @@ ansiEscapes.colourSeq = (col, isFG) => {
 	return ESC + `${isFG ? '38' : '48'};2` + SEP + c.r + SEP + c.g + SEP + c.b + "m"
 }
 
-
+// A class for colours
 ansiEscapes.Colour = class Colour {
+	// a set of predefined static colours
 	static Red = new Colour({r: 255});
 	static Blue = new Colour({b : 255});
 	static Green = new Colour({g : 255});
@@ -166,12 +183,14 @@ ansiEscapes.Colour = class Colour {
 	static LightGrey = new Colour({r:190, g:190, b:190});
 	static White = new Colour({r:255, g:255, b:255});
 
+	// simple constructor with optional colours
 	constructor({r, g, b}) {
 		this.r = r ?? 0;
 		this.g = g ?? 0;
 		this.b = b ?? 0;
 	}
 
+	// multiplies the colour with the given multiplier, clamping to range.
 	mul(multiplier) {
 		return {
 			r: Math.round(clamp(0, this.r * multiplier, 255)),

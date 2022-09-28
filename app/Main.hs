@@ -35,7 +35,9 @@ import Run hiding (main)
 import System.Directory
 
 main = scotty 5000 (
+    -- Wrasse endpoints
     ghc >> messages >> ace
+    -- Chameleon endpoints
     >> typecheck
     >> home
     >> sourceMap
@@ -50,19 +52,23 @@ main = scotty 5000 (
 
 
 --------------------------------------------
+-- Wrasse endpoint functions
+
+-- main wrasse endpoint
 ghc :: ScottyM ()
 ghc = post "/ghc" $ do
-    content <- body
+    content <- body -- body is haskell code
     result <- liftAndCatchIO $ Wrasse.hook (BS.unpack content)
     json result
 
-
+-- endpoint for Haskell Error Message Index messages
 messages :: ScottyM ()
 messages = post "/messages" $ do
-  content <- body
+  content <- body -- directory to search for messages in
   result <- liftAndCatchIO $ WrasseMsg.messageHook (BS.unpack content)
   json result
 
+-- deprecated endpoint, lists contents of current working directory as json
 ace :: ScottyM ()
 ace = post "/ace" $ do
   content <- body
