@@ -19,7 +19,13 @@ String.prototype.splice = function (index, count, add) {
 // a class for actionable highlights in the wrasse window
 class Link {
     // the different multipliers for different states of the link
-    static albedo = {
+    static albedo = 
+    ESC.LIGHT_MODE 
+    ? {
+        click : 1,
+        hover : 0.8,
+        unlit : 0.6
+    } : {
         click : 1,
         hover : 0.6,
         unlit : 0.3
@@ -608,8 +614,15 @@ class Window {
             : '═')
             .join('')
 
+
+        const toSeq = (s, fg) => {return {seq: ESC.colourSeq(s, fg) , col: s}}
+
+        const FGCol = toSeq(ESC.FGCol, true);
+        const BGCol = toSeq(ESC.BGCol, false);
+
         // slightly darken border characters
-        const borderChar = (s) => ESC.colouredText(ESC.Colour.LtDkGrey, {}, s)
+        // const borderChar = (s) => ESC.colouredText(ESC.Colour.LtDkGrey, {}, s)
+        const borderChar = (s) => ESC.colouredText(FGCol.col, BGCol.col, s)
 
         // draw top and bottom border
         let writeString = borderChar(
@@ -623,6 +636,7 @@ class Window {
         let lines = this.softwrap 
             ? this.linesWrap() 
             : this.lines()
+
 
         // handle vertical scrollbar based on content length
         const len = Math.max(this.content.length, this.softContent.length)
@@ -647,6 +661,12 @@ class Window {
                 : '║');
 
             const bodyText = esc
+            .concat([
+                {pos: 0, seq: FGCol.seq},
+                {pos: 0, seq: BGCol.seq},
+                {pos: 1000, seq: "\x1b[39m"},
+                {pos: 1000, seq: "\x1b[49m"}
+            ])
             // sort by position
             .sort((a, b) => a.pos - b.pos)
             // map to colour pairs

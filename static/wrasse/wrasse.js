@@ -593,7 +593,7 @@ let interactive_terminal = (tree) => {
         // add a link for each keyword
         wrasse.window.addLink(
           { 
-            start: { x: range.start.x + match.index + 2,                    y: node.line },
+            start: { x: range.start.x + match.index + 1,                    y: node.line },
             end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line } 
           },
           {
@@ -617,7 +617,7 @@ let interactive_terminal = (tree) => {
         // add a link for each highlight
         wrasse.window.addLink(
           { 
-            start: { x: range.start.x + match.index + 2,                    y: node.line },
+            start: { x: range.start.x + match.index + 1,                    y: node.line },
             end:   { x: range.start.x + match.index + match[0].length + 1,  y: node.line } 
           },
           {

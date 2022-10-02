@@ -2,6 +2,18 @@
 
 import {clamp} from './util';
 
+const ansiEscapes = {};
+
+ansiEscapes.LIGHT_MODE = true;
+
+ansiEscapes.FGCol = {r:255,g:255,b:255}
+ansiEscapes.BGCol = {r:0,g:0,b:0}
+
+if (ansiEscapes.LIGHT_MODE) {
+	[ansiEscapes.FGCol, ansiEscapes.BGCol] = [ansiEscapes.BGCol, ansiEscapes.FGCol]
+}
+
+
 // string constants for escape sequences
 const ESC = '\u001B[';
 const OSC = '\u001B]';
@@ -9,7 +21,6 @@ const BEL = '\u0007';
 const SEP = ';';
 const isTerminalApp = false;
 
-const ansiEscapes = {};
 
 // moves the cursor to the specified position in the terminal, top left is (1,1)
 ansiEscapes.cursorTo = (x, y) => {
@@ -152,8 +163,8 @@ ansiEscapes.cursorPos = (row, col) => {
 // colourizes the text with the specified foreground and background colour
 ansiEscapes.colouredText = (fg_col, bg_col, text) => {
 	// get colours with 0 in defaults
-	let fg = {r:0, g:0, b:0, ...fg_col}
-	let bg = {r:0, g:0, b:0, ...bg_col}
+	let fg = {...ansiEscapes.FGCol, ...fg_col}
+	let bg = {...ansiEscapes.BGCol, ...bg_col}
 	// return text string
 	return ESC + "38;2" + SEP + fg.r + SEP + fg.g + SEP + fg.b + "m"
 		 + ESC + "48;2" + SEP + bg.r + SEP + bg.g + SEP + bg.b + "m"
@@ -165,10 +176,11 @@ ansiEscapes.colouredText = (fg_col, bg_col, text) => {
 ansiEscapes.colourSeq = (col, isFG) => {
 	// get colours with 0 in defaults
 	isFG ??= false;
-	let c = {r:0, g:0, b:0, ...col}
+	let c = {...(isFG ? ansiEscapes.FGCol : ansiEscapes.BGCol), ...col}
 	// return text string
 	return ESC + `${isFG ? '38' : '48'};2` + SEP + c.r + SEP + c.g + SEP + c.b + "m"
 }
+
 
 // A class for colours
 ansiEscapes.Colour = class Colour {
@@ -183,6 +195,9 @@ ansiEscapes.Colour = class Colour {
 	static LightGrey = new Colour({r:190, g:190, b:190});
 	static White = new Colour({r:255, g:255, b:255});
 
+	// rounds and restricts a value to the colour range (0, 255)
+	static restrict = (val) => Math.round(clamp(0, val, 255));
+
 	// simple constructor with optional colours
 	constructor({r, g, b}) {
 		this.r = r ?? 0;
@@ -190,15 +205,25 @@ ansiEscapes.Colour = class Colour {
 		this.b = b ?? 0;
 	}
 
+
 	// multiplies the colour with the given multiplier, clamping to range.
 	mul(multiplier) {
-		return {
-			r: Math.round(clamp(0, this.r * multiplier, 255)),
-			g: Math.round(clamp(0, this.g * multiplier, 255)), 
-			b: Math.round(clamp(0, this.b * multiplier, 255)) 
-		}
+		return new Colour({
+			r: Colour.restrict(this.r * multiplier),
+			g: Colour.restrict(this.g * multiplier),
+			b: Colour.restrict(this.b * multiplier)
+		})
+	}
+
+	// blends two colours linearly using lerp to transition
+	blend(otherCol, lerp) {
+		const mix = (c) => this[c]*(1 - lerp) + otherCol[c]*lerp
+		return new Colour({
+			r: Colour.restrict(mix('r'), 255),
+			g: Colour.restrict(mix('g'), 255), 
+			b: Colour.restrict(mix('b'), 255) 
+		})
 	}
 }
-
 
 export default ansiEscapes;
