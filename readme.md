@@ -1,3 +1,9 @@
+# Wrasse
+
+Wrasse is a tool built on top of Chameleon, as this repo is a fork of Chameleon, it has Chameleon code as well as Wrasse code.
+
+Wrasse code is located in src/Wrasse and static/wrasse other than the inline edits of Chameleon code for interfacing.
+
 # Chameleon
 
 <img src="/static/build/logo.png" alt="Chameleon Logo">

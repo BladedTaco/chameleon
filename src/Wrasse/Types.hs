@@ -3,9 +3,9 @@
 
 module Wrasse.Types where
 
-import Data.Tree (Tree (Node))
-import GHC.Generics (Generic)
-import Data.Map (Map, empty)
+-- import external types
+import Data.Tree ( Tree ) 
+import GHC.Generics ( Generic ) 
 
 
 -- | creates a default / empty instance. Normally used for padding
