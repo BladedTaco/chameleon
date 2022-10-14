@@ -2,7 +2,6 @@ module Wrasse.Instance where
     
 import Data.Map 
 import Data.Tree
-import qualified Binding as Wrasse
 import Wrasse.Types
 
 {-
